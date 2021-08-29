@@ -7,6 +7,8 @@ Total Matches: 133 | Matches Queued: 23
 Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
 /Users/flynnwang/dev/playground/lux_perspective/main.py | bAZPIByJrrly   | 22.8821893      | μ=25.362, σ=0.827  | 133
 /Users/flynnwang/dev/playground/versions/baseline/main.py | JSvzlKU6kPpq   | 22.1575826      | μ=24.638, σ=0.827  | 133
+
+* Create more city tile at the beginning of each day.
 """
 
 import math, sys
@@ -23,6 +25,9 @@ from lux import annotate
 
 DEBUG = True
 
+BUILD_CITYTILE_ROUND = 20
+
+
 def params(key):
   return GAME_CONSTANTS['PARAMETERS'][key]
 
@@ -32,14 +37,30 @@ DAY_LENGTH = params('DAY_LENGTH')
 NIGHT_LENGTH = params('NIGHT_LENGTH')
 CIRCLE_LENGH = DAY_LENGTH + NIGHT_LENGTH
 
+UNIT_ACTION_COOLDOWN = params('UNIT_ACTION_COOLDOWN')
+WORKER_ACTION_COOLDOWN = UNIT_ACTION_COOLDOWN["WORKER"]
+CITY_BUILD_COST = params('CITY_BUILD_COST')
+
 
 def get_resource_to_fuel_rate(resource):
   return params('RESOURCE_TO_FUEL_RATE')[resource.type.upper()]
 
 
+def get_unit_action_cooldown(unit):
+  ut = 'WORKER' if unit.type == 0 else 'CART'
+  return UNIT_ACTION_COOLDOWN[ut]
+
+
 def is_within_map_range(pos, map):
   return 0 <= pos.x < map.width and 0 <= pos.y < map.height
 
+def worker_total_cargo(worker):
+  cargo = worker.cargo
+  return (cargo.wood + cargo.coal + cargo.uranium)
+
+
+def worker_enough_cargo_to_build(worker):
+  return worker_total_cargo(worker) >= CITY_BUILD_COST
 
 def get_neighbour_positions(pos, map):
   check_dirs = [
@@ -95,6 +116,10 @@ class Strategy:
     self.actions = []
     self.game = LuxGame()
 
+  @property
+  def map(self):
+    return self.game.map
+
   def update(self, observation, configuration):
     self.game.update(observation, configuration)
 
@@ -106,6 +131,17 @@ class Strategy:
       unit.target_pos = None
 
 
+  def cell_has_opponent_citytile(self, cell):
+    citytile = cell.citytile
+    return citytile is not None and citytile.team == self.game.opponent_id
+
+  def cell_near_resource(self, cell):
+    for pos in get_neighbour_positions(cell.pos, self.map):
+      nb_cell = self.map.get_cell_by_pos(pos)
+      if nb_cell.has_resource():
+        return True
+    return False
+
   def assign_worker_target(self):
     # TODO: use resource weight with neighbour resources weights
     MAX_UNIT_PER_CITY = 3
@@ -114,20 +150,29 @@ class Strategy:
 
     workers = [unit for unit in player.units if unit.is_worker()]
 
-    # TODO: remove unit occupied by opponent_unit.
+    # TODO: remove unit occupied by opponent_unit and opponent_citytile
     resource_tiles: list[Cell] = []
+    near_resource_tiles = []
     for y in range(g.map_height):
         for x in range(g.map_width):
             cell = g.map.get_cell(x, y)
             if cell.has_resource():
-                resource_tiles.append(cell)
+              resource_tiles.append(cell)
+            if (not cell.has_resource()
+                and cell.citytile is None
+                and self.cell_near_resource(cell)):
+              near_resource_tiles.append(cell)
+
 
     city_tiles = g.player_city_tiles * MAX_UNIT_PER_CITY
 
-    targets = resource_tiles + city_tiles
+    targets = resource_tiles + city_tiles + near_resource_tiles
 
     def is_resource_tile(x):
       return x < len(resource_tiles)
+
+    def is_citytiles(x):
+      return len(resource_tiles) <= x < len(resource_tiles) + len(city_tiles)
 
     def get_cell_resource_value(cell):
       if not cell.has_resource():
@@ -160,15 +205,43 @@ class Strategy:
     def get_city_tile_weight(worker, citytile, dist):
       if worker.get_cargo_space_left() == 0:
         return 50000 / (dist + 1)
-
       return 0
+
+    def get_near_resource_tile_weight(worker, near_resource_tile, dist):
+      if not worker_enough_cargo_to_build(worker):
+        return 0
+
+      t = self.game.turn % CIRCLE_LENGH
+      if t >= BUILD_CITYTILE_ROUND:
+        return 0
+
+      # TODO: use short path dist
+      # won't arrive
+      round_left = BUILD_CITYTILE_ROUND - t - worker.cooldown
+      if round_left / get_unit_action_cooldown(worker) < dist:
+        return 0
+
+      res_wt = 0
+      citytile_wt = 0
+      for pos in get_neighbour_positions(near_resource_tile.pos, self.map):
+        nb_cell = self.map.get_cell_by_pos(pos)
+        if nb_cell.has_resource():
+          res_wt += get_cell_resource_value(nb_cell)
+
+        ct = nb_cell.citytile
+        if ct and ct.team == self.game.player.team:
+          citytile_wt += 1
+
+      v = (res_wt + citytile_wt * 50) * 100
+      # print(f' >> near_v={v}', file=sys.stderr)
+      return v
 
     # Value matrix for ship target assginment
     # * row: workers
     # * column: point of interests
     weights = np.zeros((len(workers), len(targets)))
 
-    print(f'turn={g.turn}', file=sys.stderr)
+    print(f'turn={g.turn}, #nct={len(near_resource_tiles)}', file=sys.stderr)
     for i, worker in enumerate(workers):
       for j, target in enumerate(targets):
         dist = worker.pos.distance_to(target.pos)
@@ -176,9 +249,13 @@ class Strategy:
         v = 0
         if is_resource_tile(j):
           v = get_resource_weight(worker, target, dist)
-        else:
-          # it's a city tile.
+        elif is_citytiles(j):
           v = get_city_tile_weight(worker, target, dist)
+        else:
+          # near resoure tiles
+          v = get_near_resource_tile_weight(worker, target, dist)
+          if v > 0:
+            print(f'nct_wt[{target.pos}]={v}', file=sys.stderr)
 
         # if DEBUG:
           # t = annotate.text(target.pos.x, target.pos.y, f'{v:.1f}')
@@ -195,8 +272,12 @@ class Strategy:
       worker.target_pos = target.pos
 
       if DEBUG:
-        # print(f'w={worker_idx}, v={weights[worker_idx, target_idx]}', file=sys.stderr)
-        self.actions.append(annotate.circle(target.pos.x, target.pos.y))
+        print(f'w={worker_idx}, v={weights[worker_idx, target_idx]}', file=sys.stderr)
+        a = annotate.circle(target.pos.x, target.pos.y)
+        self.actions.append(a)
+
+        a = annotate.line(worker.pos.x, worker.pos.y, target.pos.x, target.pos.y)
+        self.actions.append(a)
 
 
   def compute_worker_moves(self):
