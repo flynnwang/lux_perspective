@@ -1,10 +1,33 @@
 import math, sys
+from collections import defaultdict
+
+import numpy as np
+import scipy.optimize
+
 from lux.game import Game
 from lux.game_map import Cell, RESOURCE_TYPES
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
+DEBUG = True
+
+def params(key):
+  return GAME_CONSTANTS['PARAMETERS'][key]
+
+
+DIRECTIONS = Constants.DIRECTIONS
+DAY_LENGTH = params('DAY_LENGTH')
+NIGHT_LENGTH = params('NIGHT_LENGTH')
+CIRCLE_LENGH = DAY_LENGTH + NIGHT_LENGTH
+
+
+def get_resource_to_fuel_rate(resource):
+  return params('RESOURCE_TO_FUEL_RATE')[resource.type.upper()]
+
+
+def is_within_map_range(pos, map):
+  return 0 <= pos.x < map.width and 0 <= pos.y < map.height
 
 
 class LuxGame(Game):
@@ -20,6 +43,12 @@ class LuxGame(Game):
   @property
   def opponent(self):
     return self.players[self.opponent_id]
+
+  @property
+  def player_city_tiles(self):
+    return [citytile
+            for _, city in self.player.cities.items()
+            for citytile in city.citytiles]
 
   def update(self, observation, configuration):
     game_state = self
@@ -45,63 +74,201 @@ class Strategy:
     # Clear up actions for current step.
     self.actions = []
 
-  def execute(self):
+    for unit in self.game.player.units:
+      unit.next_action = None
+      unit.target_pos = None
+
+
+  def assign_worker_target(self):
+    # TODO: use resource weight with neighbour resources weights
+    MAX_UNIT_PER_CITY = 3
     g = self.game
-    actions = self.actions
-
-    ### AI Code goes down here! ###
     player = g.player
-    opponent = g.players[self.game.opponent_id]
-    width, height = g.map.width, g.map.height
 
+    workers = [unit for unit in player.units if unit.is_worker()]
+
+    # TODO: remove unit occupied by opponent_unit.
     resource_tiles: list[Cell] = []
-    for y in range(height):
-        for x in range(width):
+    for y in range(g.map_height):
+        for x in range(g.map_width):
             cell = g.map.get_cell(x, y)
             if cell.has_resource():
                 resource_tiles.append(cell)
 
+    city_tiles = g.player_city_tiles * MAX_UNIT_PER_CITY
+
+    targets = resource_tiles + city_tiles
+
+    def is_resource_tile(x):
+      return x < len(resource_tiles)
+
+    def get_resource_weight(worker, resource_tile, dist):
+      # TODO: do not go outside with empty resoure in the night
+      # TODO: need to consider reachbility of the resource.
+
+      if worker.get_cargo_space_left() == 0:
+        return 0
+
+      resource = resource_tile.resource
+      if (resource.type == Constants.RESOURCE_TYPES.COAL
+          and not player.researched_coal()):
+        return 0
+      if (resource.type == Constants.RESOURCE_TYPES.URANIUM
+          and not player.researched_uranium()):
+        return 0
+
+      value = resource.amount * get_resource_to_fuel_rate(resource)
+      return value / (dist + 1)
+
+    def get_city_tile_weight(worker, citytile, dist):
+      if worker.get_cargo_space_left() == 0:
+        return 50000 / (dist + 1)
+
+      return 0
+
+    # Value matrix for ship target assginment
+    # * row: workers
+    # * column: point of interests
+    weights = np.zeros((len(workers), len(targets)))
+
+    print(f'turn={g.turn}', file=sys.stderr)
+    for i, worker in enumerate(workers):
+      for j, target in enumerate(targets):
+        dist = worker.pos.distance_to(target.pos)
+
+        v = 0
+        if is_resource_tile(j):
+          v = get_resource_weight(worker, target, dist)
+        else:
+          # it's a city tile.
+          v = get_city_tile_weight(worker, target, dist)
+
+        # if DEBUG:
+          # t = annotate.text(target.pos.x, target.pos.y, f'{v:.1f}')
+          # print(t, file=sys.stderr)
+          # self.actions.append(t)
+
+        weights[i, j] = v
+
+
+    rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
+    for worker_idx, target_idx in zip(rows, cols):
+      worker = workers[worker_idx]
+      target = targets[target_idx]
+      worker.target_pos = target.pos
+
+      if DEBUG:
+        # print(f'w={worker_idx}, v={weights[worker_idx, target_idx]}', file=sys.stderr)
+        self.actions.append(annotate.circle(target.pos.x, target.pos.y))
+
+
+  def compute_worker_moves(self):
+    g = self.game
+    player = g.player
+    workers = [unit for unit in player.units
+               if unit.is_worker() and unit.can_act()]
+
+    def compute_weight(worker, next_position):
+      if worker.target_pos is None:
+        return 0
+
+      cur_pos_dist = worker.pos.distance_to(worker.target_pos)
+      next_pos_dist = next_position.distance_to(worker.target_pos)
+      if next_pos_dist < cur_pos_dist:
+        return 1
+      return 0
+
+    def gen_next_positions(worker):
+      assert worker.can_act()
+
+      positions = [worker.pos]
+      check_dirs = [
+        DIRECTIONS.NORTH,
+        DIRECTIONS.EAST,
+        DIRECTIONS.SOUTH,
+        DIRECTIONS.WEST,
+      ]
+      for direction in check_dirs:
+        newpos = worker.pos.translate(direction, 1)
+        if not is_within_map_range(newpos, g.map):
+          continue
+        positions.append(newpos)
+      return positions
+
+    next_positions = {
+      pos
+      for worker in workers
+      for pos in gen_next_positions(worker)
+    }
+
+    def duplicate_positions(positions):
+      for pos in positions:
+        cell = self.game.map.get_cell_by_pos(pos)
+        if cell.citytile is not None and cell.citytile.team == self.game.id:
+          for _ in range(4):
+            yield pos
+        else:
+          yield pos
+
+    next_positions = list(duplicate_positions(next_positions))
+
+    def get_position_to_index():
+      d = defaultdict(list)
+      for i, pos in enumerate(next_positions):
+        d[pos].append(i)
+      return d
+
+    position_to_index = get_position_to_index()
+    C = np.zeros((len(workers), len(next_positions)))
+    for worker_idx, worker in enumerate(workers):
+      for next_position in gen_next_positions(worker):
+        for poi_idx in position_to_index[next_position]:
+          poi_idx = position_to_index[next_position]
+          C[worker_idx, poi_idx] = compute_weight(worker, next_position)
+
+    rows, cols = scipy.optimize.linear_sum_assignment(C, maximize=True)
+    for worker_idx, poi_idx in zip(rows, cols):
+      worker = workers[worker_idx]
+      next_position = next_positions[poi_idx]
+
+      move_dir = worker.pos.direction_to(next_position)
+      self.actions.append(worker.move(move_dir))
+
+
+  def try_build_citytile(self):
+    t = self.game.turn % CIRCLE_LENGH
+    for unit in self.game.player.units:
+      if not unit.is_worker():
+        continue
+
+      if unit.can_act() and unit.can_build(self.game.map) and t < 20:
+        unit.target_pos = None
+        self.actions.append(unit.build_city())
+
+  def compute_citytile_actions(self):
+    player = self.game.player
+    total_tile_count = player.city_tile_count
+    total_unit_count = len(player.units)
+
     for _, city in player.cities.items():
       for citytile in city.citytiles:
         if citytile.can_act():
-          actions.append(citytile.build_worker())
+          if total_unit_count < total_tile_count:
+            self.actions.append(citytile.build_worker())
+            total_unit_count += 1
+          else:
+            self.actions.append(citytile.research())
 
-    # we iterate over all our units and do something with them
-    for unit in player.units:
-      if unit.is_worker() and unit.can_act():
-        closest_dist = math.inf
-        closest_resource_tile = None
-        if unit.get_cargo_space_left() > 0:
-            # if the unit is a worker and we have space in cargo, lets find the nearest resource tile and try to mine it
-            for resource_tile in resource_tiles:
-              if resource_tile.resource.type == Constants.RESOURCE_TYPES.COAL and not player.researched_coal(): continue
-              if resource_tile.resource.type == Constants.RESOURCE_TYPES.URANIUM and not player.researched_uranium(): continue
-              dist = resource_tile.pos.distance_to(unit.pos)
-              if dist < closest_dist:
-                  closest_dist = dist
-                  closest_resource_tile = resource_tile
-            if closest_resource_tile is not None:
-                actions.append(unit.move(unit.pos.direction_to(closest_resource_tile.pos)))
-        else:
-          if (g.turn // 20) % 2 == 0 and unit.can_build(g.map):
-            actions.append(unit.build_city())
-            continue
+  def execute(self):
+    actions = self.actions
+    g = self.game
+    player = g.player
 
-          # if unit is a worker and there is no cargo space left, and we have cities, lets return to them
-          if len(player.cities) > 0:
-            closest_dist = math.inf
-            closest_city_tile = None
-            for k, city in player.cities.items():
-              for city_tile in city.citytiles:
-                dist = city_tile.pos.distance_to(unit.pos)
-                if dist < closest_dist:
-                  closest_dist = dist
-                  closest_city_tile = city_tile
-            if closest_city_tile is not None:
-              move_dir = unit.pos.direction_to(closest_city_tile.pos)
-              actions.append(unit.move(move_dir))
+    self.compute_citytile_actions()
+    self.assign_worker_target()
 
-
+    self.try_build_citytile()
+    self.compute_worker_moves()
 
 
 _strategy = Strategy()

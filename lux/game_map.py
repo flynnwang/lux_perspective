@@ -52,6 +52,9 @@ class Position:
         self.x = x
         self.y = y
 
+    def __hash__(self):
+        return hash(tuple((self.x, self.y)))
+
     def __sub__(self, pos) -> int:
         return abs(pos.x - self.x) + abs(pos.y - self.y)
 
