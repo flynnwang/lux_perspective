@@ -1,3 +1,14 @@
+"""
+baseline v1:
+
+* Use weight from neighbour cells.
+
+Total Matches: 133 | Matches Queued: 23
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | bAZPIByJrrly   | 22.8821893      | μ=25.362, σ=0.827  | 133
+/Users/flynnwang/dev/playground/versions/baseline/main.py | JSvzlKU6kPpq   | 22.1575826      | μ=24.638, σ=0.827  | 133
+"""
+
 import math, sys
 from collections import defaultdict
 
@@ -28,6 +39,22 @@ def get_resource_to_fuel_rate(resource):
 
 def is_within_map_range(pos, map):
   return 0 <= pos.x < map.width and 0 <= pos.y < map.height
+
+
+def get_neighbour_positions(pos, map):
+  check_dirs = [
+    DIRECTIONS.NORTH,
+    DIRECTIONS.EAST,
+    DIRECTIONS.SOUTH,
+    DIRECTIONS.WEST,
+  ]
+  positions = []
+  for direction in check_dirs:
+    newpos = pos.translate(direction, 1)
+    if not is_within_map_range(newpos, map):
+      continue
+    positions.append(newpos)
+  return positions
 
 
 class LuxGame(Game):
@@ -102,14 +129,11 @@ class Strategy:
     def is_resource_tile(x):
       return x < len(resource_tiles)
 
-    def get_resource_weight(worker, resource_tile, dist):
-      # TODO: do not go outside with empty resoure in the night
-      # TODO: need to consider reachbility of the resource.
-
-      if worker.get_cargo_space_left() == 0:
+    def get_cell_resource_value(cell):
+      if not cell.has_resource():
         return 0
 
-      resource = resource_tile.resource
+      resource = cell.resource
       if (resource.type == Constants.RESOURCE_TYPES.COAL
           and not player.researched_coal()):
         return 0
@@ -118,7 +142,20 @@ class Strategy:
         return 0
 
       value = resource.amount * get_resource_to_fuel_rate(resource)
-      return value / (dist + 1)
+      return value
+
+    def get_resource_weight(worker, resource_tile, dist):
+      # TODO: do not go outside with empty resoure in the night
+      # TODO: need to consider reachbility of the resource.
+
+      if worker.get_cargo_space_left() == 0:
+        return 0
+
+      wt = get_cell_resource_value(resource_tile)
+      for newpos in get_neighbour_positions(resource_tile.pos, self.game.map):
+        nb_cell = self.game.map.get_cell_by_pos(newpos)
+        wt += get_cell_resource_value(nb_cell)
+      return wt / (dist + 1)
 
     def get_city_tile_weight(worker, citytile, dist):
       if worker.get_cargo_space_left() == 0:
@@ -180,20 +217,7 @@ class Strategy:
 
     def gen_next_positions(worker):
       assert worker.can_act()
-
-      positions = [worker.pos]
-      check_dirs = [
-        DIRECTIONS.NORTH,
-        DIRECTIONS.EAST,
-        DIRECTIONS.SOUTH,
-        DIRECTIONS.WEST,
-      ]
-      for direction in check_dirs:
-        newpos = worker.pos.translate(direction, 1)
-        if not is_within_map_range(newpos, g.map):
-          continue
-        positions.append(newpos)
-      return positions
+      return [worker.pos] + get_neighbour_positions(worker.pos, g.map)
 
     next_positions = {
       pos
