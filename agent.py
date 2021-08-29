@@ -9,6 +9,19 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/versions/baseline/main.py | JSvzlKU6kPpq   | 22.1575826      | μ=24.638, σ=0.827  | 133
 
 * Create more city tile at the beginning of each day.
+
+Total Matches: 162 | Matches Queued: 16
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | SoNqAJvguMFz   | 24.8074356      | μ=27.415, σ=0.869  | 162
+/Users/flynnwang/dev/playground/versions/baseline/main.py | yhBRbJiXz1du   | 19.9770905      | μ=22.585, σ=0.869  | 162
+
+* try select build city tile round
+Total Matches: 105 | Matches Queued: 23
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | aIUgNAlWRf6l   | 25.6763579      | μ=29.523, σ=1.282  | 54
+/Users/flynnwang/dev/playground/versions/more_citytile_10/main.py | Nwjp93nH0Dig   | 24.8476294      | μ=28.452, σ=1.201  | 52
+/Users/flynnwang/dev/playground/versions/more_citytile_15/main.py | 5NIvUe6McWdM   | 24.5985483      | μ=28.261, σ=1.221  | 53
+/Users/flynnwang/dev/playground/versions/baseline/main.py | n5j4hTZO5Jga   | 17.2385194      | μ=21.729, σ=1.497  | 51
 """
 
 import math, sys
