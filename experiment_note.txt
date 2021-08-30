@@ -3,6 +3,16 @@
 
 
 
+# 2021-08-30
+
+* Use shortesestt path dist instead of manhatten dist.
+
+Total Matches: 286 | Matches Queued: 26
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | i3TIgPf8G4HP   | 29.7988206      | μ=32.627, σ=0.943  | 133
+/Users/flynnwang/dev/playground/versions/more_citytile_10/main.py | NvdxD71BcyyN   | 24.9904737      | μ=27.535, σ=0.848  | 160
+/Users/flynnwang/dev/playground/versions/more_citytile_15/main.py | jzZjGQMr3cAv   | 24.4053658      | μ=26.986, σ=0.860  | 152
+/Users/flynnwang/dev/playground/versions/baseline/main.py | 4GG7er6PpZ7P   | 18.4686148      | μ=21.431, σ=0.988  | 127
 
 
 
@@ -23,9 +33,23 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/versions/baseline/main.py | yhBRbJiXz1du   | 19.9770905      | μ=22.585, σ=0.869  | 162
 
 * try select build city tile round
+
 Total Matches: 105 | Matches Queued: 23
 Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
 /Users/flynnwang/dev/playground/lux_perspective/main.py | aIUgNAlWRf6l   | 25.6763579      | μ=29.523, σ=1.282  | 54
 /Users/flynnwang/dev/playground/versions/more_citytile_10/main.py | Nwjp93nH0Dig   | 24.8476294      | μ=28.452, σ=1.201  | 52
 /Users/flynnwang/dev/playground/versions/more_citytile_15/main.py | 5NIvUe6McWdM   | 24.5985483      | μ=28.261, σ=1.221  | 53
 /Users/flynnwang/dev/playground/versions/baseline/main.py | n5j4hTZO5Jga   | 17.2385194      | μ=21.729, σ=1.497  | 51
+
+
+* Try discount city build locations
+
+Total Matches: 304 | Matches Queued: 24
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | dY2BQ6aBQEsE   | 26.9468698      | μ=29.538, σ=0.864  | 159
+/Users/flynnwang/dev/playground/versions/more_citytile_15/main.py | LzXJknmxl5ar   | 23.7341977      | μ=26.216, σ=0.827  | 166
+/Users/flynnwang/dev/playground/versions/more_citytile_10/main.py | lO7Lp3xbq8tl   | 23.5424299      | μ=26.064, σ=0.841  | 157
+/Users/flynnwang/dev/playground/versions/baseline/main.py | b4d6I9JwuPDu   | 15.9079358      | μ=18.953, σ=1.015  | 126
+
+
+
