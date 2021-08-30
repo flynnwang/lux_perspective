@@ -169,6 +169,7 @@ class ShortestPath:
     # print(f'path points {self.start_pos}, totol_append={total_append}', file=sys.stderr)
     return path_positions
 
+
 class Strategy:
 
   def __init__(self):
@@ -186,8 +187,14 @@ class Strategy:
     self.actions = []
 
     for unit in self.game.player.units:
-      unit.next_action = None
+      unit.has_planned_action = False
       unit.target_pos = None
+
+  def add_unit_action(self, unit, action):
+    assert unit.has_planned_action == False
+
+    unit.has_planned_action = True
+    self.actions.append(action)
 
 
   def cell_near_resource(self, cell):
@@ -335,7 +342,7 @@ class Strategy:
     g = self.game
     player = g.player
     workers = [unit for unit in player.units
-               if unit.is_worker() and unit.can_act()]
+               if unit.is_worker() and not unit.has_planned_action]
 
     def compute_weight(worker, next_position, shortest_path,
                        shortest_path_points):
@@ -354,7 +361,9 @@ class Strategy:
       return 0
 
     def gen_next_positions(worker):
-      assert worker.can_act()
+      if not worker.can_act():
+        return [worker.pos]
+
       # TODO: skip non-reachable positions?
       return [worker.pos] + get_neighbour_positions(worker.pos, g.map)
 
@@ -383,7 +392,7 @@ class Strategy:
         d[pos].append(i)
       return d
 
-    position_to_index = get_position_to_index()
+    position_to_indices = get_position_to_index()
     C = np.zeros((len(workers), len(next_positions)))
     for worker_idx, worker in enumerate(workers):
       shortest_path = self.shortet_paths[worker.id]
@@ -391,31 +400,28 @@ class Strategy:
       shortest_path_points = None
       if worker.target_pos is not None:
         shortest_path_points = shortest_path.compute_shortest_path_points(worker.target_pos)
-        # if DEBUG:
-          # print('  ' , worker_idx, shortest_path_points, file=sys.stderr)
+        if DEBUG:
+          print(f'  w[{worker.id}]={worker.pos}, target={worker.target_pos}, S_path={shortest_path_points}', file=sys.stderr)
 
       for next_position in gen_next_positions(worker):
-        for poi_idx in position_to_index[next_position]:
-          poi_idx = position_to_index[next_position]
-          wt = compute_weight(worker, next_position,
-                              shortest_path, shortest_path_points)
-          C[worker_idx, poi_idx] = wt
+        wt = compute_weight(worker, next_position,
+                            shortest_path, shortest_path_points)
+        C[worker_idx, position_to_indices[next_position]] = wt
+        if DEBUG:
+          print(f'w[{worker.id}]  goto {next_position} wt = {wt}', file=sys.stderr)
 
-          # if DEBUG:
-            # print(f'w[{worker_idx}]  goto {next_position} wt = {wt}', file=sys.stderr)
- 
     # print(f'turn={g.turn}, compute_worker_moves before linear_sum_assignment',
           # file=sys.stderr)
     rows, cols = scipy.optimize.linear_sum_assignment(C, maximize=True)
     for worker_idx, poi_idx in zip(rows, cols):
       worker = workers[worker_idx]
+      if not worker.can_act():
+        continue
+
       next_position = next_positions[poi_idx]
-
       move_dir = worker.pos.direction_to(next_position)
-      self.actions.append(worker.move(move_dir))
+      self.add_unit_action(worker, worker.move(move_dir))
 
-    # print(f'turn={g.turn}, compute_worker_moves after linear_sum_assignment',
-          # file=sys.stderr)
 
 
   def try_build_citytile(self):
@@ -424,9 +430,9 @@ class Strategy:
       if not unit.is_worker():
         continue
 
-      if unit.can_act() and unit.can_build(self.game.map) and t < BUILD_CITYTILE_ROUND:
-        unit.target_pos = None
-        self.actions.append(unit.build_city())
+      if (unit.can_act() and unit.can_build(self.game.map)
+          and t < BUILD_CITYTILE_ROUND):
+        self.add_unit_action(unit, unit.build_city())
 
   def compute_citytile_actions(self):
     player = self.game.player
