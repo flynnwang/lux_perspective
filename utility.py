@@ -146,6 +146,14 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
                                                             unit_cooldown, cooldown)
 
 
+def city_wont_last_at_nights(turn, city):
+  fuel = city.fuel
+  light_upkeep = city.light_upkeep
+
+  # TODO(): can add more value to make city last
+  turn %= CIRCLE_LENGH
+  nights = min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
+  return fuel // light_upkeep < nights
 
 
 

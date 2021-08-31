@@ -1,5 +1,13 @@
 """
-* Test BUILD_CITYTILE_ROUND = 30
+* change distance decay, lower city tile weight
+* Build city (near resource tile) as fast as possible
+
+Total Matches: 46 | Matches Queued: 21
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 3Jy8n7beiwHu   | 22.1920000      | μ=26.087, σ=1.298  | 46
+/Users/flynnwang/dev/playground/versions/count_worker_night/main.py | uVU80xzPKObH   | 20.0176943      | μ=23.913, σ=1.298  | 46
+
+* Goto city that will last.
 
 TODO:
 * Add units (enemy and mine) to cell and check blocking
@@ -12,7 +20,7 @@ import numpy as np
 import scipy.optimize
 
 from lux.game import Game
-from lux.game_map import Cell, RESOURCE_TYPES
+from lux.game_map import Cell, RESOURCE_TYPES, Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
@@ -20,10 +28,14 @@ from utility import *
 
 DEBUG = True
 
-BUILD_CITYTILE_ROUND = 30
+BUILD_CITYTILE_ROUND = 24
 
 MAX_PATH_WEIGHT = 99999
 
+
+def dist_decay(dist, map):
+  decay = map.width
+  return (dist / decay) + 1
 
 def is_within_map_range(pos, map):
   return 0 <= pos.x < map.width and 0 <= pos.y < map.height
@@ -35,6 +47,8 @@ def worker_total_cargo(worker):
 
 def worker_enough_cargo_to_build(worker):
   return worker_total_cargo(worker) >= CITY_BUILD_COST
+
+
 
 def get_neighbour_positions(pos, map):
   check_dirs = [
@@ -51,10 +65,37 @@ def get_neighbour_positions(pos, map):
     positions.append(newpos)
   return positions
 
+N9_DIRS = [(-1, 1), (0, 1), (1, 1),
+           (-1, 0), (1, 0),
+           (-1, -1), (0, -1), (1, -1)]
+
+def get_nb9_positions(pos, map):
+  positions = []
+  for dx, dy in N9_DIRS:
+    newpos = Position(pos.x+dx, pos.y+dy)
+    if is_within_map_range(newpos, map):
+      positions.append(newpos)
+  return positions
+
 
 def cell_has_opponent_citytile(cell, game):
   citytile = cell.citytile
   return citytile is not None and citytile.team == game.opponent_id
+
+
+def get_cell_resource_value(cell, player):
+  if not cell.has_resource():
+    return 0
+
+  v = 0.1
+  resource = cell.resource
+  if (resource.type == Constants.RESOURCE_TYPES.COAL
+      and not player.researched_coal()):
+    return v
+  if (resource.type == Constants.RESOURCE_TYPES.URANIUM
+      and not player.researched_uranium()):
+    return v
+  return resource.amount * get_resource_to_fuel_rate(resource)
 
 
 class LuxGame(Game):
@@ -179,7 +220,8 @@ class Strategy:
 
 
   def cell_near_resource(self, cell):
-    for pos in get_neighbour_positions(cell.pos, self.map):
+    # for pos in get_neighbour_positions(cell.pos, self.map):
+    for pos in get_nb9_positions(cell.pos, self.map):
       nb_cell = self.map.get_cell_by_pos(pos)
       if nb_cell.has_resource():
         return True
@@ -221,18 +263,6 @@ class Strategy:
     def is_citytiles(x):
       return len(resource_tiles) <= x < len(resource_tiles) + len(city_tiles)
 
-    def get_cell_resource_value(cell):
-      if not cell.has_resource():
-        return 0
-
-      resource = cell.resource
-      if (resource.type == Constants.RESOURCE_TYPES.COAL
-          and not player.researched_coal()):
-        return 0
-      if (resource.type == Constants.RESOURCE_TYPES.URANIUM
-          and not player.researched_uranium()):
-        return 0
-      return resource.amount * get_resource_to_fuel_rate(resource)
 
     def get_resource_weight(worker, resource_tile, dist, unit_night_count):
       if worker.get_cargo_space_left() == 0:
@@ -251,17 +281,28 @@ class Strategy:
       if unit_night_count < target_night_count:
         return 0
 
-      wt = get_cell_resource_value(resource_tile)
+      wt = get_cell_resource_value(resource_tile, player)
       for newpos in get_neighbour_positions(resource_tile.pos, self.game.map):
         nb_cell = self.game.map.get_cell_by_pos(newpos)
-        wt += get_cell_resource_value(nb_cell)
-      return wt / (dist + 1)
+        wt += get_cell_resource_value(nb_cell, player)
+      return wt / dist_decay(dist, g.map)
 
-    def get_city_tile_weight(worker, citytile, dist):
-      # TODO: why so large?
+    def get_city_tile_weight(worker, citytile, dist, unit_night_count):
+      FULL_WORKER_WEIGHT = 10000
+      CITYTILE_LOST_WEIGHT = 1000
+
+      target_night_count = get_night_count_by_dist(g.turn, dist, worker.cooldown,
+                                                   get_unit_action_cooldown(worker))
+      if unit_night_count < target_night_count:
+        return 0
+
+      wt = 1
       if worker.get_cargo_space_left() == 0:
-        return 50000 / (dist + 1)
-      return 0.1 / (dist + 1)
+        wt += FULL_WORKER_WEIGHT
+        city = g.player.cities[citytile.cityid]
+        if city_wont_last_at_nights(g.turn, city):
+          wt += len(city.citytiles) * CITYTILE_LOST_WEIGHT
+      return wt / dist_decay(dist, g.map)
 
     def get_near_resource_tile_weight(worker, near_resource_tile, dist,
                                       unit_night_count):
@@ -285,7 +326,7 @@ class Strategy:
       for pos in get_neighbour_positions(near_resource_tile.pos, self.map):
         nb_cell = self.map.get_cell_by_pos(pos)
         if nb_cell.has_resource():
-          res_wt += get_cell_resource_value(nb_cell)
+          res_wt += get_cell_resource_value(nb_cell, player)
 
         ct = nb_cell.citytile
         if ct and ct.team == self.game.player.team:
@@ -293,10 +334,14 @@ class Strategy:
 
       v = res_wt
       if build_city_bonus:
-        v += nb_citytile_count * 100
+        # v += nb_citytile_count * 50
+        v += 1000
         v *= 100
 
       # print(f' >> near_v={v}', file=sys.stderr)
+      # return v / dist_decay(dist, g.map)
+
+      # Build city as fast as possible.
       return v / (dist + 1)
 
     # Value matrix for ship target assginment
@@ -317,7 +362,7 @@ class Strategy:
         if is_resource_tile(j):
           v = get_resource_weight(worker, target, dist, unit_night_count)
         elif is_citytiles(j):
-          v = get_city_tile_weight(worker, target, dist)
+          v = get_city_tile_weight(worker, target, dist, unit_night_count)
         else:
           # near resoure tiles
           v = get_near_resource_tile_weight(worker, target, dist,
@@ -366,7 +411,17 @@ class Strategy:
         worker_to_next_pos_dist = shortest_path_points[next_position]
         next_pos_to_target_dist = target_dist - worker_to_next_pos_dist
         if next_pos_to_target_dist < target_dist:
-          v += 10
+          v += 100
+
+        # try not step on citytile
+        next_cell = g.map.get_cell_by_pos(next_position)
+        # if next_cell.citytile is not None:
+          # v -= 50
+
+        # try step on resource
+        rv = get_cell_resource_value(next_cell, g.player)
+        v += rv / 100
+
         return v
       return 0
 
@@ -440,8 +495,13 @@ class Strategy:
       if not unit.is_worker():
         continue
 
+      # if (unit.can_act() and unit.can_build(self.game.map)
+          # and t < BUILD_CITYTILE_ROUND):
+        # self.add_unit_action(unit, unit.build_city())
+
+      # Sitting on th cell of target position for city building.
       if (unit.can_act() and unit.can_build(self.game.map)
-          and t < BUILD_CITYTILE_ROUND):
+          and unit.target_pos and unit.target_pos == unit.pos):
         self.add_unit_action(unit, unit.build_city())
 
   def compute_citytile_actions(self):

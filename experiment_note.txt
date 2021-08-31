@@ -1,5 +1,10 @@
 
 
+# 2021-09-01
+* Test BUILD_CITYTILE_ROUND = 24
+* use neighbour 9 for citytile buidling
+* add weight for citytile if it won't last in night
+
 
 # 2021-08-31
 
