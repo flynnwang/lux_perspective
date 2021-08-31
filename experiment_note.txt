@@ -1,6 +1,15 @@
 
 
 
+# 2021-08-31
+
+* Do not go into far away target and die at night
+
+Total Matches: 105 | Matches Queued: 24
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | c3UvME34GbrO   | 26.2389458      | μ=29.739, σ=1.167  | 71
+/Users/flynnwang/dev/playground/versions/shortest_path_v1/main.py | Aqp14o9ATAwU   | 21.0346771      | μ=24.237, σ=1.067  | 69
+/Users/flynnwang/dev/playground/versions/more_citytile_20/main.py | hyUiGmJTOKsn   | 18.9588067      | μ=22.226, σ=1.089  | 70
 
 
 # 2021-08-30
@@ -13,7 +22,6 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/versions/more_citytile_10/main.py | NvdxD71BcyyN   | 24.9904737      | μ=27.535, σ=0.848  | 160
 /Users/flynnwang/dev/playground/versions/more_citytile_15/main.py | jzZjGQMr3cAv   | 24.4053658      | μ=26.986, σ=0.860  | 152
 /Users/flynnwang/dev/playground/versions/baseline/main.py | 4GG7er6PpZ7P   | 18.4686148      | μ=21.431, σ=0.988  | 127
-
 
 
 baseline v1:

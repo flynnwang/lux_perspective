@@ -1,6 +1,5 @@
 """
-* Do not go into far away target and die at night
-
+* Test BUILD_CITYTILE_ROUND = 30
 
 TODO:
 * Add units (enemy and mine) to cell and check blocking
@@ -21,7 +20,7 @@ from utility import *
 
 DEBUG = True
 
-BUILD_CITYTILE_ROUND = 20
+BUILD_CITYTILE_ROUND = 30
 
 MAX_PATH_WEIGHT = 99999
 
@@ -233,12 +232,9 @@ class Strategy:
       if (resource.type == Constants.RESOURCE_TYPES.URANIUM
           and not player.researched_uranium()):
         return 0
-
-      value = resource.amount * get_resource_to_fuel_rate(resource)
-      return value
+      return resource.amount * get_resource_to_fuel_rate(resource)
 
     def get_resource_weight(worker, resource_tile, dist, unit_night_count):
-      # TODO: do not go outside with empty resoure in the night
       if worker.get_cargo_space_left() == 0:
         return 0
 
