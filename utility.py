@@ -22,6 +22,7 @@ CITY_BUILD_COST = params('CITY_BUILD_COST')
 
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
 
+MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
 
 def get_unit_type_string(unit_type):
   return 'WORKER' if unit_type == Constants.UNIT_TYPES.WORKER else 'CART'
@@ -31,6 +32,10 @@ def get_unit_upkeep(unit):
 
 def get_unit_action_cooldown(unit):
   return UNIT_ACTION_COOLDOWN[get_unit_type_string(unit.type)]
+
+
+def get_city_no(city):
+  return int(city.cityid.split('_')[1])
 
 
 def get_resource_to_fuel_rate(resource):

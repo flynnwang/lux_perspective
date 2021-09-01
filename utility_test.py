@@ -1,7 +1,7 @@
 
 
 from utility import *
-from lux.game_objects import Cargo
+from lux.game_objects import Cargo, City
 
 
 def _make_cargo(w, c, u):
@@ -87,3 +87,14 @@ def test_get_night_count_by_dist():
   assert get_night_count_by_dist(2, 15, 0, cooldown) == 1
   assert get_night_count_by_dist(3, 15, 0, cooldown) == 2
   assert get_night_count_by_dist(4, 15, 0, cooldown) == 5
+
+
+def test_get_city_no():
+  city = City(0, 'c_10', 0, 0)
+
+  assert get_city_no(city) == 10
+
+
+
+def test_constants():
+  assert MAX_RESEARCH_POINTS == 200

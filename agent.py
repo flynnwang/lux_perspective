@@ -1,18 +1,5 @@
 """
-* change distance decay, lower city tile weight
-* Build city (near resource tile) as fast as possible
-
-Total Matches: 46 | Matches Queued: 21
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/lux_perspective/main.py | 3Jy8n7beiwHu   | 22.1920000      | μ=26.087, σ=1.298  | 46
-/Users/flynnwang/dev/playground/versions/count_worker_night/main.py | uVU80xzPKObH   | 20.0176943      | μ=23.913, σ=1.298  | 46
-
-* [revert] Goto city that will last.
-
-Total Matches: 35 | Matches Queued: 22
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | ZMzTU6l9Ouc6   | 21.9197191      | μ=26.046, σ=1.376  | 35
-/Users/flynnwang/dev/playground/lux_perspective/main.py | AzuetvwJAIRi   | 19.8268789      | μ=23.954, σ=1.376  | 35
+* limit research point to 200 and build worker with new citytiles.
 
 TODO:
 * Add units (enemy and mine) to cell and check blocking
@@ -258,15 +245,15 @@ class Strategy:
             # TODO: add dist 2 neighbour
 
 
-    city_tiles = g.player_city_tiles * MAX_UNIT_PER_CITY
+    citytiles = g.player_city_tiles * MAX_UNIT_PER_CITY
 
-    targets = resource_tiles + city_tiles + near_resource_tiles
+    targets = resource_tiles + citytiles + near_resource_tiles
 
     def is_resource_tile(x):
       return x < len(resource_tiles)
 
     def is_citytiles(x):
-      return len(resource_tiles) <= x < len(resource_tiles) + len(city_tiles)
+      return len(resource_tiles) <= x < len(resource_tiles) + len(citytiles)
 
 
     def get_resource_weight(worker, resource_tile, dist, unit_night_count):
@@ -515,14 +502,34 @@ class Strategy:
     total_tile_count = player.city_tile_count
     total_unit_count = len(player.units)
 
-    for _, city in player.cities.items():
-      for citytile in city.citytiles:
-        if citytile.can_act():
-          if total_unit_count < total_tile_count:
-            self.actions.append(citytile.build_worker())
-            total_unit_count += 1
-          else:
-            self.actions.append(citytile.research())
+    cur_research_points = player.research_points
+
+    cities = list(player.cities.values())
+    cities = sorted(cities, key=lambda c: get_city_no(c), reverse=True)
+    action_citytile_positions = set()
+
+
+    def every_citytiles(cities):
+      for city in cities:
+        for citytile in city.citytiles:
+          if not citytile.can_act():
+            continue
+          yield citytile
+
+    for citytile in every_citytiles(cities)
+      if total_unit_count < total_tile_count:
+        total_unit_count += 1
+        self.actions.append(citytile.build_worker())
+        action_citytile_positions.add(citytile.pos)
+
+    cities = sorted(cities, key=lambda c: get_city_no(c))
+    for citytile in every_citytiles(cities):
+      if citytile.pos in cities:
+        continue
+      if cur_research_points < MAX_RESEARCH_POINTS:
+        cur_research_points += 1
+        self.actions.append(citytile.research())
+
 
   def compute_unit_shortest_paths(self):
     self.shortet_paths = {}
@@ -531,7 +538,6 @@ class Strategy:
       shortest_path = ShortestPath(self.game, unit.pos)
       shortest_path.compute()
       self.shortet_paths[unit.id] = shortest_path
-
 
   def execute(self):
     actions = self.actions
