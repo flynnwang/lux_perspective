@@ -7,7 +7,12 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/lux_perspective/main.py | 3Jy8n7beiwHu   | 22.1920000      | μ=26.087, σ=1.298  | 46
 /Users/flynnwang/dev/playground/versions/count_worker_night/main.py | uVU80xzPKObH   | 20.0176943      | μ=23.913, σ=1.298  | 46
 
-* Goto city that will last.
+* [revert] Goto city that will last.
+
+Total Matches: 35 | Matches Queued: 22
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | ZMzTU6l9Ouc6   | 21.9197191      | μ=26.046, σ=1.376  | 35
+/Users/flynnwang/dev/playground/lux_perspective/main.py | AzuetvwJAIRi   | 19.8268789      | μ=23.954, σ=1.376  | 35
 
 TODO:
 * Add units (enemy and mine) to cell and check blocking
@@ -299,6 +304,7 @@ class Strategy:
       wt = 1
       if worker.get_cargo_space_left() == 0:
         wt += FULL_WORKER_WEIGHT
+
         city = g.player.cities[citytile.cityid]
         if city_wont_last_at_nights(g.turn, city):
           wt += len(city.citytiles) * CITYTILE_LOST_WEIGHT
