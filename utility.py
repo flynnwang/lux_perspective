@@ -45,6 +45,18 @@ def get_resource_to_fuel_rate(resource):
   return params('RESOURCE_TO_FUEL_RATE')[type_name]
 
 
+def get_worker_collection_rate(resource):
+  type_name = resource
+  if isinstance(resource, Resource):
+    type_name = resource.type.upper()
+  return params('WORKER_COLLECTION_RATE')[type_name]
+
+
+def is_resource_wood(resource):
+  return (resource.type == Constants.RESOURCE_TYPES.WOOD
+          and resource.amount > 0)
+
+
 def cargo_night_endurance(cargo, upkeep):
   cargo = deepcopy(cargo)
   if cargo.wood == 0 and cargo.coal == 0 and cargo.uranium == 0:
@@ -80,6 +92,9 @@ def cargo_night_endurance(cargo, upkeep):
 def is_day(turn):
   turn %= CIRCLE_LENGH
   return turn < DAY_LENGTH
+
+def is_night(turn):
+  return not is_day(turn)
 
 
 def get_night_count_by_days(turn, days):
