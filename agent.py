@@ -4,19 +4,58 @@
 * Only focus on near resource tile for building
 
 
-# Firsty try
-
 Total Matches: 131 | Matches Queued: 19
 Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
 /Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 1eJKYDLxJr9B   | 24.1486851      | μ=26.726, σ=0.859  | 131
 /Users/flynnwang/dev/playground/lux_perspective/main.py | 4UwG826nuJ9d   | 20.6959079      | μ=23.274, σ=0.859  | 131
 
+
 * Use collect amount to define resource weight
 * Skip citytile during night
 
+Total Matches: 22 | Matches Queued: 18
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | QCSlghFk3qpd   | 21.2978680      | μ=28.406, σ=2.369  | 22
+/Users/flynnwang/dev/playground/lux_perspective/main.py | OOC4EmHMBWW0   | 14.4867675      | μ=21.594, σ=2.369  | 22
+
+
+* use collect amount X fuel rate, revert night forbidden_positions.
+
+Total Matches: 41 | Matches Queued: 19
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | HCmof1oX6QfD   | 23.0505634      | μ=27.061, σ=1.337  | 41
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 59h0nB9ntfen   | 18.9291842      | μ=22.939, σ=1.337  | 41
+
+
+* revert night weights
+
+Total Matches: 44 | Matches Queued: 20
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | XA6yt0G6RDpw   | 22.9055557      | μ=26.636, σ=1.244  | 44
+/Users/flynnwang/dev/playground/lux_perspective/main.py | hhED6DV4wMVJ   | 19.6328387      | μ=23.364, σ=1.244  | 44
+
+
+* Move to city that will last at night
+
+Total Matches: 109 | Matches Queued: 19
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | j3bqdqRms2Et   | 23.4153534      | μ=26.061, σ=0.882  | 109
+/Users/flynnwang/dev/playground/lux_perspective/main.py | a4ymKWS0ZTjP   | 21.2940286      | μ=23.939, σ=0.882  | 109
+
+
+* Use near resource tile cell value with worker cargo to boost its weight
+
+Tournament - ID: roq9bF, Name: Lux AI Season 1 Tournament | Dimension - ID: GMvRXx, Name: Lux
+Status: running | Competitors: 2 | Rank System: trueskill
+
+Total Matches: 64 | Matches Queued: 20
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 83Rj0D3ZYg8A   | 22.3923900      | μ=25.528, σ=1.045  | 64
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 2ewpYlZUbSVn   | 21.3372860      | μ=24.472, σ=1.045  | 64
+
+
 
 # TODO: build city away from near resource tile
-* Estimate collect rate 
 
 
 TODO:
@@ -44,7 +83,8 @@ MAX_PATH_WEIGHT = 99999
 
 
 def dist_decay(dist, game_map):
-  decay = game_map.width
+  # decay = game_map.width
+  decay = 1
   return (dist / decay) + 1
 
 def is_within_map_range(pos, game_map):
@@ -54,8 +94,8 @@ def worker_total_cargo(worker):
   cargo = worker.cargo
   return (cargo.wood + cargo.coal + cargo.uranium)
 
-def worker_enough_cargo_to_build(worker):
-  return worker_total_cargo(worker) >= CITY_BUILD_COST
+def worker_enough_cargo_to_build(worker, near_resource_tile_value):
+  return worker_total_cargo(worker) + near_resource_tile_value >= CITY_BUILD_COST
 
 
 def get_neighbour_positions(pos, game_map):
@@ -109,8 +149,9 @@ def get_cell_resource_value(cell, player):
     return 0
 
   resource = cell.resource
-  rate = get_worker_collection_rate(resource)
-  return min(rate, resource.amount)
+  collection_rate = get_worker_collection_rate(resource)
+  fuel_rate = get_resource_to_fuel_rate(resource)
+  return min(collection_rate, resource.amount) * fuel_rate
 
 
 def mark_boundary_resource(resource_tiles, game_map):
@@ -368,7 +409,14 @@ class Strategy:
       # if self.is_wood_citytile(citytile) and worker_total_cargo(worker) > 0:
         # wt = 0
       # else:
-      wt = 0
+      wt = 0.1
+
+      city = g.player.cities[citytile.cityid]
+      city_will_last = not city_wont_last_at_nights(g.turn, city)
+      round_night_count = get_night_count_this_round(g.turn)
+      if is_night(g.turn) and city_will_last and unit_night_count < round_night_count:
+        wt += 1
+
       if worker.get_cargo_space_left() == 0:
         # wt += FULL_WORKER_WEIGHT
         city = g.player.cities[citytile.cityid]
@@ -384,22 +432,26 @@ class Strategy:
       if unit_night_count < target_night_count:
         return -1
 
-      build_city_bonus = False
-      t = self.game.turn % CIRCLE_LENGH
-      # days_left = BUILD_CITYTILE_ROUND - t - worker.cooldown
-      if (worker_enough_cargo_to_build(worker)
-          and t < BUILD_CITYTILE_ROUND):
-          # and days_left >= (dist - 1) * get_unit_action_cooldown(worker) + 1):
-        build_city_bonus = True
-
-      v = 0
+      res = 0
       for pos in get_neighbour_positions(near_resource_tile.pos, g.game_map):
         nb_cell = g.game_map.get_cell_by_pos(pos)
         if nb_cell.has_resource():
-          v += get_cell_resource_value(nb_cell, player)
+          res += get_cell_resource_value(nb_cell, player)
 
+      build_city_bonus = False
+      t = self.game.turn % CIRCLE_LENGH
+      days_left = BUILD_CITYTILE_ROUND - t - worker.cooldown
+      if (worker_enough_cargo_to_build(worker, res)
+          and t < BUILD_CITYTILE_ROUND
+          and days_left >= (dist - 1) * get_unit_action_cooldown(worker) + 1):
+        build_city_bonus = True
+
+      v = 0.1 + res
+
+      cargo_full_rate = worker_total_cargo(worker) / WORKER_RESOURCE_CAPACITY
+      v = v * (np.e ** cargo_full_rate)
       if build_city_bonus:
-        v = v * 10 + 10000
+        v = v + 10000
 
       # Build city as fast as possible.
       return v / (dist + 1)
@@ -481,13 +533,13 @@ class Strategy:
       v = 0
       next_cell = g.game_map.get_cell_by_pos(next_position)
       # try not step on citytile
-      if (next_cell.citytile is not None
-          and next_cell.citytile.team == g.player.team
-          and is_night(g.turn)):
-        citytile = next_cell.citytile
-        city = g.player.cities[citytile.cityid]
-        if city_wont_last_at_nights(g.turn, city):
-          v -= 5
+      # if (next_cell.citytile is not None
+          # and next_cell.citytile.team == g.player.team
+          # and is_night(g.turn)):
+        # citytile = next_cell.citytile
+        # city = g.player.cities[citytile.cityid]
+        # if city_wont_last_at_nights(g.turn, city):
+          # v -= 5
 
       if next_position in shortest_path_points:
         v += 1
@@ -623,11 +675,11 @@ class Strategy:
 
     empty_set = set()
     for unit in self.game.player.units:
-      forbidden_positions = (self.citytile_positions
-                             if (worker_total_cargo(unit) > 0
-                                 and is_night(self.game.turn))
-                             else empty_set)
-      shortest_path = ShortestPath(self.game, unit.pos, forbidden_positions)
+      # forbidden_positions = (self.citytile_positions
+                             # if (worker_total_cargo(unit) > 0
+                                 # and is_night(self.game.turn))
+                             # else empty_set)
+      shortest_path = ShortestPath(self.game, unit.pos, empty_set)
       shortest_path.compute()
       self.shortet_paths[unit.id] = shortest_path
 

@@ -18,6 +18,7 @@ CIRCLE_LENGH = DAY_LENGTH + NIGHT_LENGTH
 
 UNIT_ACTION_COOLDOWN = params('UNIT_ACTION_COOLDOWN')
 WORKER_ACTION_COOLDOWN = UNIT_ACTION_COOLDOWN["WORKER"]
+WORKER_RESOURCE_CAPACITY = params('RESOURCE_CAPACITY')['WORKER']
 CITY_BUILD_COST = params('CITY_BUILD_COST')
 
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
@@ -93,8 +94,14 @@ def is_day(turn):
   turn %= CIRCLE_LENGH
   return turn < DAY_LENGTH
 
+
 def is_night(turn):
   return not is_day(turn)
+
+
+def get_night_count_this_round(turn):
+  turn %= CIRCLE_LENGH
+  return NIGHT_LENGTH - turn
 
 
 def get_night_count_by_days(turn, days):

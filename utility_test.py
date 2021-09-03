@@ -98,3 +98,18 @@ def test_get_city_no():
 
 def test_constants():
   assert MAX_RESEARCH_POINTS == 200
+
+
+def test_city_wont_last_at_nights():
+  city = City(0, 'c_10', fuel=4, light_upkeep=2)
+  assert not city_wont_last_at_nights(39, city)
+
+  city = City(0, 'c_10', fuel=4, light_upkeep=2)
+  assert not city_wont_last_at_nights(38, city)
+
+  city = City(0, 'c_10', fuel=4, light_upkeep=2)
+  assert city_wont_last_at_nights(37, city)
+
+  city = City(0, 'c_10', fuel=5, light_upkeep=2)
+  assert not city_wont_last_at_nights(38, city)
+
