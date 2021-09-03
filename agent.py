@@ -83,8 +83,8 @@ MAX_PATH_WEIGHT = 99999
 
 
 def dist_decay(dist, game_map):
-  # decay = game_map.width
-  decay = 1
+  decay = game_map.width
+  # decay = 1
   return (dist / decay) + 1
 
 def is_within_map_range(pos, game_map):
@@ -454,8 +454,8 @@ class Strategy:
         v = v + 10000
 
       # Build city as fast as possible.
-      return v / (dist + 1)
-      # return v / dist_decay(dist, g.map)
+      # return v / (dist + 1)
+      return v / dist_decay(dist, g.map)
 
     def get_worker_tile_weight(worker, target):
       if worker.pos == target.pos:
