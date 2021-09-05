@@ -5,6 +5,7 @@ from copy import deepcopy
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux.game_map import Resource
+from lux.game_objects import Cargo
 
 
 def params(key):
@@ -24,6 +25,11 @@ CITY_BUILD_COST = params('CITY_BUILD_COST')
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
 
 MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
+
+
+def is_within_map_range(pos, game_map):
+  return 0 <= pos.x < game_map.width and 0 <= pos.y < game_map.height
+
 
 def get_unit_type_string(unit_type):
   return 'WORKER' if unit_type == Constants.UNIT_TYPES.WORKER else 'CART'
@@ -53,10 +59,48 @@ def get_worker_collection_rate(resource):
   return params('WORKER_COLLECTION_RATE')[type_name]
 
 
+def worker_total_cargo(worker):
+  cargo = worker.cargo
+  return (cargo.wood + cargo.coal + cargo.uranium)
+
+
+def worker_total_fuel(worker):
+  wood_fuel_rate = get_resource_to_fuel_rate('WOOD')
+  coal_fuel_rate = get_resource_to_fuel_rate('COAL')
+  uranium_fuel_rate = get_resource_to_fuel_rate('URANIUM')
+  cargo = worker.cargo
+  return (cargo.wood * wood_fuel_rate
+          + cargo.coal * coal_fuel_rate
+          + cargo.uranium * uranium_fuel_rate)
+
+
+def worker_cargo_full_rate(worker):
+  return worker_total_cargo(worker) / WORKER_RESOURCE_CAPACITY
+
+
 def is_resource_wood(resource):
   return (resource.type == Constants.RESOURCE_TYPES.WOOD
           and resource.amount > 0)
 
+def is_resource_coal(resource):
+  return (resource.type == Constants.RESOURCE_TYPES.COAL
+          and resource.amount > 0)
+
+def is_resource_uranium(resource):
+  return (resource.type == Constants.RESOURCE_TYPES.URANIUM
+          and resource.amount > 0)
+
+def resource_to_cargo(resource):
+  cargo = Cargo()
+  if resource is None:
+    return cargo
+  if is_resource_wood(resource):
+    cargo.wood = resource.amount
+  if is_resource_coal(resource):
+    cargo.coal = resource.amount
+  if is_resource_uranium(resource):
+    cargo.uranium = resource.amount
+  return cargo
 
 def cargo_night_endurance(cargo, upkeep):
   cargo = deepcopy(cargo)
@@ -101,7 +145,7 @@ def is_night(turn):
 
 def get_night_count_this_round(turn):
   turn %= CIRCLE_LENGH
-  return NIGHT_LENGTH - turn
+  return min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
 
 
 def get_night_count_by_days(turn, days):
@@ -173,8 +217,8 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
                                                             unit_cooldown, cooldown)
 
 
-def city_wont_last_at_nights(turn, city):
-  fuel = city.fuel
+def city_wont_last_at_nights(turn, city, add_fuel=0):
+  fuel = city.fuel + add_fuel
   light_upkeep = city.light_upkeep
 
   # TODO(): can add more value to make city last
