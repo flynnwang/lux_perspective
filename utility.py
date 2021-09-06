@@ -102,6 +102,11 @@ def resource_to_cargo(resource):
     cargo.uranium = resource.amount
   return cargo
 
+
+def resource_fuel(resource):
+  return resource.amount * get_resource_to_fuel_rate(resource)
+
+
 def cargo_night_endurance(cargo, upkeep):
   cargo = deepcopy(cargo)
   if cargo.wood == 0 and cargo.coal == 0 and cargo.uranium == 0:
