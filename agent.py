@@ -1,53 +1,18 @@
 """
 
-* Limit maximum amount when compute resource weight
-* Bugfix on worker_enough_cargo_to_build() from fuel to amount
-* Support Dying woker weights on global and local moves.
-* Check near_resource_tile target blocked by citytile.
-* Only pass through enemy unit which can't act (but not player unit)
-* Try lower city tile boost value for full cargo worker: 1
-* Raise default weight 0.1 for any resource tile
+* Add cluster task assignment.
 
-Total Matches: 443 | Matches Queued: 11
+Total Matches: 310 | Matches Queued: 7
 Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | W4frPn0iVPSo   | 25.2599588      | μ=27.776, σ=0.839  | 443
-/Users/flynnwang/dev/playground/lux_perspective/main.py | lmojnyTBNFB9   | 19.7072696      | μ=22.224, σ=0.839  | 443
+/Users/flynnwang/dev/playground/lux_perspective/main.py | dZWx98fVYhLF   | 23.8722553      | μ=26.287, σ=0.805  | 211
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | cPzlOXvKfqqp   | 21.1380997      | μ=23.527, σ=0.796  | 207
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 52QGdnzOVOqe   | 20.7752570      | μ=23.165, σ=0.797  | 202
 
 
-* Fix resource.amount
-Total Matches: 107 | Matches Queued: 11
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | VitC7Rawf5Ee   | 24.4715737      | μ=27.310, σ=0.946  | 107
-/Users/flynnwang/dev/playground/lux_perspective/main.py | rSHgEc2FvHXq   | 19.8509722      | μ=22.690, σ=0.946  | 107
-
-
-* Only build city tile before 24
-* Move to citytile to save city giving 20+ boost
-* use small decay for resource (encourge explore)
-
-Total Matches: 66 | Matches Queued: 8
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | VbMmNeBaaAdN   | 24.3048438      | μ=28.020, σ=1.238  | 66
-/Users/flynnwang/dev/playground/lux_perspective/main.py | hh4J08m8A17j   | 18.2643310      | μ=21.980, σ=1.238  | 66
-
-
-* Drop the boost weight for near resource tile.
-* Boost step planning of resource mining worker
-
-
-Total Matches: 208 | Matches Queued: 7
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | QXETR4JVggnF   | 22.3338552      | μ=24.803, σ=0.823  | 138
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 7fpP0QuD1NfG   | 22.0795301      | μ=24.528, σ=0.816  | 145
-/Users/flynnwang/dev/playground/lux_perspective/main.py | XHAa2mYP3c1D   | 21.4132871      | μ=23.895, σ=0.827  | 133
-
-
-* In left round (24-30), save city as possible.
 
 
 # Doing
 * Raise priority of near_resource_tile targeted worker
-
 
 
 # TODO
@@ -329,6 +294,7 @@ class ShortestPath:
 
 
 
+# TODO: add near resource tile to cluster
 class ClusterInfo:
 
   def __init__(self, game):
@@ -338,6 +304,7 @@ class ClusterInfo:
     self.cluster_fuel = {}  # (cluster_id, cluster fuel)
     self.cluster_citytile_count = {}
     self.max_cluster_fuel = 0
+    self.max_cluster_id = 0
 
   def set_cid(self, pos, cid):
     self.position_to_cid[pos.x][pos.y] = cid
@@ -537,7 +504,7 @@ class Strategy:
       return False
 
     MAX_WEIGHT_VALUE = 10000
-    CLUSTER_BOOST_WEIGHT = 100
+    CLUSTER_BOOST_WEIGHT = 200
     def get_resource_weight(worker, resource_tile, dist, unit_night_count):
       # Use dist - 1, because then the worker will get resource.
       target_night_count = get_night_count_by_dist(g.turn, dist-1, worker.cooldown,
@@ -557,12 +524,15 @@ class Strategy:
                                            g.game_map)
       wt += fuel
 
-      # cluster_fuel_factor = self.cluster_info.query_cluster_fuel_factor(resource_tile.pos)
-      # wt += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
+      cid = self.cluster_info.get_cid(resource_tile.pos)
+      boost_cluster = 0
+      if worker.target_cid > 0 and worker.target_cid == cid:
+        cluster_fuel_factor = self.cluster_info.query_cluster_fuel_factor(resource_tile.pos)
+        boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
       # return wt / dist_decay(dist, g.game_map) + CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
-      # return wt / (dist + 1)
-      return wt / dist_decay(dist, g.game_map)
+      return wt / (dist + 1) + boost_cluster
+      # return wt / dist_decay(dist, g.game_map)
 
     def get_city_tile_weight(worker, citytile, dist, unit_night_count):
       """
@@ -598,7 +568,7 @@ class Strategy:
       days_left = DAY_LENGTH - self.circle_turn - worker.cooldown
       unit_time_cost = (dist - 1) * get_unit_action_cooldown(worker) + 1
       if worker.get_cargo_space_left() == 0 and unit_time_cost <= days_left:
-        wt += 10
+        wt += 1
         # boost_city_lost_wt = True
 
       n_citytile = len(city.citytiles)
@@ -742,10 +712,14 @@ class Strategy:
       target = targets[target_idx]
       worker.target_pos = target.pos
 
+      # TODO: skip negative weight.
       if DEBUG:
         # print(f'worker[{worker_idx}], v={weights[worker_idx, target_idx]}', file=sys.stderr)
         # x = annotate.x(worker.pos.x, worker.pos.y)
         c = annotate.circle(target.pos.x, target.pos.y)
+        if worker.target_cid > 0:
+          c = annotate.x(target.pos.x, target.pos.y)
+
         line = annotate.line(worker.pos.x, worker.pos.y, target.pos.x, target.pos.y)
         self.actions.extend([c, line])
 
@@ -806,8 +780,8 @@ class Strategy:
 
         # demote target cell one next move
 
-      # if worker.id == 'u_1':
-        # print(f"w[{worker.id}], next[{next_position}], v={v}, target={worker.target_pos}, fuel={fuel}", file=sys.stderr)
+      if worker.id == 'u_3':
+        print(f"w[{worker.id}], next[{next_position}], v={v}, target={worker.target_pos}, fuel={fuel}", file=sys.stderr)
 
       return v
 
@@ -945,9 +919,13 @@ class Strategy:
   def assign_worker_to_resource_cluster(self):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
       And set its target pos."""
+    # Computes worker property. TODO move it out of this function.
     workers = [unit for unit in self.game.player.units
                if unit.is_worker() and unit.target_pos is None]
     for i, worker in enumerate(workers):
+      worker.target_cid = -1
+      worker.cid_to_tile_pos = {}
+
       worker.unit_night_count = cargo_night_endurance(worker.cargo, get_unit_upkeep(worker))
 
       round_night_count = get_night_count_this_round(self.game.turn)
@@ -956,55 +934,70 @@ class Strategy:
     if self.game.player.city_tile_count < 2:
       return
 
-    cid_citytiles = list(self.cluster_info.cluster_citytile_count.items())
-    cid_citytiles = sorted(cid_citytiles, key=lambda x: x[1], reverse=True)
+    if self.cluster_info.max_cluster_id == 0:
+      return
 
-    # for cid in range(self.cluster_info.max_cluster_id):
-    for cid, n_citytile in cid_citytiles:
-      # n_citytile = self.cluster_info.cluster_citytile_count[cid]
-      # Ignore city with too much citytile
-      # if n_citytile >= 2:
-        # continue
-
+    def worker_cluster_dist(worker, cid):
       x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
-      # Ignore small resource cluster
-      if len(x_pos) <= 1:
-        continue
+      n_resource_tile = len(x_pos)
 
+      shortest_path = self.shortet_paths[worker.id]
       best_pos = None
-      best_worker = None
       best_dist = MAX_PATH_WEIGHT
       for x, y in zip(x_pos, y_pos):
         pos = Position(x, y)
-        for worker in workers:
-          if worker.target_pos is not None:
-            continue
+        dist = shortest_path.shortest_dist(pos)
+        if best_dist <= dist:
+          continue
 
-          shortest_path = self.shortet_paths[worker.id]
-          dist = shortest_path.shortest_dist(pos)
-          if dist >= best_dist:
-            continue
+        target_night_count = get_night_count_by_dist(self.game.turn, dist-1,
+                                                     worker.cooldown,
+                                                     get_unit_action_cooldown(worker))
+        if worker.unit_night_count < target_night_count:
+          continue
+        best_dist = dist
+        best_pos = pos
+      return best_dist, best_pos, n_resource_tile
 
-          target_night_count = get_night_count_by_dist(self.game.turn, dist-1,
-                                                       worker.cooldown, get_unit_action_cooldown(worker))
-          if worker.unit_night_count < target_night_count:
-            continue
-          best_dist = dist
-          best_pos = pos
-          best_worker = worker
+    def get_cluster_weight(worker, cid):
+      fuel = self.cluster_info.cluster_fuel[cid]
+      tile_dist, tile_pos, n_tile = worker_cluster_dist(worker, cid)
+      if tile_dist >= MAX_PATH_WEIGHT:
+        return -1
+      # Save tile position
+      worker.cid_to_tile_pos[cid] = tile_pos
 
-      if best_worker:
-        best_worker.target_pos = best_pos
-        x = annotate.x(best_pos.x, best_pos.y)
-        line = annotate.line(best_worker.pos.x, best_worker.pos.y, best_pos.x, best_pos.y)
-        self.actions.extend([x, line])
+      # if n_tile <= 1:
+        # return 1
+      wt = fuel / ((tile_dist / 5) + 1)
+      return wt
 
-        if n_citytile >= 2 or worker.get_cargo_space_left() == 0:
-          best_worker.ignore_it = True
 
-    for w in workers:
-      if hasattr(w, 'ignore_it'):
-        w.target_pos = None
+    resource_clusters = list(range(self.cluster_info.max_cluster_id))
+    weights = np.ones((len(workers), len(resource_clusters))) * -1
+    for j, cid in enumerate(resource_clusters):
+      for i, worker in enumerate(workers):
+        weights[i, j] = get_cluster_weight(worker, cid)
+
+    rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
+    for worker_idx, cluster_idx in zip(rows, cols):
+      worker = workers[worker_idx]
+      cid = resource_clusters[cluster_idx]
+      if weights[worker_idx, cluster_idx] < 0:
+        continue
+
+      # n_citytile >= 2?
+      if worker.get_cargo_space_left() == 0:
+        # Skip full worker to build citytile first
+        continue
+
+      worker.target_cid = cid
+
+      # for debugging.
+      tile_pos = worker.cid_to_tile_pos[cid]
+      x = annotate.x(tile_pos.x, tile_pos.y)
+      line = annotate.line(worker.pos.x, worker.pos.y, tile_pos.x, tile_pos.y)
+      self.actions.extend([x, line])
 
 
   def execute(self):

@@ -1,5 +1,53 @@
 
 
+## 2021-09-0
+
+
+* Limit maximum amount when compute resource weight
+* Bugfix on worker_enough_cargo_to_build() from fuel to amount
+* Support Dying woker weights on global and local moves.
+* Check near_resource_tile target blocked by citytile.
+* Only pass through enemy unit which can't act (but not player unit)
+* Try lower city tile boost value for full cargo worker: 1
+* Raise default weight 0.1 for any resource tile
+
+Total Matches: 443 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | W4frPn0iVPSo   | 25.2599588      | μ=27.776, σ=0.839  | 443
+/Users/flynnwang/dev/playground/lux_perspective/main.py | lmojnyTBNFB9   | 19.7072696      | μ=22.224, σ=0.839  | 443
+
+
+* Fix resource.amount
+Total Matches: 107 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | VitC7Rawf5Ee   | 24.4715737      | μ=27.310, σ=0.946  | 107
+/Users/flynnwang/dev/playground/lux_perspective/main.py | rSHgEc2FvHXq   | 19.8509722      | μ=22.690, σ=0.946  | 107
+
+
+* Only build city tile before 24
+* Move to citytile to save city giving 20+ boost
+* use small decay for resource (encourge explore)
+
+Total Matches: 66 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | VbMmNeBaaAdN   | 24.3048438      | μ=28.020, σ=1.238  | 66
+/Users/flynnwang/dev/playground/lux_perspective/main.py | hh4J08m8A17j   | 18.2643310      | μ=21.980, σ=1.238  | 66
+
+
+* Drop the boost weight for near resource tile.
+* Boost step planning of resource mining worker
+
+
+Total Matches: 208 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | QXETR4JVggnF   | 22.3338552      | μ=24.803, σ=0.823  | 138
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 7fpP0QuD1NfG   | 22.0795301      | μ=24.528, σ=0.816  | 145
+/Users/flynnwang/dev/playground/lux_perspective/main.py | XHAa2mYP3c1D   | 21.4132871      | μ=23.895, σ=0.827  | 133
+
+
+* In left round (24-30), save city as possible.
+
+
 
 ## 2021-09-03
 
