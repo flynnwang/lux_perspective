@@ -1,18 +1,5 @@
 """
 
-* Add cluster task assignment.
-
-Total Matches: 310 | Matches Queued: 7
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/lux_perspective/main.py | dZWx98fVYhLF   | 23.8722553      | μ=26.287, σ=0.805  | 211
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | cPzlOXvKfqqp   | 21.1380997      | μ=23.527, σ=0.796  | 207
-/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 52QGdnzOVOqe   | 20.7752570      | μ=23.165, σ=0.797  | 202
-
-
-* Update unit step prioripy, only boost for next position in shortest path.
-* Limit max worker to build, but not limit citytile
-
-
 
 # Doing
 * Raise priority of near_resource_tile targeted worker

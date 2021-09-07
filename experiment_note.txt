@@ -1,6 +1,30 @@
 
 
-## 2021-09-0
+
+
+## 2021-09-07
+
+* Add cluster task assignment.
+
+Total Matches: 310 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | dZWx98fVYhLF   | 23.8722553      | μ=26.287, σ=0.805  | 211
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | cPzlOXvKfqqp   | 21.1380997      | μ=23.527, σ=0.796  | 207
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 52QGdnzOVOqe   | 20.7752570      | μ=23.165, σ=0.797  | 202
+
+
+* Update unit step prioripy, only boost for next position in shortest path.
+* Limit max worker to build, but not limit citytile
+
+Total Matches: 350 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | GzG6aOM4Znxq   | 25.5647316      | μ=28.050, σ=0.828  | 234
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | PPJz8rGibznN   | 21.4861582      | μ=23.877, σ=0.797  | 233
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 8ZmeZPyjj220   | 20.3470058      | μ=22.787, σ=0.813  | 233
+
+
+
+## 2021-09-06
 
 
 * Limit maximum amount when compute resource weight
