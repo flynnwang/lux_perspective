@@ -9,6 +9,9 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 52QGdnzOVOqe   | 20.7752570      | μ=23.165, σ=0.797  | 202
 
 
+* Update unit step prioripy, only boost for next position in shortest path.
+* Limit max worker to build, but not limit citytile
+
 
 
 # Doing
@@ -21,7 +24,6 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 
 
 TODO
-* Limit max worker to build, but not limit citytile
 
 
 TODO:
@@ -47,6 +49,8 @@ DEBUG = True
 BUILD_CITYTILE_ROUND = 24
 
 MAX_PATH_WEIGHT = 99999
+
+MAX_UNIT_NUM = 50
 
 
 def dist_decay(dist, game_map):
@@ -743,14 +747,6 @@ class Strategy:
         return 0
 
       v = 0
-      # Priority all positions of th dying worker, let others make room for him.
-      if worker.is_dying:
-        v += 100
-
-      cell = self.game_map.get_cell_by_pos(worker.target_pos)
-      if cell.has_resource():
-        v += 50
-
       next_cell = g.game_map.get_cell_by_pos(next_position)
       # try not step on citytile: not good
       # if (next_cell.citytile is not None
@@ -760,7 +756,6 @@ class Strategy:
         # city = g.player.cities[citytile.cityid]
         # if city_wont_last_at_nights(g.turn, city):
           # v -= 0.1
-
       fuel = 0
       if next_position in shortest_path_points:
         v += 1
@@ -771,17 +766,25 @@ class Strategy:
         if next_pos_to_target_dist < target_dist:
           v += 10
 
-        # Try step on resource: the worker version is better, maybe because
-        # other worker can use that.
-        # amount, fuel = get_cell_resource_values(next_cell, g.player, unit=None)
-        amount, fuel = get_cell_resource_values(next_cell, g.player, unit=worker)
-        if fuel > 0:
-          v += 1
+          # Priority all positions of th dying worker, let others make room for him.
+          if worker.is_dying:
+            v += 100
+
+          cell = self.game_map.get_cell_by_pos(worker.target_pos)
+          if cell.has_resource():
+            v += 50
+
+          # Try step on resource: the worker version is better, maybe because
+          # other worker can use that.
+          # amount, fuel = get_cell_resource_values(next_cell, g.player, unit=None)
+          amount, fuel = get_cell_resource_values(next_cell, g.player)
+          if fuel > 0:
+            v += 1
 
         # demote target cell one next move
 
-      if worker.id == 'u_3':
-        print(f"w[{worker.id}], next[{next_position}], v={v}, target={worker.target_pos}, fuel={fuel}", file=sys.stderr)
+      # if worker.id in ['u_3', 'u_1']:
+        # print(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, target={worker.target_pos}, fuel={fuel}", file=sys.stderr)
 
       return v
 
@@ -848,6 +851,8 @@ class Strategy:
       move_dir = worker.pos.direction_to(next_position)
       self.add_unit_action(worker, worker.move(move_dir))
 
+      # print(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={C[worker_idx, poi_idx]}, target={worker.target_pos}", file=sys.stderr)
+
 
   def try_build_citytile(self):
     t = self.game.turn % CIRCLE_LENGH
@@ -884,7 +889,7 @@ class Strategy:
           yield citytile
 
     for citytile in every_citytiles(cities):
-      if total_unit_count < total_tile_count:
+      if total_unit_count < total_tile_count and total_unit_count < MAX_UNIT_NUM:
         total_unit_count += 1
         self.actions.append(citytile.build_worker())
         action_citytile_positions.add(citytile.pos)
