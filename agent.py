@@ -3,6 +3,11 @@
 
 
 
+* add cell near city as target.
+* check transfer condition and do transfer.
+
+
+
 * give multiple worker to coal & uranium cell
 * worker forward fuel (from coal and uranium) to city better
 
@@ -80,7 +85,11 @@ def get_nb9_positions(pos, game_map):
 
 def cell_has_opponent_citytile(cell, game):
   citytile = cell.citytile
-  return citytile is not None and citytile.team == game.opponent_id
+  return citytile is not None and citytile.team == game.opponent.team
+
+def cell_has_player_citytile(cell, game):
+  citytile = cell.citytile
+  return citytile is not None and citytile.team == game.player.team
 
 
 def is_resource_researched(resource, player):
@@ -133,15 +142,6 @@ def get_one_step_collection_values(cell, player, game_map):
     amount += a
     fuel += f
   return amount, fuel
-
-
-def mark_boundary_resource(resource_tiles, game_map):
-  for cell in resource_tiles:
-    cell.is_boundary_resource = False
-    for pos in get_neighbour_positions(cell.pos, game_map):
-      nb_cell = game_map.get_cell_by_pos(pos)
-      if not nb_cell.has_resource() and nb_cell.citytile is None:
-        cell.is_boundary_resource = True
 
 
 class LuxGame(Game):
@@ -421,6 +421,12 @@ class Strategy:
       cell = self.game_map.get_cell_by_pos(unit.pos)
       cell.unit = unit
 
+  def has_citytile_neighbours(self, cell):
+    for newpos in get_neighbour_positions(cell.pos, self.game_map):
+      nb_cell = self.game_map.get_cell_by_pos(newpos)
+      if cell_has_opponent_citytile(cell, self.game):
+        return True
+    return False
 
   def assign_worker_target(self):
     MAX_UNIT_PER_CITY = 4
@@ -430,57 +436,36 @@ class Strategy:
     workers = [unit for unit in player.units
                if unit.is_worker() and unit.target_pos is None]
 
-    # TODO: remove unit occupied by opponent_unit and opponent_citytile
-    resource_tiles: list[Cell] = []
-    citytiles = []
-    near_resource_tiles = []
-    worker_tiles = []
-    citytile_count = 0
+    def is_near_resource_cell(cell):
+      return (not cell.has_resource()
+              and cell.citytile is None
+              and self.cell_near_done_research_resource(cell))
+
+    target_cells = []
     for y in range(g.map_height):
       for x in range(g.map_width):
         cell = g.game_map.get_cell(x, y)
         cell.is_near_resource = False
+        cell.is_citytile_neighbour = False
 
-        if cell.citytile and cell.citytile.team == player.team:
-          # TODO: move it to a common place
+        is_target_cell = False
+        if cell_has_player_citytile(cell, self.game):
           cell.citytile.cell = cell
-          citytiles.append(cell.citytile)
-          continue
-
-        if cell.has_resource():
-          resource_tiles.append(cell)
-          continue
-
-        if (not cell.has_resource()
-            and cell.citytile is None
-            and self.cell_near_done_research_resource(cell)):
-          near_resource_tiles.append(cell)
+          target_cells.extend([cell] * MAX_UNIT_PER_CITY)
+        elif cell.has_resource():
+          is_target_cell = True
+        elif is_near_resource_cell(cell):
           cell.is_near_resource = True
-          continue
+          is_target_cell = True
+        elif self.has_citytile_neighbours(cell):
+          cell.is_citytile_neighbour = True
+          is_target_cell = True
+        elif (hasattr(cell, 'unit') and cell.unit.team == player.team):
+          cell.is_worker_cell = True
+          is_target_cell = True
 
-        if hasattr(cell, 'unit') and cell.unit.team == player.team:
-          worker_tiles.append(cell)
-          continue
-        # TODO: add dist 2 neighbour
-
-    # mark_boundary_resource(resource_tiles, g.game_map)
-
-    assert len(citytiles) == len(g.player_city_tiles)
-    n_citytile = len(citytiles)
-    citytiles = citytiles * MAX_UNIT_PER_CITY
-
-    targets = resource_tiles + citytiles + near_resource_tiles + worker_tiles
-
-    def is_resource_tile(x):
-      return x < len(resource_tiles)
-
-    def is_citytiles(x):
-      return len(resource_tiles) <= x < len(resource_tiles) + len(citytiles)
-
-    def is_near_res_tiles(x):
-      low = len(resource_tiles) + len(citytiles)
-      high = low + len(near_resource_tiles)
-      return low <= x < high
+        if is_target_cell:
+          target_cells.append(cell)
 
     def is_resource_tile_can_save_dying_worker(resource_tile, worker):
       if (not resource_tile.has_resource()
@@ -523,7 +508,7 @@ class Strategy:
       return wt / (dist + 1) + boost_cluster
       # return wt / dist_decay(dist, g.game_map)
 
-    def get_city_tile_weight(worker, citytile, dist, unit_night_count):
+    def get_city_tile_weight(worker, city_cell, dist, unit_night_count):
       """
       1. collect fuel
       2. protect dying worker [at night]
@@ -538,6 +523,7 @@ class Strategy:
 
       # amount, fuel = get_one_step_collection_values(citytile.cell, player, g.game_map)
       # wt = fuel # base score.
+      citytile = city_cell.citytile
       wt = 0
 
       # Try to hide in the city if worker will run out of fuel at night
@@ -636,20 +622,22 @@ class Strategy:
         # print(f"w[{worker.id}], fuel={fuel}, wt={wt}, bonus={build_city_bonus}", file=sys.stderr)
       return wt / (dist + 1)
 
+    def get_city_tile_neighbour_weight(cell):
+      return 0.1
+
     def get_worker_tile_weight(worker, target):
       if worker.pos == target.pos:
         return 0.1
       return -1
 
 
-
     # Value matrix for ship target assginment
     # * row: workers
     # * column: point of interests
-    weights = np.zeros((len(workers), len(targets)))
+    weights = np.zeros((len(workers), len(target_cells)))
 
     # MAIN_PRINT
-    print((f'*turn={g.turn}, #W={len(workers)}, #C={n_citytile} '
+    print((f'*turn={g.turn}, #W={len(workers)}, #C={player.city_tile_count} '
            f'R={g.player.research_points}'),
           file=sys.stderr)
     for i, worker in enumerate(workers):
@@ -659,42 +647,36 @@ class Strategy:
       # if worker.id == 'u_29':
         # print(f"w[{worker.id}], unit_night_count={unit_night_count}, round_night_count={round_night_count}", file=sys.stderr)
 
-      for j, target in enumerate(targets):
-        # print(f'----S, i={i}, j={j}, {worker.id}')
+      for j, target in enumerate(target_cells):
+        # Can't arrive at target cell.
         shortest_path = self.shortet_paths[worker.id]
         dist = shortest_path.shortest_dist(target.pos)
         if dist >= MAX_PATH_WEIGHT:
           continue
 
         v = 0
-        if is_resource_tile(j):
-          v = get_resource_weight(worker, target, dist, unit_night_count)
-        elif is_citytiles(j):
+        if cell_has_player_citytile(target, self.game):
           v = get_city_tile_weight(worker, target, dist, unit_night_count)
-        elif is_near_res_tiles(j):
-          # near resoure tiles
+        elif target.has_resource():
+          v = get_resource_weight(worker, target, dist, unit_night_count)
+        elif target.is_near_resource:
           v = get_near_resource_tile_weight(worker, target, dist,
                                             unit_night_count)
+        elif target.is_citytile_neighbour:
+          v = get_city_tile_neighbour_weight(target)
         else:
           v = get_worker_tile_weight(worker, target)
-          # if v > 0:
-            # print(f'nct_wt[{target.pos}]={v}', file=sys.stderr)
-
-        # if worker.id == 'u_3' and target.pos in [Position(3, 14), Position(2, 13),
-                                                 # Position(4, 16)]:
-          # print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
-        # if worker.id == 'u_29' and target.pos == Position(4, 6):
-          # print(f"w[{worker.id}], t[{target.pos}], wt={v}", file=sys.stderr)
-        # if worker.id == 'u_29' and target.pos == Position(0, 0):
-          # print(f"w[{worker.id}], t[{target.pos}], wt={v}", file=sys.stderr)
-
         weights[i, j] = v
+
+        # if worker.id == 'u_1' and target.pos in [Position(4, 7), Position(4, 8),
+                                                 # Position(4, 9)]:
+          # print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
 
 
     rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
     for worker_idx, target_idx in zip(rows, cols):
       worker = workers[worker_idx]
-      target = targets[target_idx]
+      target = target_cells[target_idx]
       worker.target_pos = target.pos
 
       # TODO: skip negative weight.
