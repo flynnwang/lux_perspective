@@ -1,17 +1,39 @@
 """
 
+* make can_not_act worker weight as MAX when compute next move
+* make enemy citytile weight as MAX when compute next move
+* boost city weight when cargo is full
+* Try fix step move weight -1 issue on map 258834615
 
-# Doing
-* Raise priority of near_resource_tile targeted worker
+Total Matches: 218 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | cwM0goq3Vqeu   | 24.7388388      | μ=27.358, σ=0.873  | 114
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | y7egVymUYvhE   | 24.5274083      | μ=27.111, σ=0.861  | 115
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | aKNSomUVRuBP   | 23.2311555      | μ=25.854, σ=0.874  | 108
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | fBxW63XFzStt   | 20.7812039      | μ=23.538, σ=0.919  | 99
+
+* Build city ASAP for cluster targeted worker
+* If worker is build city, do not move onto it.
+
+Total Matches: 169 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | uSTvajCPIGaD   | 25.7304544      | μ=28.698, σ=0.989  | 83
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 3LP0kv1D7VvJ   | 25.3548629      | μ=28.472, σ=1.039  | 99
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | xnHS9Ly4RxVx   | 21.1616515      | μ=24.181, σ=1.006  | 80
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | L0heUIpoL2BU   | 15.4124924      | μ=19.353, σ=1.313  | 76
+
+
+* skip cluster boost score if agent is near, plus increase cluster boost weight.
+* inc cluster worker size
+
+* give multiple worker to coal & uranium cell
+* worker forward fuel (from coal and uranium) to city better
 
 
 # TODO
 * give some weight to not finished research resource (arrive at them earlier)
 * Add resource weight to city tile.
-
-
-TODO
-
+* Raise priority of near_resource_tile targeted worker
 
 TODO:
 * Add units (enemy and mine) to cell and check blocking
@@ -126,11 +148,11 @@ def estimate_cell_night_count(cell, upkeep, game_map):
   return nights
 
 
-def get_unit_collection_values(cell, player, unit, game_map):
-  amount, fuel = get_cell_resource_values(cell, player, unit)
+def get_one_step_collection_values(cell, player, game_map):
+  amount, fuel = get_cell_resource_values(cell, player)
   for newpos in get_neighbour_positions(cell.pos, game_map):
     nb_cell = game_map.get_cell_by_pos(newpos)
-    a, f = get_cell_resource_values(nb_cell, player, unit)
+    a, f = get_cell_resource_values(nb_cell, player)
     amount += a
     fuel += f
   return amount, fuel
@@ -511,8 +533,7 @@ class Strategy:
       if is_resource_tile_can_save_dying_worker(resource_tile, worker):
         wt += MAX_WEIGHT_VALUE * 2
 
-      _, fuel = get_unit_collection_values(resource_tile, player, worker,
-                                           g.game_map)
+      _, fuel = get_one_step_collection_values(resource_tile, player, g.game_map)
       wt += fuel
 
       cid = self.cluster_info.get_cid(resource_tile.pos)
@@ -538,8 +559,7 @@ class Strategy:
       if unit_night_count < target_night_count:
         return -1
 
-      # amount, fuel = get_unit_collection_values(citytile.cell, player, worker,
-                                                # g.game_map)
+      # amount, fuel = get_one_step_collection_values(citytile.cell, player, g.game_map)
       # wt = fuel # base score.
       wt = 0
 
@@ -554,15 +574,26 @@ class Strategy:
         # print(f"w[{worker.id}], t[{citytile.pos}], turn_c={self.circle_turn >= BUILD_CITYTILE_ROUND}, dying={worker.is_dying}, city_last={city_will_last}", file=sys.stderr)
 
       # TODO(wangfei): estimate worker will full
-      boost_city_lost_wt = False
-
-      days_left = DAY_LENGTH - self.circle_turn - worker.cooldown
-      unit_time_cost = (dist - 1) * get_unit_action_cooldown(worker) + 1
-      if worker.get_cargo_space_left() == 0 and unit_time_cost <= days_left:
-        wt += 1
-        # boost_city_lost_wt = True
 
       n_citytile = len(city.citytiles)
+
+      # Boost when worker is full and can arrive at city
+      days_left = DAY_LENGTH - self.circle_turn - worker.cooldown
+      unit_time_cost = (dist - 1) * get_unit_action_cooldown(worker) + 1
+      city_left_days = math.ceil(city.fuel / city.light_upkeep)
+      round_nights = get_night_count_this_round(g.turn)
+      if worker.get_cargo_space_left() == 0 and unit_time_cost <= days_left:
+        wt += 100
+
+        # More weights on dying city
+        if city_left_days < round_nights:
+          wt += n_citytile * CITYTILE_LOST_WEIGHT
+
+      # When there is not fuel on the map.
+      if self.cluster_info.max_cluster_fuel == 0:
+        wt += 100
+
+
       # TODO: support night
       # Save more citytile if worker has enough resource to save it
       # - enough time to arrive
@@ -575,13 +606,6 @@ class Strategy:
           and city_left_days < NIGHT_LENGTH
           and city_left_days_deposited > NIGHT_LENGTH
           and city_left_days_deposited - city_left_days >= (20 // n_citytile)):
-        boost_city_lost_wt = True
-
-      # When there is not fuel on the map.
-      if self.cluster_info.max_cluster_fuel == 0:
-        boost_city_lost_wt = True
-
-      if boost_city_lost_wt:
         wt += CITYTILE_LOST_WEIGHT * len(city.citytiles)
 
       # return wt / dist_decay(dist, g.game_map)
@@ -596,8 +620,7 @@ class Strategy:
       if unit_night_count < target_night_count:
         return -1
 
-      amount, fuel = get_unit_collection_values(near_resource_tile, player,
-                                                worker, g.game_map)
+      amount, fuel = get_one_step_collection_values(near_resource_tile, player, g.game_map)
 
       wt = 0.1 + fuel
 
@@ -632,12 +655,16 @@ class Strategy:
         wt += MAX_WEIGHT_VALUE
 
       # return wt / dist_decay(dist, g.map)
+      # if worker.id == 'u_1' and target.pos in [Position(5, 10), Position(4, 7)]:
+        # print(f"w[{worker.id}], fuel={fuel}, wt={wt}, bonus={build_city_bonus}", file=sys.stderr)
       return wt / (dist + 1)
 
     def get_worker_tile_weight(worker, target):
       if worker.pos == target.pos:
         return 0.1
       return -1
+
+
 
     # Value matrix for ship target assginment
     # * row: workers
@@ -659,15 +686,8 @@ class Strategy:
         # print(f'----S, i={i}, j={j}, {worker.id}')
         shortest_path = self.shortet_paths[worker.id]
         dist = shortest_path.shortest_dist(target.pos)
-
-        # if worker.id == 'u_29' and target.pos == Position(4, 7):
-          # print(f'-- dist={dist} is_resource_tile={is_resource_tile(j)}, ct={is_citytiles(j)}, nrt={is_near_res_tiles(j)}')
-
         if dist >= MAX_PATH_WEIGHT:
           continue
-
-        # if worker.id == 'u_29' and target.pos == Position(4, 7):
-          # print(f' not skip ? dist={dist} MAX_PATH_WEIGHT={MAX_PATH_WEIGHT}, {dist >=MAX_PATH_WEIGHT}')
 
         v = 0
         if is_resource_tile(j):
@@ -683,12 +703,9 @@ class Strategy:
           # if v > 0:
             # print(f'nct_wt[{target.pos}]={v}', file=sys.stderr)
 
-        # if DEBUG:
-          # t = annotate.text(target.pos.x, target.pos.y, f'{v:.1f}')
-          # print(t, file=sys.stderr)
-          # self.actions.append(t)
-        # if worker.id == 'u_1' and v > 0:
-          # print(f"w[{worker.id}], t[{target.pos}], wt={v:.1f}", file=sys.stderr)
+        # if worker.id == 'u_3' and target.pos in [Position(3, 14), Position(2, 13),
+                                                 # Position(4, 16)]:
+          # print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
         # if worker.id == 'u_29' and target.pos == Position(4, 6):
           # print(f"w[{worker.id}], t[{target.pos}], wt={v}", file=sys.stderr)
         # if worker.id == 'u_29' and target.pos == Position(0, 0):
@@ -727,14 +744,27 @@ class Strategy:
       # if w.target_pos:
         # unit_target_positions.add(w.target_pos)
 
-    def compute_weight(worker, next_position, shortest_path,
+    MAX_MOVE_WEIGHT = 9999
+    def get_step_weight(worker, next_position, shortest_path,
                        shortest_path_points):
       """Only workers next 5 positions will be computed here."""
-      if worker.target_pos is None or shortest_path_points is None:
-        return 0
+      if worker.pos == next_position:
+        # If a worker can't move, it's a stone.
+        if not worker.can_act():
+          return MAX_MOVE_WEIGHT
 
-      v = 0
+        # If woker is building city.
+        if worker.is_building_city:
+          return MAX_MOVE_WEIGHT
+
+      assert worker.target_pos is not None
+      assert shortest_path_points is not None
+
       next_cell = g.game_map.get_cell_by_pos(next_position)
+      if (next_cell.citytile is not None
+          and next_cell.citytile.team == self.game.opponent.team):
+        return -MAX_MOVE_WEIGHT
+
       # try not step on citytile: not good
       # if (next_cell.citytile is not None
           # and next_cell.citytile.team == g.player.team
@@ -744,6 +774,7 @@ class Strategy:
         # if city_wont_last_at_nights(g.turn, city):
           # v -= 0.1
       fuel = 0
+      v = 0
       if next_position in shortest_path_points:
         v += 1
 
@@ -751,7 +782,7 @@ class Strategy:
         worker_to_next_pos_dist = shortest_path_points[next_position]
         next_pos_to_target_dist = target_dist - worker_to_next_pos_dist
         if next_pos_to_target_dist < target_dist:
-          v += 10
+          v += 50
 
           # Priority all positions of th dying worker, let others make room for him.
           if worker.is_dying:
@@ -759,7 +790,7 @@ class Strategy:
 
           cell = self.game_map.get_cell_by_pos(worker.target_pos)
           if cell.has_resource():
-            v += 50
+            v += 1
 
           # Try step on resource: the worker version is better, maybe because
           # other worker can use that.
@@ -771,7 +802,7 @@ class Strategy:
         # demote target cell one next move
 
       # if worker.id in ['u_3', 'u_1']:
-        # print(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, target={worker.target_pos}, fuel={fuel}", file=sys.stderr)
+      # print(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, target={worker.target_pos}, fuel={fuel}", file=sys.stderr)
 
       return v
 
@@ -809,7 +840,7 @@ class Strategy:
       return d
 
     position_to_indices = get_position_to_index()
-    C = np.ones((len(workers), len(next_positions))) * -1
+    C = np.ones((len(workers), len(next_positions))) * -MAX_MOVE_WEIGHT
     for worker_idx, worker in enumerate(workers):
       shortest_path = self.shortet_paths[worker.id]
 
@@ -820,11 +851,11 @@ class Strategy:
           # print(f'  w[{worker.id}]={worker.pos}, target={worker.target_pos}, S_path={shortest_path_points}', file=sys.stderr)
 
       for next_position in gen_next_positions(worker):
-        wt = compute_weight(worker, next_position,
+        wt = get_step_weight(worker, next_position,
                             shortest_path, shortest_path_points)
         C[worker_idx, position_to_indices[next_position]] = wt
         # if DEBUG:
-          # print(f'w[{worker.id}]  goto {next_position} wt = {wt}', file=sys.stderr)
+        # print(f'w[{worker.id}]@{worker.pos} goto {next_position}, wt = {wt}', file=sys.stderr)
 
     # print(f'turn={g.turn}, compute_worker_moves before linear_sum_assignment',
           # file=sys.stderr)
@@ -834,16 +865,26 @@ class Strategy:
       if not worker.can_act():
         continue
 
+      wt = C[worker_idx, poi_idx]
+      if wt < 0:
+        print((f"w[{worker.id}]@{worker.pos}, next[{next_position}], "
+              f"v={C[worker_idx, poi_idx]}, target={worker.target_pos}"),
+              file=sys.stderr)
+        assert wt >= 0
+
       next_position = next_positions[poi_idx]
       move_dir = worker.pos.direction_to(next_position)
       self.add_unit_action(worker, worker.move(move_dir))
 
-      # print(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={C[worker_idx, poi_idx]}, target={worker.target_pos}", file=sys.stderr)
+      # print((f"w[{worker.id}]@{worker.pos}, next[{next_position}], "
+             # f"v={C[worker_idx, poi_idx]}, target={worker.target_pos}"),
+            # file=sys.stderr)
 
 
   def try_build_citytile(self):
     t = self.game.turn % CIRCLE_LENGH
     for unit in self.game.player.units:
+      unit.is_building_city = False
       if not unit.is_worker():
         continue
 
@@ -851,10 +892,12 @@ class Strategy:
       if (self.circle_turn < BUILD_CITYTILE_ROUND
           and unit.can_act()
           and unit.can_build(self.game.game_map)
-          and unit.target_pos and unit.target_pos == unit.pos):
+          and (unit.target_pos and unit.target_pos == unit.pos
+               or unit.target_cid > 0)):
         cell = self.game_map.get_cell_by_pos(unit.pos)
-        if cell.is_near_resource:
-          self.add_unit_action(unit, unit.build_city())
+        # if cell.is_near_resource:
+        self.add_unit_action(unit, unit.build_city())
+        unit.is_building_city = True
 
   def compute_citytile_actions(self):
     player = self.game.player
@@ -976,11 +1019,6 @@ class Strategy:
       worker = workers[worker_idx]
       cid = resource_clusters[cluster_idx]
       if weights[worker_idx, cluster_idx] < 0:
-        continue
-
-      # n_citytile >= 2?
-      if worker.get_cargo_space_left() == 0:
-        # Skip full worker to build citytile first
         continue
 
       worker.target_cid = cid

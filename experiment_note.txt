@@ -22,6 +22,13 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | PPJz8rGibznN   | 21.4861582      | μ=23.877, σ=0.797  | 233
 /Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | 8ZmeZPyjj220   | 20.3470058      | μ=22.787, σ=0.813  | 233
 
+Total Matches: 296 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | dNpiQvFtPzbl   | 26.3496491      | μ=28.999, σ=0.883  | 151
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | hb9D9m1v0fly   | 22.0345976      | μ=24.492, σ=0.819  | 168
+/Users/flynnwang/dev/playground/versions/fast_city_far_resource/main.py | F5RczBnS48Gv   | 20.7976869      | μ=23.340, σ=0.847  | 142
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | mJPpfoMrjpWF   | 18.6338814      | μ=21.295, σ=0.887  | 131
+
 
 
 ## 2021-09-06
