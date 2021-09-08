@@ -1,5 +1,98 @@
 
 
+# 2021-09-08
+
+* make can_not_act worker weight as MAX when compute next move
+* make enemy citytile weight as MAX when compute next move
+* boost city weight when cargo is full
+* Try fix step move weight -1 issue on map 258834615
+
+Total Matches: 218 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | cwM0goq3Vqeu   | 24.7388388      | μ=27.358, σ=0.873  | 114
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | y7egVymUYvhE   | 24.5274083      | μ=27.111, σ=0.861  | 115
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | aKNSomUVRuBP   | 23.2311555      | μ=25.854, σ=0.874  | 108
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | fBxW63XFzStt   | 20.7812039      | μ=23.538, σ=0.919  | 99
+
+* Build city ASAP for cluster targeted worker
+* If worker is build city, do not move onto it.
+
+Total Matches: 169 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | uSTvajCPIGaD   | 25.7304544      | μ=28.698, σ=0.989  | 83
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 3LP0kv1D7VvJ   | 25.3548629      | μ=28.472, σ=1.039  | 99
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | xnHS9Ly4RxVx   | 21.1616515      | μ=24.181, σ=1.006  | 80
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | L0heUIpoL2BU   | 15.4124924      | μ=19.353, σ=1.313  | 76
+
+              Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	31.579	11.111	2.500
+boost_near_resource	68.421	0.000	44.444	17.857
+explore_cluster	88.889	55.556	0.000	56.250
+lux_perspective	97.500	82.143	43.750	0.000
+
+
+* Weight minor fine turne
+
+Total Matches: 229 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | vvuFeE7iPIUC   | 24.1393799      | μ=26.848, σ=0.903  | 120
+/Users/flynnwang/dev/playground/lux_perspective/main.py | Suop9KYQEfBt   | 23.6382103      | μ=26.349, σ=0.904  | 124
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | tRldXNMBtEqV   | 22.0345814      | μ=24.788, σ=0.918  | 105
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | XnaxKcena1GX   | 16.5911762      | μ=19.755, σ=1.055  | 109
+
+              Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	12.500	11.765	18.182
+boost_near_resource	87.500	0.000	39.474	32.258
+explore_cluster	88.235	60.526	0.000	36.111
+lux_perspective	81.818	67.742	63.889	0.000
+
+
+
+* inc cluster worker size: max 2
+
+Total Matches: 194 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | klbSKQ3a28RX   | 25.1380534      | μ=27.982, σ=0.948  | 104
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | JbvqNMIN0bRw   | 25.0708927      | μ=28.000, σ=0.976  | 88
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | XnGjALxtJwc9   | 22.3521659      | μ=25.086, σ=0.911  | 112
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | 83xlVo9Vpf3D   | 16.2076697      | μ=19.628, σ=1.140  | 84
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	20.588	13.043	11.111
+boost_near_resource	79.412	0.000	33.333	26.667
+explore_cluster	86.957	69.697	0.000	56.250
+lux_perspective	88.889	73.333	43.750	0.000
+
+
+* skip cluster of size 1
+
+Total Matches: 270 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | BYVUalOHJz5b   | 26.4605247      | μ=29.056, σ=0.865  | 149
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | wO3kMI3abafW   | 26.0020502      | μ=28.598, σ=0.865  | 138
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | le69vocfJhvW   | 21.1001041      | μ=23.731, σ=0.877  | 132
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | LGHZsV0kPG2o   | 19.5473273      | μ=22.359, σ=0.937  | 121
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	31.250	16.667	17.391
+boost_near_resource	68.750	0.000	23.913	20.000
+explore_cluster	83.333	76.087	0.000	48.980
+lux_perspective	82.609	80.000	53.061	0.000
+
+* skip cluster boost score if agent is near, plus increase cluster boost weight.
+
+Total Matches: 131 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | htbZxpFPDcVb   | 26.8438998      | μ=30.342, σ=1.166  | 64
+/Users/flynnwang/dev/playground/lux_perspective/main.py | MyVUq23rwLNw   | 24.3988374      | μ=27.685, σ=1.095  | 70
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | mQ11xyBqMToG   | 21.5036317      | μ=24.772, σ=1.089  | 69
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | 3WFyfjllP2p8   | 15.3937309      | μ=19.473, σ=1.360  | 59
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	36.364	0.000	5.263
+boost_near_resource	63.636	0.000	41.176	10.526
+explore_cluster	100.000	58.824	0.000	70.588
+lux_perspective	94.737	89.474	29.412	0.000
 
 
 ## 2021-09-07

@@ -1,53 +1,7 @@
 """
 
-* make can_not_act worker weight as MAX when compute next move
-* make enemy citytile weight as MAX when compute next move
-* boost city weight when cargo is full
-* Try fix step move weight -1 issue on map 258834615
-
-Total Matches: 218 | Matches Queued: 10
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/lux_perspective/main.py | cwM0goq3Vqeu   | 24.7388388      | μ=27.358, σ=0.873  | 114
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | y7egVymUYvhE   | 24.5274083      | μ=27.111, σ=0.861  | 115
-/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | aKNSomUVRuBP   | 23.2311555      | μ=25.854, σ=0.874  | 108
-/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | fBxW63XFzStt   | 20.7812039      | μ=23.538, σ=0.919  | 99
-
-* Build city ASAP for cluster targeted worker
-* If worker is build city, do not move onto it.
-
-Total Matches: 169 | Matches Queued: 7
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | uSTvajCPIGaD   | 25.7304544      | μ=28.698, σ=0.989  | 83
-/Users/flynnwang/dev/playground/lux_perspective/main.py | 3LP0kv1D7VvJ   | 25.3548629      | μ=28.472, σ=1.039  | 99
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | xnHS9Ly4RxVx   | 21.1616515      | μ=24.181, σ=1.006  | 80
-/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | L0heUIpoL2BU   | 15.4124924      | μ=19.353, σ=1.313  | 76
-
-              Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
-Tong_Hui_Kang	0.000	31.579	11.111	2.500
-boost_near_resource	68.421	0.000	44.444	17.857
-explore_cluster	88.889	55.556	0.000	56.250
-lux_perspective	97.500	82.143	43.750	0.000
 
 
-* Weight minor fine turne
-
-Total Matches: 229 | Matches Queued: 7
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | vvuFeE7iPIUC   | 24.1393799      | μ=26.848, σ=0.903  | 120
-/Users/flynnwang/dev/playground/lux_perspective/main.py | Suop9KYQEfBt   | 23.6382103      | μ=26.349, σ=0.904  | 124
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | tRldXNMBtEqV   | 22.0345814      | μ=24.788, σ=0.918  | 105
-/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | XnaxKcena1GX   | 16.5911762      | μ=19.755, σ=1.055  | 109
-
-              Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
-Tong_Hui_Kang	0.000	12.500	11.765	18.182
-boost_near_resource	87.500	0.000	39.474	32.258
-explore_cluster	88.235	60.526	0.000	36.111
-lux_perspective	81.818	67.742	63.889	0.000
-
-
-
-* skip cluster boost score if agent is near, plus increase cluster boost weight.
-* inc cluster worker size
 
 * give multiple worker to coal & uranium cell
 * worker forward fuel (from coal and uranium) to city better
@@ -82,7 +36,7 @@ BUILD_CITYTILE_ROUND = 24
 
 MAX_PATH_WEIGHT = 99999
 
-MAX_UNIT_NUM = 50
+MAX_UNIT_NUM = 60
 
 
 def dist_decay(dist, game_map):
@@ -983,6 +937,7 @@ class Strategy:
     for i, worker in enumerate(workers):
       worker.target_cid = -1
       worker.cid_to_tile_pos = {}
+      worker.cid_to_cluster_dist = {}
 
       worker.unit_night_count = cargo_night_endurance(worker.cargo, get_unit_upkeep(worker))
 
@@ -1024,14 +979,22 @@ class Strategy:
         return -1
       # Save tile position
       worker.cid_to_tile_pos[cid] = tile_pos
+      worker.cid_to_cluster_dist[cid] = tile_dist
 
       # if n_tile <= 1:
         # return 1
       wt = fuel / ((tile_dist / 5) + 1)
       return wt
 
+    def gen_resource_clusters():
+      for cid in range(self.cluster_info.max_cluster_id):
+        x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
+        n_resource_tile = len(x_pos)
+        if n_resource_tile <= 1:
+          continue
+        yield cid
 
-    resource_clusters = list(range(self.cluster_info.max_cluster_id))
+    resource_clusters = list(gen_resource_clusters())
     weights = np.ones((len(workers), len(resource_clusters))) * -1
     for j, cid in enumerate(resource_clusters):
       for i, worker in enumerate(workers):
@@ -1045,6 +1008,7 @@ class Strategy:
         continue
 
       worker.target_cid = cid
+      worker.target_cid_dist = worker.cid_to_cluster_dist[cid]
 
       # for debugging.
       tile_pos = worker.cid_to_tile_pos[cid]
