@@ -70,7 +70,8 @@ class Cargo:
         self.uranium = 0
 
     def __str__(self) -> str:
-        return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
+        return f"<W:{self.wood}, C:{self.coal}, U:{self.uranium}>"
+        # return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
 
 
 class Unit:
