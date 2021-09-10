@@ -38,6 +38,7 @@ class City:
 class CityTile:
     def __init__(self, teamid, cityid, x, y, cooldown):
         self.cityid = cityid
+        self.id = cityid
         self.team = teamid
         self.pos = Position(x, y)
         self.cooldown = cooldown
