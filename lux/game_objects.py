@@ -14,15 +14,16 @@ class Player:
         self.units: list[Unit] = []
         self.cities: Dict[str, City] = {}
         self.city_tile_count = 0
-    def researched_coal(self) -> bool:
-        return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
-    def researched_uranium(self) -> bool:
-        return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
+    def researched_coal(self, plus=0) -> bool:
+        return (self.research_points + plus) >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
+    def researched_uranium(self, plus=0) -> bool:
+        return (self.research_points + plus) >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
 
 class City:
     def __init__(self, teamid, cityid, fuel, light_upkeep):
         self.cityid = cityid
+        self.id = cityid
         self.team = teamid
         self.fuel = fuel
         self.citytiles: list[CityTile] = []

@@ -21,6 +21,7 @@ UNIT_ACTION_COOLDOWN = params('UNIT_ACTION_COOLDOWN')
 WORKER_ACTION_COOLDOWN = UNIT_ACTION_COOLDOWN["WORKER"]
 WORKER_RESOURCE_CAPACITY = params('RESOURCE_CAPACITY')['WORKER']
 CITY_BUILD_COST = params('CITY_BUILD_COST')
+CITY_ACTION_COOLDOWN = params('CITY_ACTION_COOLDOWN')
 
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
 
@@ -222,14 +223,17 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
                                                             unit_cooldown, cooldown)
 
 
-def city_wont_last_at_nights(turn, city, add_fuel=0):
+def city_last_nights(city, add_fuel=0):
   fuel = city.fuel + add_fuel
   light_upkeep = city.light_upkeep
+  return fuel // light_upkeep
 
-  # TODO(): can add more value to make city last
+
+def city_wont_last_at_nights(turn, city, add_fuel=0):
   turn %= CIRCLE_LENGH
-  nights = min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
-  return fuel // light_upkeep < nights
+  round_nights = min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
+  city_nights = city_last_nights(city, add_fuel)
+  return city_nights < round_nights
 
 
 
