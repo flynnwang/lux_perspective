@@ -65,6 +65,7 @@ lux_perspective	81.250	77.500	52.941	0.000
 * Transfer worker not move onto transfer locations (across multiple turns)
 * split different type cluster
 * Move to coal and uranimu earlier (Estimate research points)
+* dist=2 woker not moving back to city (because of round limit, >=28)
 
 ->
 * worker forward fuel (from coal and uranium) to city better?
@@ -205,8 +206,7 @@ def estimate_resource_night_count(resource, upkeep):
 
 def estimate_cell_night_count(cell, upkeep, game_map):
   nights = estimate_resource_night_count(cell.resource, upkeep)
-  for newpos in get_neighbour_positions(cell.pos, game_map):
-    nb_cell = game_map.get_cell_by_pos(newpos)
+  for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
     nights += estimate_resource_night_count(nb_cell.resource, upkeep)
   return nights
 
@@ -589,11 +589,12 @@ class Strategy:
           cell.has_buildable_neighbour = cell_has_buildable_neighbour(cell)
           target_cells.append(cell)
 
-    def is_resource_tile_can_save_dying_worker(resource_tile, worker):
+    def is_resource_tile_can_save_dying_worker(resource_tile, worker, dist):
       if (not resource_tile.has_resource()
-          or (not is_resource_researched(resource_tile.resource, player))):
+          or (not is_resource_researched(resource_tile.resource, player,
+                                         move_days=dist_to_days(dist)))):
         return False
-      if self.circle_turn >= BUILD_CITYTILE_ROUND and worker.is_dying:
+      if worker.is_dying:
         cell_nights = estimate_cell_night_count(cell, get_unit_upkeep(worker), g.game_map)
         round_nights = get_night_count_this_round(g.turn)
         if worker.unit_night_count + cell_nights >= round_nights:
@@ -629,7 +630,7 @@ class Strategy:
       wt += fuel
 
       # Try to hide next to resource grid.
-      if is_resource_tile_can_save_dying_worker(resource_tile, worker):
+      if is_resource_tile_can_save_dying_worker(resource_tile, worker, dist):
         wt += UNIT_SAVED_BY_RES_WEIGHT
 
 
@@ -674,23 +675,22 @@ class Strategy:
       _, worker_collect_fuel = get_cell_resource_values(worker.cell, player)
       is_safe_cell = (worker_collect_fuel >= get_unit_upkeep(worker))
       boost_dying_worker = False
-      if (self.circle_turn >= BUILD_CITYTILE_ROUND and worker.is_dying and city_will_last
-          and not is_safe_cell):
-        wt += MAX_WEIGHT_VALUE / 10
+      if (worker.is_dying and city_will_last and not is_safe_cell):
+        wt += 1
         boost_dying_worker = True
 
 
-      # if worker.id == 'u_12':
+      # if worker.id == 'u_6':
         # print(f"w[{worker.id}], t[{citytile.pos}], turn_c={self.circle_turn >= BUILD_CITYTILE_ROUND}, dying={worker.is_dying}, city_last={city_will_last}", file=sys.stderr)
 
       # TODO(wangfei): estimate worker will full
       n_citytile = len(city.citytiles)
 
 
-      # TODO: need to check whether this worker can arrive at the city?
       # Try move onto city to save it
       min_fuel = (self.game.is_day and 60 or 60)
       min_city_last = 20 if g.turn < 320 else 10
+      # TODO: is this round needed? or could be fine turned
       if (self.circle_turn >= 20
           and n_citytile >= 2
           and city_last_nights(city) < min_city_last
@@ -702,15 +702,8 @@ class Strategy:
       # Boost when worker has resource and city tile won't last.
       days_left = DAY_LENGTH - self.circle_turn - worker.cooldown
       round_nights = get_night_count_this_round(g.turn)
-      # TODO: add city won't last
-      # if (self.circle_turn >= BUILD_CITYTILE_ROUND
-          # and is_safe_cell
-          # and worker.pos.distance_to(city_cell.pos) == 1):
-        # print(f"w[{worker.id}], t[{citytile.pos}], city_last={city_will_last}, boost city lost",
-              # file=sys.stderr)
-        # wt += CITYTILE_LOST_WEIGHT * n_citytile
 
-      # Boost based on woker, city assignment.
+      # Boost based on woker, city assignment. (not used)
       if (worker.target_city_id == citytile.cityid
           and worker.pos.distance_to(city_cell.pos) == 1):
         wt += 1000 * n_citytile
@@ -719,16 +712,15 @@ class Strategy:
         # if city_left_days < round_nights:
           # wt += n_citytile * CITYTILE_LOST_WEIGHT
 
-      # When there is not fuel on the map, go back to city
+      # When there is no fuel on the map, go back to city
       if self.cluster_info.max_cluster_fuel == 0:
         wt += 100
-
 
       # TODO: support night
       # Save more citytile if worker has enough resource to save it
       # - enough time to arrive
       # - with substential improvement of its living
-      # TODO(wangfei): this is not right, more tile will have larger light_upkeep
+      # TODO(wangfei): try delete this rule
       unit_time_cost = (dist - 1) * get_unit_action_cooldown(worker) + 1
       city_left_days = math.floor(city.fuel / city.light_upkeep)
       woker_fuel = worker_total_fuel(worker)
@@ -768,10 +760,11 @@ class Strategy:
       wt = 0.1 + fuel
 
       # Boost the target collect amount by 2 (for cooldown) to test for citytile building.
+      # it's 2, because one step move and one step for cooldown
       build_city_bonus = False
       days_left = BUILD_CITYTILE_ROUND - self.circle_turn - worker.cooldown
-      if (worker_enough_cargo_to_build(worker, amount*2)
-          and self.circle_turn < BUILD_CITYTILE_ROUND
+      if (self.circle_turn < BUILD_CITYTILE_ROUND
+          and worker_enough_cargo_to_build(worker, amount*2)
           and days_left >= (dist - 1) * get_unit_action_cooldown(worker) + 1):
         build_city_bonus = True
 
@@ -804,12 +797,12 @@ class Strategy:
       p = near_resource_tile.pos
 
       # Try to hide next to resource grid.
-      if is_resource_tile_can_save_dying_worker(near_resource_tile, worker):
+      if is_resource_tile_can_save_dying_worker(near_resource_tile, worker, dist):
         wt += UNIT_SAVED_BY_RES_WEIGHT
 
-      if worker.id == 'u_3' and near_resource_tile.pos in [Position(5, 28), Position(8, 24),
-                                                           Position(4, 27)]:
-        print(f"t={g.turn}, near_resource_cell={near_resource_tile.pos}, dist={dist}, wt={wt}, wt_c={boost_cluster}, amt={amount}, fuel={fuel}")
+      # if worker.id == 'u_3' and near_resource_tile.pos in [Position(5, 28), Position(8, 24),
+                                                           # Position(4, 27)]:
+        # print(f"t={g.turn}, near_resource_cell={near_resource_tile.pos}, dist={dist}, wt={wt}, wt_c={boost_cluster}, amt={amount}, fuel={fuel}")
       return wt / dist_decay(dist, g.game_map) + boost_cluster
       # return wt / (dist + 0.1) + boost_cluster
 
@@ -881,8 +874,7 @@ class Strategy:
           v = get_worker_tile_weight(worker, target)
         weights[i, j] = v
 
-        # if worker.id == 'u_8' and target.pos in [Position(5, 24), Position(6, 23)]:
-        if worker.id == 'u_3' and target.pos in [Position(5, 28), Position(8, 24),]:
+        if worker.id == 'u_6' and target.pos in [Position(8, 25), Position(6, 25),]:
           print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
 
 
