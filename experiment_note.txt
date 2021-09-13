@@ -1,5 +1,93 @@
 
 
+# 2021-09-13
+
+* add cell near city as target.
+
+Total Matches: 429 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | vdOYoX49CNJq   | 25.1753266      | μ=27.615, σ=0.813  | 234
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | M3bmkebwG4Cx   | 25.0145022      | μ=27.452, σ=0.812  | 218
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | V0q7LGOpDy0b   | 20.9430865      | μ=23.375, σ=0.810  | 220
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | iKNww9lYVkHe   | 19.1461051      | μ=21.682, σ=0.845  | 186
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	30.769	18.644	20.968
+boost_near_resource	69.231	0.000	27.143	24.390
+explore_cluster	81.356	72.857	0.000	44.828
+lux_perspective	79.032	75.610	55.172	0.000
+
+
+* check transfer condition and do transfer.
+* WIP do not goto the cell of a transfer action worker
+* Do not send money to citytile, but build
+
+Total Matches: 198 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | rKWMEoftKxLP   | 25.4902518      | μ=28.230, σ=0.913  | 105
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 6tlVPTUCce9a   | 23.9821881      | μ=26.720, σ=0.913  | 103
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | nmsDh2ZwEu1c   | 22.4263394      | μ=25.188, σ=0.921  | 98
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | F3NuuZ1BN8Ja   | 18.1242076      | μ=21.228, σ=1.035  | 90
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	16.000	21.875	18.750
+boost_near_resource	88.000	0.000	38.889	30.556
+explore_cluster	78.125	61.111	0.000	42.857
+lux_perspective	81.250	69.444	57.143	0.000
+
+
+WIP
+* save more citytiles, how to move at night: need to consider city assingment.
+
+Total Matches: 224 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 2kzojOcDHJ6N   | 25.1049731      | μ=27.890, σ=0.928  | 104
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | JGyLxWmBdbps   | 24.4152954      | μ=27.142, σ=0.909  | 116
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 21jnhfG9PXYJ   | 20.9467166      | μ=23.598, σ=0.884  | 116
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | SRKabI4NF0S3   | 17.7132924      | μ=20.576, σ=0.954  | 112
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	36.842	8.889	18.750
+boost_near_resource	65.789	0.000	36.585	22.500
+explore_cluster	91.111	63.415	0.000	50.000
+lux_perspective	81.250	77.500	52.941	0.000
+
+
+* Assign maximum amount of resource worker per cluster.
+* debug 437892541 at turn 49, worker going back.
+* debug u_5 goto (6, 28) at turn 16: boost cluster weight not right.
+* keep cluster assignment even it's conflict with citytile assignment.
+* issue 1: why move out of city and wait.
+* issue 2: why not stay in the city?
+* do not move onto build action unit.
+
+
+* Sorted transfer grid.
+* Do not tranfer more times
+* Do not pull cluster explore worker back for city building.
+* Transfer worker not move onto transfer locations (across multiple turns)
+* split different type cluster
+* Move to coal and uranimu earlier (Estimate research points)
+* dist=2 woker not moving back to city (because of round limit, >=28)
+* [bugfix] map:371000968, initial round not moving
+
+
+(major release for agent with tranfer function)
+Total Matches: 289 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 2HVr21WetP0P   | 27.1547770      | μ=29.974, σ=0.940  | 157
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 0X4tg6Oa39HM   | 23.2028640      | μ=25.797, σ=0.865  | 143
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 4GafAqRR7UJg   | 21.0124892      | μ=23.653, σ=0.880  | 137
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | wMQ0NSMIK3UK   | 17.2696384      | μ=20.208, σ=0.980  | 141
+
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	30.000	17.647	4.000
+boost_near_resource	70.000	0.000	42.857	14.286
+explore_cluster	82.353	59.524	0.000	30.189
+lux_perspective	96.000	85.714	71.698	0.000
+
+
+
 # 2021-09-08
 
 * make can_not_act worker weight as MAX when compute next move
