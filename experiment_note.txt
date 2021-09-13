@@ -1,4 +1,27 @@
 
+# 2021-09-14
+
+* verify: use last turn and arrival_turns no regression
+
+Total Matches: 230 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | rr13kDcVjPCm   | 27.7679228      | μ=30.663, σ=0.965  | 126
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | bwPOxgs2wRq0   | 25.0028005      | μ=27.716, σ=0.905  | 132
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | o63ICWh25NfQ   | 21.0584183      | μ=23.971, σ=0.971  | 106
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | gOiIaUPXOrGc   | 18.0041670      | μ=21.404, σ=1.133  | 96
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+lux_perspective	93.750	86.842	65.455	0.000
+
+
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 6xCkyXkZSEJL   | 26.9735267      | μ=29.524, σ=0.850  | 402
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | XTGNIkGumlup   | 25.8120251      | μ=28.376, σ=0.855  | 433
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | HlFXOD1dtmmV   | 21.7806737      | μ=24.241, σ=0.820  | 385
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 7lO8TCY7OEW9   | 17.7254238      | μ=20.303, σ=0.859  | 349
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | lSdQCNI52YGh   | 16.4273934      | μ=19.126, σ=0.900  | 327
+
+
 
 # 2021-09-13
 
@@ -85,6 +108,46 @@ Tong_Hui_Kang	0.000	30.000	17.647	4.000
 boost_near_resource	70.000	0.000	42.857	14.286
 explore_cluster	82.353	59.524	0.000	30.189
 lux_perspective	96.000	85.714	71.698	0.000
+
+
+
+* test drop n_resource_tile <= 1 check
+
+Total Matches: 217 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | FvkTMpDoVVRg   | 25.2861051      | μ=28.157, σ=0.957  | 116
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 2QXMnNXpSRqE   | 24.1743905      | μ=26.919, σ=0.915  | 108
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | hi3ywdsMnbtt   | 19.3622050      | μ=22.176, σ=0.938  | 114
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | 4nntiwyXbeL3   | 15.9842726      | μ=19.131, σ=1.049  | 96
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+lux_perspective	90.323	88.372	59.524	0.000
+
+* test drop n_resource_tile <= 1 check only for wood cluster
+
+Total Matches: 159 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 3xwm7NVrAiVY   | 27.3786076      | μ=30.522, σ=1.048  | 89
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | buDOaMsi8VN1   | 25.9196927      | μ=28.896, σ=0.992  | 83
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | WxnlD8cR5SgN   | 24.4332307      | μ=27.553, σ=1.040  | 76
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | DLWlvPNyg4oX   | 17.0075096      | μ=20.961, σ=1.318  | 70
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+lux_perspective	93.103	79.310	56.667	0.000
+
+
+
+* Drop MAX_EXPLORE_WORKE
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	tranfer_agent_v1
+tranfer_agent_v1	96.000	95.833	73.684	0.000
+
+Total Matches: 176 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | npEQBEmZ3GMP   | 27.1199295      | μ=30.689, σ=1.190  | 88
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 7HFJpzctGTyo   | 23.9343353      | μ=26.888, σ=0.985  | 94
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | s8i1fq2l2T3A   | 19.3687370      | μ=22.469, σ=1.033  | 86
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | O8jjBFm8gXHZ   | 17.2644057      | μ=20.487, σ=1.074  | 84
 
 
 

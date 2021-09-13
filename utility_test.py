@@ -122,3 +122,25 @@ def test_get_night_count_this_round():
   assert get_night_count_this_round(30) == 10
   assert get_night_count_this_round(39) == 1
   assert get_night_count_this_round(40) == 10
+
+
+def test_compute_last_turns():
+  assert nights_to_last_turns(0, 5) == 30 + 5
+  assert nights_to_last_turns(0, 2) == 30 + 2
+  assert nights_to_last_turns(0, 1) == 30 + 1
+  assert nights_to_last_turns(0, 0) == 30
+
+  assert nights_to_last_turns(30, 5) == 5
+  assert nights_to_last_turns(30, 2) == 2
+  assert nights_to_last_turns(30, 1) == 1
+  assert nights_to_last_turns(30, 0) == 0
+
+  assert nights_to_last_turns(31, 5) == 5
+  assert nights_to_last_turns(31, 2) == 2
+  assert nights_to_last_turns(31, 1) == 1
+  assert nights_to_last_turns(31, 0) == 0
+
+  assert nights_to_last_turns(29, 5) == 5 + 1
+  assert nights_to_last_turns(29, 2) == 2 + 1
+  assert nights_to_last_turns(29, 1) == 1 + 1
+  assert nights_to_last_turns(29, 0) == 0 + 1

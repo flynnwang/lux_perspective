@@ -154,6 +154,14 @@ def get_night_count_this_round(turn):
   return min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
 
 
+def get_day_count_this_round(turn):
+  turn %= CIRCLE_LENGH
+  return max(DAY_LENGTH - turn, 0)
+
+def get_left_turns_this_round(turn):
+  return CIRCLE_LENGH - turn % CIRCLE_LENGH
+
+
 def get_night_count_by_days(turn, days):
   turn %= CIRCLE_LENGH
   if is_day(turn):
@@ -219,14 +227,51 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
     next_dist = dist - step
     unit_cooldown = step * night_cooldown - nights_left
     # print(f'night-2, nights_left={nights_left}, step={step}, unit_cooldown={unit_cooldown}')
-    return nights + + nights_left + get_night_count_by_dist(turn, next_dist,
-                                                            unit_cooldown, cooldown)
+    return nights + nights_left + get_night_count_by_dist(turn, next_dist,
+                                                           unit_cooldown, cooldown)
 
 
 def city_last_nights(city, add_fuel=0):
   fuel = city.fuel + add_fuel
   light_upkeep = city.light_upkeep
   return fuel // light_upkeep
+
+
+def nights_to_last_turns(turn, last_nights):
+  if is_day(turn):
+    days = get_day_count_this_round(turn)
+    return nights_to_last_turns(turn+days, last_nights) + days
+
+  # The night case
+  nights = get_night_count_this_round(turn)
+  if last_nights <= nights:
+    return last_nights
+
+  last_nights -= nights
+  return nights_to_last_turns(turn+nights, last_nights)
+
+
+def city_last_days(turn, city):
+  last_nights = city_last_nights(city)
+  return nights_to_last_turns(turn, last_nights)
+
+
+def unit_surviving_turns(turn, unit):
+  last_nights = cargo_night_endurance(unit.cargo, get_unit_upkeep(unit))
+  return nights_to_last_turns(turn, last_nights)
+
+
+def unit_arrival_turns(turn, unit, dist):
+  cooldown = get_unit_action_cooldown(unit)
+  last_nights = get_night_count_by_dist(turn, dist, unit.cooldown, cooldown)
+  return nights_to_last_turns(turn, last_nights)
+
+
+def resource_surviving_nights(turn, resource, upkeep):
+  cargo = resource_to_cargo(resource)
+  nights = cargo_night_endurance(cargo, upkeep)
+  return nights_to_last_turns(turn, nights)
+
 
 
 def city_wont_last_at_nights(turn, city, add_fuel=0):

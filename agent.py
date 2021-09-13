@@ -1,35 +1,14 @@
 """
 
-* test drop n_resource_tile <= 1 check
+>> DONE
+* bug: 392744278, not building new citytile at beginning
+* Try use large negative values for task assignment.
 
-Total Matches: 217 | Matches Queued: 7
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/lux_perspective/main.py | FvkTMpDoVVRg   | 25.2861051      | μ=28.157, σ=0.957  | 116
-/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 2QXMnNXpSRqE   | 24.1743905      | μ=26.919, σ=0.915  | 108
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | hi3ywdsMnbtt   | 19.3622050      | μ=22.176, σ=0.938  | 114
-/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | 4nntiwyXbeL3   | 15.9842726      | μ=19.131, σ=1.049  | 96
 
-opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
-Tong_Hui_Kang	0.000	22.857	16.667	9.677
-boost_near_resource	77.143	0.000	27.778	11.628
-explore_cluster	83.333	72.222	0.000	42.857
-lux_perspective	90.323	88.372	59.524	0.000
 
-* test drop n_resource_tile <= 1 check only for wood cluster
-
-Total Matches: 159 | Matches Queued: 9
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/Users/flynnwang/dev/playground/lux_perspective/main.py | 3xwm7NVrAiVY   | 27.3786076      | μ=30.522, σ=1.048  | 89
-/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | buDOaMsi8VN1   | 25.9196927      | μ=28.896, σ=0.992  | 83
-/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | WxnlD8cR5SgN   | 24.4332307      | μ=27.553, σ=1.040  | 76
-/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | DLWlvPNyg4oX   | 17.0075096      | μ=20.961, σ=1.318  | 70
-
-opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
-Tong_Hui_Kang	0.000	22.222	13.043	6.897
-boost_near_resource	77.778	0.000	55.172	20.690
-explore_cluster	86.957	44.828	0.000	43.333
-lux_perspective	93.103	79.310	56.667	0.000
-
+* debug: 527767717, why moving to other cluster at round 1
+* 971170929: step 70: why u_4 moving back
+* 559804163: similar go back steps.
 
 -> bugfix
 
@@ -172,16 +151,12 @@ def get_cell_resource_values(cell, player, unit=None, move_days=0):
   return amount, fuel
 
 # TODO(wangfei): try more accurate estimate
-def estimate_resource_night_count(resource, upkeep):
-  cargo = resource_to_cargo(resource)
-  return cargo_night_endurance(cargo, upkeep)
-
-
-def estimate_cell_night_count(cell, upkeep, game_map):
-  nights = estimate_resource_night_count(cell.resource, upkeep)
-  for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
-    nights += estimate_resource_night_count(nb_cell.resource, upkeep)
-  return nights
+def resource_cell_added_surviving_nights(cell, upkeep, game):
+  turns = resource_surviving_nights(game.turn, cell.resource, upkeep)
+  for nb_cell in get_neighbour_positions(cell.pos, game.game_map,
+                                         return_cell=True):
+    turns += resource_surviving_nights(game.turn, nb_cell.resource, upkeep)
+  return turns
 
 
 def get_one_step_collection_values(cell, player, game_map, move_days=0):
@@ -496,11 +471,17 @@ class Strategy:
       unit.target_cluster_id = -1
       unit.is_transfer_worker = False
       unit.target_city_id = None
+      unit.surviving_turns = unit_surviving_turns(self.game.turn, unit)
 
       unit.unit_night_count = cargo_night_endurance(unit.cargo, get_unit_upkeep(unit))
 
-      round_night_count = get_night_count_this_round(self.game.turn)
-      unit.is_dying = unit.unit_night_count < round_night_count
+      left_turns_this_round = get_left_turns_this_round(self.game.turn)
+      unit.is_dying = unit.surviving_turns < left_turns_this_round
+
+      # round_night_count = get_night_count_this_round(self.game.turn)
+      # dying = unit.unit_night_count < round_night_count
+      # assert dying == unit.is_dying
+
       unit.cell = self.game_map.get_cell_by_pos(unit.pos)
 
       # Shortest path
@@ -571,10 +552,22 @@ class Strategy:
           target_cells.append(cell)
 
     def is_resource_tile_can_save_dying_worker(resource_tile, worker, dist):
+        # After arrival, resource is enough to reach the next circle.
+      def estimate_resource_night_count(resource, upkeep):
+        cargo = resource_to_cargo(resource)
+        return cargo_night_endurance(cargo, upkeep)
+
+      def estimate_cell_night_count(cell, upkeep, game_map):
+        nights = estimate_resource_night_count(cell.resource, upkeep)
+        for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
+          nights += estimate_resource_night_count(nb_cell.resource, upkeep)
+        return nights
+
       if (not resource_tile.has_resource()
           or (not is_resource_researched(resource_tile.resource, player,
                                          move_days=dist_to_days(dist)))):
         return False
+
       if worker.is_dying:
         cell_nights = estimate_cell_night_count(cell, get_unit_upkeep(worker), g.game_map)
         round_nights = get_night_count_this_round(g.turn)
@@ -587,11 +580,10 @@ class Strategy:
     UNIT_SAVED_BY_RES_WEIGHT = 10
     def get_resource_weight(worker, resource_tile, dist):
       # Use dist - 1, because then the worker will get resource.
-      target_night_count = get_night_count_by_dist(g.turn, dist-1, worker.cooldown,
-                                                   get_unit_action_cooldown(worker))
+      arrival_turns = unit_arrival_turns(g.turn, worker, dist-1)
       # TODO: add some buffer for safe arrival
-      if worker.unit_night_count < target_night_count:
-        return -1
+      if worker.surviving_turns < arrival_turns:
+        return -9999
 
       # Give a small weight for any resource 0.1 TODO: any other option?
       wt = 0
@@ -637,12 +629,10 @@ class Strategy:
       3. receive fuel from a fuel full worker on cell
       """
       CITYTILE_LOST_WEIGHT = 200
-
       # TODO: It's asuming dist are full of danger, but it could be move inside citytile.
-      target_night_count = get_night_count_by_dist(g.turn, dist, worker.cooldown,
-                                                   get_unit_action_cooldown(worker))
-      if worker.unit_night_count < target_night_count:
-        return -1
+      arrival_turns = unit_arrival_turns(g.turn, worker, dist)
+      if worker.surviving_turns < arrival_turns:
+        return -9999
 
       citytile = city_cell.citytile
       city = g.player.cities[citytile.cityid]
@@ -715,7 +705,7 @@ class Strategy:
         wt += CITYTILE_LOST_WEIGHT * len(city.citytiles)
 
       # if worker.id == 'u_7' and city.id in ['c_12']:
-        # print(f"t={g.turn}, {worker.id}, nc={worker.unit_night_count}, tnc={target_night_count} tile={citytile.pos}, wt={wt}, dying={worker.is_dying}, boost_dying={boost_dying_worker}")
+        # print(f"t={g.turn}, {worker.id}, nc={worker.surviving_turns}, tnc={arrival_turns} tile={citytile.pos}, wt={wt}, dying={worker.is_dying}, boost_dying={boost_dying_worker}")
       return wt / dist_decay(dist, g.game_map)
       # return wt / (dist + 0.1)
 
@@ -732,11 +722,10 @@ class Strategy:
 
       # TODO(wangfei): merge near resource tile and resource tile weight functon
     def get_near_resource_tile_weight(worker, near_resource_tile, dist):
-      target_night_count = get_night_count_by_dist(g.turn, dist, worker.cooldown,
-                                                   get_unit_action_cooldown(worker))
+      arrival_turns = unit_arrival_turns(g.turn, worker, dist)
       # TODO: add some buffer for safe arri0
-      if worker.unit_night_count < target_night_count:
-        return -1
+      if worker.surviving_turns < arrival_turns:
+        return -9999
 
       amount, fuel = get_one_step_collection_values(near_resource_tile, player,
                                                     g.game_map, move_days=dist_to_days(dist))
@@ -938,9 +927,13 @@ class Strategy:
           if worker.is_dying:
             v += 100
 
-          cell = self.game_map.get_cell_by_pos(worker.target_pos)
-          if cell.has_resource():
+          target_cell = self.game_map.get_cell_by_pos(worker.target_pos)
+          if target_cell.has_resource():
             v += 1
+
+          if (target_cell.is_near_resource
+              and cell_has_player_citytile(next_cell, self.game)):
+            v -= 5
 
           # Try step on resource: the worker version is better, maybe because
           # other worker can use that.
@@ -1124,17 +1117,15 @@ class Strategy:
         if best_dist <= dist:
           continue
 
-        target_night_count = get_night_count_by_dist(self.game.turn, dist-1,
-                                                     worker.cooldown,
-                                                     get_unit_action_cooldown(worker))
-        if worker.unit_night_count < target_night_count:
+        arrival_turns = unit_arrival_turns(self.game.turn, worker, dist-1)
+        if worker.surviving_turns < arrival_turns:
           continue
 
         best_dist = dist
         best_pos = pos
 
       # if self.game.turn == 15:
-        # print(f"{worker.id}, target_tile[{best_pos}, dist={best_dist}, unit_nights={worker.unit_night_count}], target_night_count={target_night_count}",
+        # print(f"{worker.id}, target_tile[{best_pos}, dist={best_dist}, unit_nights={worker.surviving_turns}], arrival_turns={arrival_turns}",
             # file=sys.stderr)
       return best_dist, best_pos, n_resource_tile
 
@@ -1182,8 +1173,6 @@ class Strategy:
         weights[i, j] = get_cluster_weight(worker, cid)
 
 
-    # MAX_EXPLORE_WORKE = 3
-    # explore_worker_num = 0
     rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
     sorted_pairs = sorted(list(zip(rows, cols)), key=lambda x: -weights[x[0], x[1]])
     for worker_idx, cluster_idx in sorted_pairs:
@@ -1200,12 +1189,8 @@ class Strategy:
       x = annotate.x(tile_pos.x, tile_pos.y)
       line = annotate.line(worker.pos.x, worker.pos.y, tile_pos.x, tile_pos.y)
       self.actions.extend([x, line])
-
       # print(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
 
-      # explore_worker_num += 1
-      # if explore_worker_num >= MAX_EXPLORE_WORKE:
-        # break
 
 
   def worker_look_for_resource_transfer(self):
