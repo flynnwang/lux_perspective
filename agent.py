@@ -66,15 +66,24 @@ lux_perspective	81.250	77.500	52.941	0.000
 * split different type cluster
 * Move to coal and uranimu earlier (Estimate research points)
 * dist=2 woker not moving back to city (because of round limit, >=28)
+* [bugfix] map:371000968, initial round not moving
+
+
+-> bugfix
 
 ->
+* Save size 1 citytile
+* Tune BUILD_CITYTILE_ROUND to 30 (for the last day, must build connect city)
 * worker forward fuel (from coal and uranium) to city better?
 
-* Move earlier into wood for city building.
+* Move earlier into wood for city building. (at first hour of day?)
 * Support other type of resource transfer.
 
-* give multiple worker to coal & uranium cell
+* give multiple worker to coal & uranium cell?
 * [minor opt]: do not move to cell has limit resource due to collection: predict cell dying
+
+
+
 
 
 # TODO
@@ -90,6 +99,7 @@ TODO:
 
 * unit cargo won't goto 100 at night
 * in city tile, road level is 6 (which means, move to citytile at night is good)
+* A full worker will not collect resource
 """
 
 import math, sys
@@ -642,8 +652,8 @@ class Strategy:
         cluster_fuel_factor = self.cluster_info.query_cluster_fuel_factor(resource_tile.pos)
         boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
-      if worker.id == 'u_8' and resource_tile.pos in [Position(5, 24), Position(6, 23)]:
-        print(f"t={g.turn},cell={resource_tile.pos}, wt={wt}, wt_c={boost_cluster}")
+      # if worker.id == 'u_8' and resource_tile.pos in [Position(5, 24), Position(6, 23)]:
+        # print(f"t={g.turn},cell={resource_tile.pos}, wt={wt}, wt_c={boost_cluster}")
 
       return wt / dist_decay(dist, g.game_map) + boost_cluster
       # return wt / (dist + 0.1) + boost_cluster
@@ -668,7 +678,9 @@ class Strategy:
 
       # Stay at city will gain this amout of fuel
       amount, fuel = get_one_step_collection_values(citytile.cell, player, g.game_map)
-      wt = max(fuel - LIGHT_UPKEEP['CITY'], 0)
+      wt = 0
+      if self.game.is_night:
+        wt += max(fuel - LIGHT_UPKEEP['CITY'], 0)
 
       # Try to hide in the city if worker will run out of fuel at night
       city_will_last = not city_wont_last_at_nights(g.turn, city)
@@ -874,8 +886,8 @@ class Strategy:
           v = get_worker_tile_weight(worker, target)
         weights[i, j] = v
 
-        if worker.id == 'u_6' and target.pos in [Position(8, 25), Position(6, 25),]:
-          print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
+        # if worker.id == 'u_6' and target.pos in [Position(8, 25), Position(6, 25),]:
+          # print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
 
 
 
@@ -1238,7 +1250,7 @@ class Strategy:
       line = annotate.line(worker.pos.x, worker.pos.y, tile_pos.x, tile_pos.y)
       self.actions.extend([x, line])
 
-      print(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
+      # print(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
 
       explore_worker_num += 1
       if explore_worker_num >= MAX_EXPLORE_WORKE:
