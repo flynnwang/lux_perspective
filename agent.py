@@ -101,7 +101,7 @@ TODO:
 * in city tile, road level is 6 (which means, move to citytile at night is good)
 * A full worker will not collect resource
 """
-
+import functools
 import math, sys
 from collections import defaultdict, deque
 
@@ -141,6 +141,7 @@ def worker_enough_cargo_to_build(worker, collected_amount):
   return (worker_total_cargo(worker) + collected_amount >= CITY_BUILD_COST)
 
 
+@functools.lru_cache(maxsize=1024, typed=False)
 def get_neighbour_positions(pos, game_map, return_cell=False):
   check_dirs = [
     DIRECTIONS.NORTH,
@@ -223,8 +224,7 @@ def estimate_cell_night_count(cell, upkeep, game_map):
 
 def get_one_step_collection_values(cell, player, game_map, move_days=0):
   amount, fuel = get_cell_resource_values(cell, player, move_days=move_days)
-  for newpos in get_neighbour_positions(cell.pos, game_map):
-    nb_cell = game_map.get_cell_by_pos(newpos)
+  for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
     a, f = get_cell_resource_values(nb_cell, player, move_days=move_days)
     amount += a
     fuel += f
@@ -293,9 +293,7 @@ class ShortestPath:
     while q:
       cur = q.popleft()
       cur_dist = self.dist[cur.x, cur.y]
-      for newpos in get_neighbour_positions(cur, self.game_map):
-        nb_cell = self.game_map.get_cell_by_pos(newpos)
-
+      for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
         if cell_has_opponent_citytile(nb_cell, self.game):
           continue
 
@@ -303,6 +301,8 @@ class ShortestPath:
         if (nb_cell.unit and
             nb_cell.unit.team == self.game.opponent_id and not nb_cell.unit.can_act()):
           continue
+
+        newpos = nb_cell.pos
         if newpos in self.forbidden_positions:
           continue
 
@@ -333,7 +333,8 @@ class ShortestPath:
     while q:
       cur = q.popleft()
       cur_dist = self.dist[cur.x, cur.y]
-      for newpos in get_neighbour_positions(cur, self.game_map):
+      for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
+        newpos = nb_cell.pos
         nb_dist = self.dist[newpos.x, newpos.y]
         if nb_dist == cur_dist - 1:
           if newpos in path_positions:
@@ -359,7 +360,8 @@ class ShortestPath:
     while q:
       cur = q.popleft()
       cur_dist = self.dist[cur.x, cur.y]
-      for newpos in get_neighbour_positions(cur, self.game_map):
+      for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
+        newpos = nb_cell.pos
         nb_dist = self.dist[newpos.x, newpos.y]
         if nb_dist == cur_dist - 1 and newpos not in path_positions:
           total_append += 1
@@ -404,8 +406,8 @@ class ClusterInfo:
       while q:
         cur = q.popleft()
         cur_cell = self.game_map.get_cell_by_pos(cur)
-        for newpos in get_neighbour_positions(cur, self.game_map):
-          nb_cell = self.game_map.get_cell_by_pos(newpos)
+        for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
+          newpos = nb_cell.pos
 
           # Count citytile.
           # if (nb_cell.citytile != None
@@ -496,22 +498,6 @@ class Strategy:
     # Clear up actions for current step.
     self.actions = []
 
-    for unit in self.game.player.units:
-      unit.has_planned_action = False
-      unit.target_pos = None
-      unit.transfer_build_locations = set()
-
-      unit.unit_night_count = cargo_night_endurance(unit.cargo, get_unit_upkeep(unit))
-
-      round_night_count = get_night_count_this_round(self.game.turn)
-      unit.is_dying = unit.unit_night_count < round_night_count
-      unit.cell = self.game_map.get_cell_by_pos(unit.pos)
-
-      unit.target_cluster_id = -1
-      unit.is_transfer_worker = False
-
-      unit.target_city_id = None
-
   def add_unit_action(self, unit, action):
     assert unit.has_planned_action == False
 
@@ -519,22 +505,15 @@ class Strategy:
     self.actions.append(action)
 
 
-  def cell_near_done_research_resource(self, cell):
-    for pos in get_neighbour_positions(cell.pos, self.game_map):
-      nb_cell = self.game_map.get_cell_by_pos(pos)
-      if (nb_cell.has_resource()
-          and is_resource_researched(nb_cell.resource, self.game.player)):
-        return True
-    return False
 
-
-  def update_game_map_unit_info(self):
+  def update_game_map_info(self):
     for y in range(self.game.map_height):
       for x in range(self.game.map_width):
         cell = self.game_map.get_cell(x, y)
-        cell.is_near_resource = False
-        cell.is_citytile_neighbour = False
         cell.unit = None
+        cell.is_near_resource = self.is_near_resource_cell(cell)
+        cell.is_citytile_neighbour = self.has_citytile_neighbours(cell)
+        cell.has_buildable_neighbour = False
 
     for unit in self.game.player.units:
       cell = self.game_map.get_cell_by_pos(unit.pos)
@@ -544,6 +523,33 @@ class Strategy:
       cell = self.game_map.get_cell_by_pos(unit.pos)
       cell.unit = unit
 
+  def update_unit_info(self):
+    self.shortet_paths = {}
+    empty_set = set()
+    for unit in self.game.player.units:
+      unit.has_planned_action = False
+      unit.target_pos = None
+
+      unit.transfer_build_locations = set()
+      unit.target_cluster_id = -1
+      unit.is_transfer_worker = False
+      unit.target_city_id = None
+
+      unit.unit_night_count = cargo_night_endurance(unit.cargo, get_unit_upkeep(unit))
+
+      round_night_count = get_night_count_this_round(self.game.turn)
+      unit.is_dying = unit.unit_night_count < round_night_count
+      unit.cell = self.game_map.get_cell_by_pos(unit.pos)
+
+      # Shortest path
+      shortest_path = ShortestPath(self.game, unit.pos, empty_set)
+      shortest_path.compute()
+      self.shortet_paths[unit.id] = shortest_path
+
+      unit.cid_to_tile_pos = {}
+      unit.cid_to_cluster_dist = {}
+
+
   def has_citytile_neighbours(self, cell):
     for nb_cell in get_neighbour_positions(cell.pos, self.game_map, return_cell=True):
       if cell_has_player_citytile(nb_cell, self.game):
@@ -551,9 +557,16 @@ class Strategy:
     return False
 
   def is_near_resource_cell(self, cell):
+    def cell_near_done_research_resource(cell):
+      for nb_cell in get_neighbour_positions(cell.pos, self.game_map, return_cell=True):
+        if (nb_cell.has_resource()
+            and is_resource_researched(nb_cell.resource, self.game.player)):
+          return True
+      return False
+
     return (not cell.has_resource()
             and cell.citytile is None
-            and self.cell_near_done_research_resource(cell))
+            and cell_near_done_research_resource(cell))
 
   def assign_worker_target(self):
     MAX_UNIT_PER_CITY = 4
@@ -584,15 +597,11 @@ class Strategy:
           target_cells.extend([cell] * MAX_UNIT_PER_CITY)
         elif cell.has_resource():
           is_target_cell = True
-        elif self.is_near_resource_cell(cell):
-          # TODO: move this to update
-          cell.is_near_resource = True
+        elif cell.is_near_resource:
           is_target_cell = True
-        elif self.has_citytile_neighbours(cell):
-          cell.is_citytile_neighbour = True
+        elif cell.is_citytile_neighbour:
           is_target_cell = True
         elif (cell.unit and cell.unit.team == player.team):
-          cell.is_worker_cell = True
           is_target_cell = True
 
         if is_target_cell:
@@ -614,18 +623,18 @@ class Strategy:
     MAX_WEIGHT_VALUE = 10000
     CLUSTER_BOOST_WEIGHT = 200 * 40
     UNIT_SAVED_BY_RES_WEIGHT = 10
-    def get_resource_weight(worker, resource_tile, dist, unit_night_count):
+    def get_resource_weight(worker, resource_tile, dist):
       # Use dist - 1, because then the worker will get resource.
       target_night_count = get_night_count_by_dist(g.turn, dist-1, worker.cooldown,
                                                    get_unit_action_cooldown(worker))
       # TODO: add some buffer for safe arrival
-      if unit_night_count < target_night_count:
+      if worker.unit_night_count < target_night_count:
         return -1
 
       # Give a small weight for any resource 0.1 TODO: any other option?
       wt = 0
 
-      # For wood cell wit no buildable neightbor, demote its weight
+      # For wood cell with no buildable neightbor, demote its weight
       if (is_resource_wood(resource_tile.resource)
           and not resource_tile.has_buildable_neighbour):
         # TODO: use dist * 2 for estimate of number of days to cell
@@ -659,7 +668,7 @@ class Strategy:
       # return wt / (dist + 0.1) + boost_cluster
       # return wt / dist_decay(dist, g.game_map)
 
-    def get_city_tile_weight(worker, city_cell, dist, unit_night_count):
+    def get_city_tile_weight(worker, city_cell, dist):
       """
       1. collect fuel
       2. protect dying worker [at night]
@@ -670,7 +679,7 @@ class Strategy:
       # TODO: It's asuming dist are full of danger, but it could be move inside citytile.
       target_night_count = get_night_count_by_dist(g.turn, dist, worker.cooldown,
                                                    get_unit_action_cooldown(worker))
-      if unit_night_count < target_night_count:
+      if worker.unit_night_count < target_night_count:
         return -1
 
       citytile = city_cell.citytile
@@ -752,19 +761,19 @@ class Strategy:
       if worker.target_cluster_id < 0:
         return False
 
-      for newpos in get_neighbour_positions(near_resource_tile.pos, g.game_map):
+      for nb_cell in get_neighbour_positions(near_resource_tile.pos, g.game_map, return_cell=True):
+        newpos = nb_cell.pos
         cid = self.cluster_info.get_cid(newpos)
         if cid == worker.target_cluster_id:
           return True
       return False
 
       # TODO(wangfei): merge near resource tile and resource tile weight functon
-    def get_near_resource_tile_weight(worker, near_resource_tile, dist,
-                                      unit_night_count):
+    def get_near_resource_tile_weight(worker, near_resource_tile, dist):
       target_night_count = get_night_count_by_dist(g.turn, dist, worker.cooldown,
                                                    get_unit_action_cooldown(worker))
       # TODO: add some buffer for safe arri0
-      if unit_night_count < target_night_count:
+      if worker.unit_night_count < target_night_count:
         return -1
 
       amount, fuel = get_one_step_collection_values(near_resource_tile, player,
@@ -859,12 +868,6 @@ class Strategy:
            f'R={g.player.research_points}'),
           file=sys.stderr)
     for i, worker in enumerate(workers):
-      round_night_count = get_night_count_this_round(g.turn)
-      unit_night_count = worker.unit_night_count
-
-      # if worker.id == 'u_29':
-        # print(f"w[{worker.id}], unit_night_count={unit_night_count}, round_night_count={round_night_count}", file=sys.stderr)
-
       for j, target in enumerate(target_cells):
         # Can't arrive at target cell.
         shortest_path = self.shortet_paths[worker.id]
@@ -874,12 +877,11 @@ class Strategy:
 
         v = 0
         if cell_has_player_citytile(target, self.game):
-          v = get_city_tile_weight(worker, target, dist, unit_night_count)
+          v = get_city_tile_weight(worker, target, dist)
         elif target.has_resource():
-          v = get_resource_weight(worker, target, dist, unit_night_count)
+          v = get_resource_weight(worker, target, dist)
         elif target.is_near_resource:
-          v = get_near_resource_tile_weight(worker, target, dist,
-                                            unit_night_count)
+          v = get_near_resource_tile_weight(worker, target, dist)
         elif target.is_citytile_neighbour:
           v = get_city_tile_neighbour_weight(worker, target)
         else:
@@ -899,7 +901,6 @@ class Strategy:
       if weights[worker_idx, target_idx] < 0:
         continue
 
-      # TODO: skip negative weight.
       if DEBUG:
         # print(f'{worker.id}, v={weights[worker_idx, target_idx]}', file=sys.stderr)
         # x = annotate.x(worker.pos.x, worker.pos.y)
@@ -1000,7 +1001,7 @@ class Strategy:
         return [worker.pos]
 
       # TODO: skip non-reachable positions?
-      return [worker.pos] + get_neighbour_positions(worker.pos, g.game_map)
+      return [worker.pos] + [c.pos for c in get_neighbour_positions(worker.pos, g.game_map, return_cell=True)]
 
     next_positions = {
       pos
@@ -1123,15 +1124,6 @@ class Strategy:
         self.actions.append(citytile.research())
 
 
-  def compute_unit_shortest_paths(self):
-    self.shortet_paths = {}
-
-    empty_set = set()
-    for unit in self.game.player.units:
-      shortest_path = ShortestPath(self.game, unit.pos, empty_set)
-      shortest_path.compute()
-      self.shortet_paths[unit.id] = shortest_path
-
 
   def update_player_info(self):
     # Estimate number of research point in left day times.
@@ -1142,21 +1134,15 @@ class Strategy:
     self.cluster_info = ClusterInfo(self.game)
     self.cluster_info.compute()
 
-    self.update_game_map_unit_info()
     self.update_player_info()
-
+    self.update_game_map_info()
+    self.update_unit_info()
 
 
   def assign_worker_to_resource_cluster(self):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
       And set its target pos."""
-    # TODO: split different cluster
-    # Computes worker property. TODO move it out of this function.
-    workers = self.player_available_workers()
-    for i, worker in enumerate(workers):
-      worker.cid_to_tile_pos = {}
-      worker.cid_to_cluster_dist = {}
-
+    # Computes worker property.
     if self.game.player.city_tile_count < 2:
       return
 
@@ -1224,6 +1210,7 @@ class Strategy:
           continue
         yield cid
 
+    workers = self.player_available_workers()
     resource_clusters = list(gen_resource_clusters())
     weights = np.ones((len(workers), len(resource_clusters))) * -9999
     for j, cid in enumerate(resource_clusters):
@@ -1282,7 +1269,7 @@ class Strategy:
       for nb_cell in get_neighbour_positions(cell.pos, self.game_map, return_cell=True):
         if cell_has_player_citytile(nb_cell, self.game):
           wt += 100
-        elif self.is_near_resource_cell(nb_cell):
+        elif nb_cell.is_near_resource:
           wt += 1000
       return wt
 
@@ -1342,10 +1329,6 @@ class Strategy:
 
             # Assume the first worker transfer.
             return
-
-            # TODO: compute move based on this cell.
-            # self.add_unit_action(worker, worker.build_city())
-            # return nb_unit
 
 
     # check direct transfer and build.
@@ -1432,7 +1415,6 @@ class Strategy:
     player = g.player
 
     self.update_game_info()
-    self.compute_unit_shortest_paths()
 
     self.compute_citytile_actions()
 
