@@ -1,5 +1,35 @@
 """
 
+* test drop n_resource_tile <= 1 check
+
+Total Matches: 217 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | FvkTMpDoVVRg   | 25.2861051      | μ=28.157, σ=0.957  | 116
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 2QXMnNXpSRqE   | 24.1743905      | μ=26.919, σ=0.915  | 108
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | hi3ywdsMnbtt   | 19.3622050      | μ=22.176, σ=0.938  | 114
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | 4nntiwyXbeL3   | 15.9842726      | μ=19.131, σ=1.049  | 96
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	22.857	16.667	9.677
+boost_near_resource	77.143	0.000	27.778	11.628
+explore_cluster	83.333	72.222	0.000	42.857
+lux_perspective	90.323	88.372	59.524	0.000
+
+* test drop n_resource_tile <= 1 check only for wood cluster
+
+Total Matches: 159 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 3xwm7NVrAiVY   | 27.3786076      | μ=30.522, σ=1.048  | 89
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | buDOaMsi8VN1   | 25.9196927      | μ=28.896, σ=0.992  | 83
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | WxnlD8cR5SgN   | 24.4332307      | μ=27.553, σ=1.040  | 76
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | DLWlvPNyg4oX   | 17.0075096      | μ=20.961, σ=1.318  | 70
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective
+Tong_Hui_Kang	0.000	22.222	13.043	6.897
+boost_near_resource	77.778	0.000	55.172	20.690
+explore_cluster	86.957	44.828	0.000	43.333
+lux_perspective	93.103	79.310	56.667	0.000
+
 
 -> bugfix
 
@@ -1138,7 +1168,9 @@ class Strategy:
       for cid in range(self.cluster_info.max_cluster_id):
         x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
         n_resource_tile = len(x_pos)
-        if n_resource_tile <= 1:
+        cell = self.game_map.get_cell(x_pos[0], y_pos[0])
+        if (n_resource_tile <= 1
+            and cell.resource.type == Constants.RESOURCE_TYPES.WOOD):
           continue
         yield cid
 
@@ -1150,8 +1182,8 @@ class Strategy:
         weights[i, j] = get_cluster_weight(worker, cid)
 
 
-    MAX_EXPLORE_WORKE = 3
-    explore_worker_num = 0
+    # MAX_EXPLORE_WORKE = 3
+    # explore_worker_num = 0
     rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
     sorted_pairs = sorted(list(zip(rows, cols)), key=lambda x: -weights[x[0], x[1]])
     for worker_idx, cluster_idx in sorted_pairs:
@@ -1171,10 +1203,9 @@ class Strategy:
 
       # print(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
 
-      explore_worker_num += 1
-      if explore_worker_num >= MAX_EXPLORE_WORKE:
-
-        break
+      # explore_worker_num += 1
+      # if explore_worker_num >= MAX_EXPLORE_WORKE:
+        # break
 
 
   def worker_look_for_resource_transfer(self):
