@@ -66,14 +66,20 @@ class CityTile:
 
 
 class Cargo:
-    def __init__(self):
-        self.wood = 0
-        self.coal = 0
-        self.uranium = 0
+    def __init__(self, wood=0, coal=0, uranium=0):
+        self.wood = wood
+        self.coal = coal
+        self.uranium = uranium
 
     def __str__(self) -> str:
         return f"<W:{self.wood}, C:{self.coal}, U:{self.uranium}>"
         # return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
+
+    def __repr__(self) -> str:
+        return f"<W:{self.wood}, C:{self.coal}, U:{self.uranium}>"
+
+    def __eq__(self, other):
+      return self.wood == other.wood and self.coal == other.coal and self.uranium == other.uranium
 
 
 class Unit:

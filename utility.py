@@ -24,8 +24,11 @@ CITY_BUILD_COST = params('CITY_BUILD_COST')
 CITY_ACTION_COOLDOWN = params('CITY_ACTION_COOLDOWN')
 
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
+WORKER_UPKEEP = LIGHT_UPKEEP['WORKER']
 
 MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
+
+
 
 
 def is_within_map_range(pos, game_map):
@@ -52,6 +55,9 @@ def get_resource_to_fuel_rate(resource):
     type_name = resource.type.upper()
   return params('RESOURCE_TO_FUEL_RATE')[type_name]
 
+WOOD_FUEL_RATE = get_resource_to_fuel_rate('WOOD')
+COAL_FUEL_RATE = get_resource_to_fuel_rate('COAL')
+URANIUM_FUEL_RATE = get_resource_to_fuel_rate('URANIUM')
 
 def get_worker_collection_rate(resource):
   type_name = resource
@@ -65,14 +71,14 @@ def worker_total_cargo(worker):
   return (cargo.wood + cargo.coal + cargo.uranium)
 
 
+def cargo_total_fuel(cargo):
+  return (cargo.wood * WOOD_FUEL_RATE
+          + cargo.coal * COAL_FUEL_RATE
+          + cargo.uranium * URANIUM_FUEL_RATE)
+
+
 def worker_total_fuel(worker):
-  wood_fuel_rate = get_resource_to_fuel_rate('WOOD')
-  coal_fuel_rate = get_resource_to_fuel_rate('COAL')
-  uranium_fuel_rate = get_resource_to_fuel_rate('URANIUM')
-  cargo = worker.cargo
-  return (cargo.wood * wood_fuel_rate
-          + cargo.coal * coal_fuel_rate
-          + cargo.uranium * uranium_fuel_rate)
+  return cargo_total_fuel(worker.cargo)
 
 
 def worker_cargo_full_rate(worker):
@@ -90,6 +96,17 @@ def is_resource_coal(resource):
 def is_resource_uranium(resource):
   return (resource.type == Constants.RESOURCE_TYPES.URANIUM
           and resource.amount > 0)
+
+
+def cell_has_opponent_citytile(cell, game):
+  citytile = cell.citytile
+  return citytile is not None and citytile.team == game.opponent.team
+
+def cell_has_player_citytile(cell, game):
+  citytile = cell.citytile
+  return citytile is not None and citytile.team == game.player.team
+
+
 
 def resource_to_cargo(resource):
   cargo = Cargo()
@@ -113,19 +130,15 @@ def cargo_night_endurance(cargo, upkeep):
   if cargo.wood == 0 and cargo.coal == 0 and cargo.uranium == 0:
     return 0
 
-  wood_fuel_rate = get_resource_to_fuel_rate('WOOD')
-  coal_fuel_rate = get_resource_to_fuel_rate('COAL')
-  uranium_fuel_rate = get_resource_to_fuel_rate('URANIUM')
-
   def burn_fuel(amount, fuel_rate):
     one_night_amount = int(math.ceil(upkeep / fuel_rate))
     nights = amount // one_night_amount
     resource_left = amount - one_night_amount * nights
     return nights, resource_left
 
-  wood_nights, wood_left = burn_fuel(cargo.wood, wood_fuel_rate)
+  wood_nights, wood_left = burn_fuel(cargo.wood, WOOD_FUEL_RATE)
 
-  assert coal_fuel_rate >= upkeep and uranium_fuel_rate >= upkeep
+  assert COAL_FUEL_RATE >= upkeep and URANIUM_FUEL_RATE >= upkeep
   if wood_left > 0 and (cargo.coal > 0 or cargo.uranium > 0):
     wood_nights += 1
 
@@ -135,9 +148,44 @@ def cargo_night_endurance(cargo, upkeep):
       assert cargo.uranium > 0
       cargo.uranium -= 1
 
-  coal_nights, _ = burn_fuel(cargo.coal, coal_fuel_rate)
-  uranium_nights, _ = burn_fuel(cargo.uranium, uranium_fuel_rate)
+  coal_nights, _ = burn_fuel(cargo.coal, COAL_FUEL_RATE)
+  uranium_nights, _ = burn_fuel(cargo.uranium, URANIUM_FUEL_RATE)
   return wood_nights + coal_nights + uranium_nights
+
+
+def consume_cargo(turn, cargo, is_citytile, sim_turns, upkeep):
+  # Empty cargo when worker is on citytile.
+  if is_citytile:
+    return Cargo()
+
+  if sim_turns == 0:
+    return cargo
+
+  def burn_resource(resource_amt, fuel_rate, fuel):
+    if fuel == 0:
+      return resource_amt, 0
+
+    one_night_amount = int(math.ceil(upkeep / fuel_rate))
+    if resource_amt >= one_night_amount:
+      return resource_amt - one_night_amount, 0
+    return 0, fuel - resource_amt * fuel_rate
+
+  cargo = Cargo(cargo.wood, cargo.coal, cargo.uranium)
+  # for t in range(turn+1, turn+sim_turns+1):
+  for t in range(turn+1, turn+sim_turns+1):
+    # Cargo won't change during the day.
+    if is_day(t):
+      continue
+
+    fuel = upkeep
+    cargo.wood, fuel = burn_resource(cargo.wood, WOOD_FUEL_RATE, fuel)
+    cargo.coal, fuel = burn_resource(cargo.coal, COAL_FUEL_RATE, fuel)
+    cargo.uranium, fuel = burn_resource(cargo.uranium, URANIUM_FUEL_RATE, fuel)
+
+    # No enough resource to collect fuel
+    if fuel > 0:
+      return None
+  return cargo
 
 
 def is_day(turn):

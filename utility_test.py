@@ -144,3 +144,33 @@ def test_compute_last_turns():
   assert nights_to_last_turns(29, 2) == 2 + 1
   assert nights_to_last_turns(29, 1) == 1 + 1
   assert nights_to_last_turns(29, 0) == 0 + 1
+
+
+def test_consume_cargo_at_citytile():
+  turn = 0
+  cargo = Cargo(100, 0, 0)
+  upkeep = WORKER_UPKEEP
+  assert consume_cargo(turn, cargo, True, 1, upkeep) == Cargo()
+  assert consume_cargo(turn, cargo, True, 10, upkeep) == Cargo()
+  assert consume_cargo(turn, cargo, True, 40, upkeep) == Cargo()
+
+  assert consume_cargo(turn, cargo, True, 0, upkeep) == Cargo()
+
+
+def test_consume_cargo_in_the_day():
+  cargo = Cargo(100, 0, 0)
+  upkeep = WORKER_UPKEEP
+  assert consume_cargo(0, cargo, False, 1, upkeep) == cargo
+  assert consume_cargo(10, cargo, False, 1, upkeep) == cargo
+  assert consume_cargo(20, cargo, False, 1, upkeep) == cargo
+
+
+def test_consume_cargo_at_night():
+  cargo = Cargo(100, 0, 0)
+  upkeep = WORKER_UPKEEP
+  print(str(cargo))
+  assert consume_cargo(30, cargo, False, 1, upkeep) == Cargo(96, 0, 0)
+  assert consume_cargo(30, cargo, False, 2, upkeep) == Cargo(92, 0, 0)
+
+  # night + day
+  assert consume_cargo(38, cargo, False, 2, upkeep) == Cargo(96, 0, 0)

@@ -6,9 +6,14 @@
 
 
 
+* Move to nearest non-saving city tile
+
+* 559804163: go to remote cluster blocked by citytile
+  Solution: use priority search based on turn & resource & cooldown
+
+
 * debug: 527767717, why moving to other cluster at round 1
 * 971170929: step 70: why u_4 moving back
-* 559804163: similar go back steps.
 
 -> bugfix
 
@@ -43,6 +48,7 @@ TODO:
 * A full worker will not collect resource
 """
 import functools
+import heapq
 import math, sys
 from collections import defaultdict, deque
 
@@ -112,15 +118,6 @@ def get_nb9_positions(pos, game_map):
     if is_within_map_range(newpos, game_map):
       positions.append(newpos)
   return positions
-
-
-def cell_has_opponent_citytile(cell, game):
-  citytile = cell.citytile
-  return citytile is not None and citytile.team == game.opponent.team
-
-def cell_has_player_citytile(cell, game):
-  citytile = cell.citytile
-  return citytile is not None and citytile.team == game.player.team
 
 
 def is_resource_researched(resource, player, move_days=0):
@@ -213,7 +210,6 @@ class LuxGame(Game):
         game_state._update(observation["updates"])
 
 
-# TODO(wangei): use priority based search?
 class ShortestPath:
 
   def __init__(self, game, start_pos, forbidden_positions):
@@ -231,6 +227,7 @@ class ShortestPath:
       cur = q.popleft()
       cur_dist = self.dist[cur.x, cur.y]
       for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
+        # Can not go pass through enemy citytile.
         if cell_has_opponent_citytile(nb_cell, self.game):
           continue
 
@@ -309,6 +306,113 @@ class ShortestPath:
     return path_positions
 
 
+class SearchState:
+
+  def __init__(self, turn, cell, cargo, cooldown):
+    # print('SearchState ', type(turn), cell.pos, type(cooldown), cooldown)
+    self.turn = turn
+    self.cell = cell
+    self.cargo = cargo
+    self.cooldown = cooldown
+
+  @property
+  def pos(self):
+    return self.cell.pos
+
+  @property
+  def fuel(self):
+    return cargo_total_fuel(self.cargo)
+
+  def __lt__(self, other):
+    return self.turn < other.turn or (self.turn == other.turn
+                                      and self.fuel > other.fuel)
+
+# TODO(wangei): use priority based search?
+class QuickestPath:
+  """Find the path with (min_turns, max_cargo_resource)."""
+
+  def __init__(self, game, worker):
+    self.game = game
+    self.turn = game.turn
+    self.game_map = game.game_map
+    self.worker = worker
+    # TODO: this might not be optimal due to missing states of cargo amount.
+    self.state_map = [[None
+                       for h in range(self.game_map.height)]
+                      for w in range(self.game_map.width)]
+
+  def compute(self):
+    q = []
+
+    def heap_push(new_state):
+      pos = new_state.pos
+      state = self.state_map[pos.x][pos.y]
+      if state is None or new_state < state:
+        self.state_map[pos.x][pos.y] = new_state
+        heapq.heappush(q, new_state)
+
+
+    print('start search')
+    upkeep = get_unit_upkeep(self.worker)
+    start_state = SearchState(self.turn, self.worker.cell, self.worker.cargo,
+                              int(self.worker.cooldown))
+    heap_push(start_state)
+    max_turn = 0
+    while q:
+      cur_state = heapq.heappop(q)
+      # print(f'sz={len(q)}, cur={cur_state.pos}, turn={cur_state.turn}, cd={cur_state.cooldown}, cargo={cur_state.cargo}',
+            # file=sys.stderr)
+      # print(f'{cur_state.pos}, t={cur_state.turn}',
+            # file=sys.stderr)
+      max_turn = max(max_turn, cur_state.turn)
+      for nb_cell in get_neighbour_positions(cur_state.pos, self.game_map,
+                                             return_cell=True):
+        # Can not go pass through enemy citytile.
+        if cell_has_opponent_citytile(nb_cell, self.game):
+          continue
+
+        # TODO: maybe not in cooldown?
+        # Skip enemy unit in cooldown.
+        if (nb_cell.unit and
+            nb_cell.unit.team == self.game.opponent_id and not nb_cell.unit.can_act()):
+          continue
+
+        turn = cur_state.turn
+
+        # Wait on cur_state.cell
+        is_citytile = cell_has_player_citytile(cur_state.cell, self.game)
+        cargo = consume_cargo(turn, cur_state.cargo, is_citytile,
+                              cur_state.cooldown, upkeep)
+        turn += cur_state.cooldown
+        if not cargo:
+          continue
+
+        # Move to next cell
+        is_citytile = cell_has_player_citytile(nb_cell, self.game)
+        cargo = consume_cargo(turn, cargo, is_citytile, 1, upkeep)
+        is_night_turn = is_night(turn)
+        turn += 1
+        if not cargo:
+          continue
+
+        # TODO: if on citytile, cooldown is 0
+        cooldown = get_unit_action_cooldown(self.worker)
+        if is_night_turn:
+          cooldown *= 2
+        if cell_has_player_citytile(cargo):
+          cooldown = 1  # 1 - 1 to get 0
+        next_state = SearchState(turn, nb_cell, cargo, cooldown-1)
+        heap_push(next_state)
+
+    # print(f'{self.worker.id}, max_turn={max_turn}, {self.worker.cargo}')
+    # if max_turn == 83:
+      # with open('/Users/flynnwang/dev/playground/a.txt', 'w') as f:
+        # for h in range(self.game_map.height):
+          # for w in range(self.game_map.width):
+            # st = self.state_map[h][w]
+            # if st:
+              # print(f'{st.pos}, t={st.turn}, {st.cargo}, cd={st.cooldown}', file=f)
+        # assert False
 
 # TODO: add near resource tile to cluster
 class ClusterInfo:
@@ -489,6 +593,9 @@ class Strategy:
       shortest_path.compute()
       self.shortet_paths[unit.id] = shortest_path
 
+      quickest_path = QuickestPath(self.game, unit)
+      quickest_path.compute()
+
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_dist = {}
 
@@ -583,7 +690,7 @@ class Strategy:
       arrival_turns = unit_arrival_turns(g.turn, worker, dist-1)
       # TODO: add some buffer for safe arrival
       if worker.surviving_turns < arrival_turns:
-        return -9999
+        return worker.surviving_turns - arrival_turns
 
       # Give a small weight for any resource 0.1 TODO: any other option?
       wt = 0
@@ -602,10 +709,9 @@ class Strategy:
                                                  move_days=dist_to_days(dist))
       wt += fuel
 
-      # Try to hide next to resource grid.
+      # Try to hide next to resource grid in the night.
       if is_resource_tile_can_save_dying_worker(resource_tile, worker, dist):
         wt += UNIT_SAVED_BY_RES_WEIGHT
-
 
       # TODO: Consider drop cluster boosting when dist <= 1
       cid = self.cluster_info.get_cid(resource_tile.pos)
@@ -632,14 +738,16 @@ class Strategy:
       # TODO: It's asuming dist are full of danger, but it could be move inside citytile.
       arrival_turns = unit_arrival_turns(g.turn, worker, dist)
       if worker.surviving_turns < arrival_turns:
-        return -9999
+        return worker.surviving_turns - arrival_turns
 
       citytile = city_cell.citytile
       city = g.player.cities[citytile.cityid]
 
+      # Default go back to city.
+      wt = max(city_last_nights(city), 2)
+
       # Stay at city will gain this amout of fuel
       amount, fuel = get_one_step_collection_values(citytile.cell, player, g.game_map)
-      wt = 0
       if self.game.is_night:
         wt += max(fuel - LIGHT_UPKEEP['CITY'], 0)
 
@@ -676,7 +784,7 @@ class Strategy:
       days_left = DAY_LENGTH - self.circle_turn - worker.cooldown
       round_nights = get_night_count_this_round(g.turn)
 
-      # Boost based on woker, city assignment. (not used)
+      # [not used] Boost based on woker, city assignment.
       if (worker.target_city_id == citytile.cityid
           and worker.pos.distance_to(city_cell.pos) == 1):
         wt += 1000 * n_citytile
@@ -725,7 +833,7 @@ class Strategy:
       arrival_turns = unit_arrival_turns(g.turn, worker, dist)
       # TODO: add some buffer for safe arri0
       if worker.surviving_turns < arrival_turns:
-        return -9999
+        return worker.surviving_turns < arrival_turns
 
       amount, fuel = get_one_step_collection_values(near_resource_tile, player,
                                                     g.game_map, move_days=dist_to_days(dist))
@@ -815,7 +923,7 @@ class Strategy:
     weights = np.ones((len(workers), len(target_cells))) * -9999
 
     # MAIN_PRINT
-    print((f'*turn={g.turn}, #W={len(workers)}, #C={player.city_tile_count} '
+    print((f'>turn={g.turn}, #W={len(workers)}, #C={player.city_tile_count} '
            f'R={g.player.research_points}'),
           file=sys.stderr)
     for i, worker in enumerate(workers):
