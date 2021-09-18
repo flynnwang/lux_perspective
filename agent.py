@@ -16,12 +16,23 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | oHttUsiLRB3C   | 17.1875221      | μ=20.730, σ=1.181  | 71
 
 
-
-
-
-
--> bugfix
+* Do not make unit with cd > 1 as target cell.
 * multiple next steps on quick_path
+* Do not do cluster boost for player cluster.
+* Fix multi path points from quick path (dulicated source)
+* bug: Cluster boost will make agent die (should use next position on path, not position on path)
+
+>>eval
+opponent_name	boost_near_resource	lux_perspective
+boost_near_resource	0.000	30.357
+lux_perspective	69.643	0.000
+
+
+
+-> priority
+* Optimize the search algorithm. state should be (turn, x, y)
+* Limit the number of citytile per cluster
+
 
 ->
 * Do not spawn at night in dying city.
@@ -73,8 +84,13 @@ from utility import *
 DEBUG = True
 
 
-DRAW_UNIT_ACTION = True
-DRAW_UNIT_CLUSTER_PAIR = True
+DRAW_UNIT_ACTION = 1
+DRAW_UNIT_CLUSTER_PAIR = 1
+
+DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_MOVE_VALUE = 0
+DRAW_QUICK_PATH_VALUE = 0
+
 
 
 # TODO: add more
@@ -420,8 +436,8 @@ class QuickestPath:
 
         # TODO: maybe not in cooldown?
         # Skip enemy unit in cooldown.
-        if (nb_cell.unit and
-            nb_cell.unit.team == self.game.opponent_id and not nb_cell.unit.can_act()):
+        if (nb_cell.unit and nb_cell.unit.team == self.game.opponent_id):
+            # nb_cell.unit.team == self.game.opponent_id and not nb_cell.unit.can_act()):
           continue
 
         turn = cur_state.turn
@@ -467,29 +483,48 @@ class QuickestPath:
       return MAX_PATH_WEIGHT
     return state.turn - self.turn
 
-  def get_path_positions(self, target_pos):
+  def get_next_step_path_points(self, target_pos, worker_pos):
+    st = self.state_map[target_pos.x][target_pos.y]
     path_positions = {target_pos}
-    # return path_positions
+    next_step_path_points = set()
 
+    q = deque([st])
+    while q:
+      st = q.popleft()
+      if st is None:
+        continue
+      for prev in st.prev_states:
+        # Root
+        if prev is None:
+          continue
+
+        # Collect points of next step from worker position
+        if prev.pos == worker_pos:
+          next_step_path_points.add(st.pos)
+
+
+        # Added by other node.
+        if prev.pos in path_positions:
+          continue
+        q.append(prev)
+        path_positions.add(prev.pos)
+
+        if self.debug:
+          line = annotate.line(prev.pos.x, prev.pos.y,
+                               st.pos.x, st.pos.y)
+          self.actions.extend([line])
+          # a = annotate.text(st.pos.x, st.pos.y, f'{len(st.prev_states)}', fontsize=32)
+          # self.actions.extend([line, a])
+    return next_step_path_points
+
+
+    path_positions = {target_pos}
     st = self.state_map[target_pos.x][target_pos.y]
     while st:
       path_positions.add(st.pos)
       st = st.prev
     return path_positions
 
-
-    q = deque([st])
-
-    while q:
-      st = q.popleft()
-      for prev in st.prev_states:
-        # Root
-        if prev is None:
-          continue
-
-        q.append(prev)
-        path_positions.add(prev.pos)
-    return path_positions
 
 
 # TODO: add near resource tile to cluster
@@ -679,16 +714,20 @@ class Strategy:
       # assert dying == unit.is_dying
 
       unit.cell = self.game_map.get_cell_by_pos(unit.pos)
+      debug = False
 
-      quickest_path = QuickestPath(self.game, unit)
+      debug = (unit.id == 'u_7' and DRAW_QUICK_PATH_VALUE)
+      quickest_path = QuickestPath(self.game, unit, debug=debug)
       quickest_path.compute()
+      self.actions.extend(quickest_path.actions)
 
 
       # debug = (True if unit.id == 'u_2' else False)
       quickest_path_wo_citytile = QuickestPath(self.game, unit,
-                                               not_leaving_citytile=True, debug=debug)
+                                               not_leaving_citytile=True)
+                                               # not_leaving_citytile=True, debug=debug)
       quickest_path_wo_citytile.compute()
-      self.actions.extend(quickest_path_wo_citytile.actions)
+      # self.actions.extend(quickest_path_wo_citytile.actions)
 
       self.quickest_path_pairs[unit.id] = (quickest_path, quickest_path_wo_citytile)
 
@@ -869,7 +908,8 @@ class Strategy:
       if (self.circle_turn >= 20
           and n_citytile >= 2
           and city_last_nights(city) < min_city_last
-          and worker_total_fuel(worker) >= min_fuel):
+          and worker_total_fuel(worker) >= min_fuel
+          or (is_worker_cargo_full(worker))):
         wt += worker_total_fuel(worker)
         if not city_will_last:
           wt += worker_total_fuel(worker)
@@ -1043,6 +1083,11 @@ class Strategy:
             # print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
           continue
 
+        # Other worker can't move onto worker cell with cd > 1
+        if target.unit and target.unit.cooldown >= 1 and worker.id != target.unit.id:
+
+          continue
+
         if cell_has_player_citytile(target, self.game):
           # TODO: when should we use path without citytile?
           # _, path_wo_cc = self.quickest_path_pairs[worker.id]
@@ -1066,6 +1111,12 @@ class Strategy:
         else:
           v = get_worker_tile_weight(worker, target)
         weights[i, j] = v
+
+
+        if worker.id in ['u_2'] and DRAW_UNIT_TARGET_VALUE:
+          pos = target.pos
+          a = annotate.text(pos.x, pos.y, f'{int(v)}', fontsize=32)
+          self.actions.append(a)
 
         # if worker.id == 'u_48' and target.pos in [Position(18, 9), Position(18, 11),]:
           # print(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
@@ -1165,6 +1216,10 @@ class Strategy:
         if next_position in worker.transfer_build_locations:
           v += 100
 
+
+      if worker.id in ['u_7'] and DRAW_UNIT_MOVE_VALUE:
+        a = annotate.text(next_position.x, next_position.y, f'{int(v)}', fontsize=32)
+        self.actions.append(a)
       # if worker.id in ['u_2']:
         # print(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, target={worker.target_pos}", file=sys.stderr)
       return v
@@ -1222,12 +1277,14 @@ class Strategy:
       # if worker.id in ['u_2']:
         # print(f'-> {worker.id}, amt={worker.cargo}, building_tile: {is_worker_building_citytile(worker)}')
         # if is_worker_building_citytile(worker):
-          # print(f'not leave city{quick_path.not_leaving_citytile}, path_positions={quick_path.get_path_positions(worker.target_pos)}')
+          # print(f'not leave city{quick_path.not_leaving_citytile}, path_positions={quick_path.get_next_step_path_points(worker.target_pos)}')
 
       # path staths from dest to start point
       # if worker.target_pos is None:
         # print(f'  w[{worker.id}]={worker.pos}, target={worker.target_pos}, S_path={path_positions}', file=sys.stderr)
-      path_positions = quick_path.get_path_positions(worker.target_pos)
+
+      path_positions = quick_path.get_next_step_path_points(worker.target_pos, worker.pos)
+      self.actions.extend(quick_path.actions)
 
       for next_position in gen_next_positions(worker):
         wt = get_step_weight(worker, next_position, quick_path, path_positions)
@@ -1423,6 +1480,11 @@ class Strategy:
       worker = workers[worker_idx]
       cid = resource_clusters[cluster_idx]
       if weights[worker_idx, cluster_idx] < 0:
+        continue
+
+      # Do not boost for player cluster.
+      n_citytile = self.cluster_info.cluster_citytile_count[cid]
+      if n_citytile > 0:
         continue
 
       worker.target_cluster_id = cid
@@ -1628,7 +1690,7 @@ class Strategy:
     self.worker_look_for_resource_transfer()
 
     self.assign_worker_to_resource_cluster()
-    self.assign_worker_to_resource_cluster(multi_worker=True)
+    # self.assign_worker_to_resource_cluster(multi_worker=True)
     self.assign_worker_target()
 
     self.try_build_citytile()

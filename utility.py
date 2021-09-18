@@ -71,6 +71,10 @@ def worker_total_cargo(worker):
   return (cargo.wood + cargo.coal + cargo.uranium)
 
 
+def is_worker_cargo_full(worker):
+  return worker_total_cargo(worker) == WORKER_RESOURCE_CAPACITY
+
+
 def cargo_total_fuel(cargo):
   return (cargo.wood * WOOD_FUEL_RATE
           + cargo.coal * COAL_FUEL_RATE
