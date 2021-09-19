@@ -12,6 +12,8 @@ def params(key):
   return GAME_CONSTANTS['PARAMETERS'][key]
 
 
+MAX_DAYS = params("MAX_DAYS")
+
 DIRECTIONS = Constants.DIRECTIONS
 DAY_LENGTH = params('DAY_LENGTH')
 NIGHT_LENGTH = params('NIGHT_LENGTH')
@@ -27,6 +29,7 @@ LIGHT_UPKEEP = params('LIGHT_UPKEEP')
 WORKER_UPKEEP = LIGHT_UPKEEP['WORKER']
 
 MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
+
 
 
 
@@ -158,6 +161,8 @@ def cargo_night_endurance(cargo, upkeep):
 
 
 def consume_cargo(turn, cargo, is_citytile, sim_turns, upkeep):
+  """1) Not counting resource collect on the way.
+     2) Not counting city corrupt."""
   # Empty cargo when worker is on citytile.
   if is_citytile:
     return Cargo()
