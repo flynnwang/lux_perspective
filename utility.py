@@ -332,8 +332,7 @@ def resource_surviving_nights(turn, resource, upkeep):
 
 
 def city_wont_last_at_nights(turn, city, add_fuel=0):
-  turn %= CIRCLE_LENGH
-  round_nights = min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
+  round_nights = get_night_count_this_round(turn)
   city_nights = city_last_nights(city, add_fuel)
   return city_nights < round_nights
 

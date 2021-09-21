@@ -1,4 +1,117 @@
 
+
+# 2021-09-21
+
+
+@254213878
+* How to keep citytile alive?
+- collect as much as possible before moving back citytile with minimum deliveray.
+- Do not use uranium for city building (except if no city left)
+- Add multiple targets for coal and uranium target.
+- Fix one step collect rate for city cell weight of dying worker.
+
+Total Matches: 932 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | xSmq9wwIJbxW   | 28.2573994      | μ=30.902, σ=0.881  | 445
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | VpjMGvpKRSWM   | 26.7640726      | μ=29.293, σ=0.843  | 391
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | jhmVKpEJI458   | 22.6833760      | μ=25.170, σ=0.829  | 395
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | kpHU6c1LR4Vi   | 18.7487519      | μ=21.338, σ=0.863  | 334
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | TnSRS1R2sn49   | 17.5817110      | μ=20.282, σ=0.900  | 299
+
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective	tranfer_agent_v1
+Tong_Hui_Kang	0.000	32.203	19.737	8.333	3.896
+boost_near_resource	69.492	0.000	27.848	10.476	13.131
+explore_cluster	82.895	72.152	0.000	18.248	29.091
+lux_perspective	91.667	89.524	81.752	0.000	64.545
+tranfer_agent_v1	96.104	86.869	70.909	35.455	0.000
+
+
+# 2021-09-19
+
+>> DONE
+* bug: 392744278, not building new citytile at beginning
+* Try use large negative values for task assignment.
+* Move to nearest non-saving city tile
+* 559804163: go to remote cluster blocked by citytile
+  Solution: use priority search based on turn & resource & cooldown
+
+Total Matches: 207 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 3crvlZRyRYc7   | 27.6776525      | μ=30.691, σ=1.004  | 97
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | I6wBPwqxj8kx   | 23.8109692      | μ=26.767, σ=0.985  | 82
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | g41HVbkZB6nm   | 22.5754104      | μ=25.538, σ=0.988  | 80
+/Users/flynnwang/dev/playground/lux_perspective/main.py | kQ4cCdhLyk8h   | 21.0058017      | μ=23.998, σ=0.998  | 84
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | oHttUsiLRB3C   | 17.1875221      | μ=20.730, σ=1.181  | 71
+
+
+* Do not make unit with cd > 1 as target cell.
+* multiple next steps on quick_path
+* Do not do cluster boost for player cluster.
+* Fix multi path points from quick path (dulicated source)
+* bug: Cluster boost will make agent die (should use next position on path, not position on path)
+
+>>eval
+opponent_name	boost_near_resource	lux_perspective
+boost_near_resource	0.000	30.357
+lux_perspective	69.643	0.000
+
+
+* Optimize the search algorithm: add waiting on city path
+
+opponent_name	boost_near_resource	lux_perspective
+boost_near_resource	0.000	21.622
+lux_perspective	81.081	0.000
+
+
+X Try skip build city boost for cluster boost worker
+* Add small weight for city
+
+* [Fix] near_resource_tile: use it even it's not reseached. No need to check reached for near resource tile
+* [Fix] research points growth use citytile, not city
+* Estimate to the end of day time this round or unit arrival turns
+
+Total Matches: 22 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 4CKKG4BqBnOo   | 20.5313804      | μ=30.603, σ=3.357  | 22
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 69BdySuYM0XI   | 9.3244231       | μ=19.397, σ=3.357  | 22
+
+opponent_name	boost_near_resource	lux_perspective
+boost_near_resource	0.000	  4.762
+lux_perspective	    95.238	0.000
+
+
+* Boost the values for dying worker (save it from dying)
+([Fix] Fix resoruce tile save worker from near resoruce tile.)
+
+Total Matches: 126 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | 93BSGxynL3I8   | 26.3699693      | μ=29.551, σ=1.060  | 126
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | RM6Cz85QmG9y   | 17.2676592      | μ=20.449, σ=1.060  | 126
+
+win_loss	win	loss
+boost_near_resource	0.095	0.905
+lux_perspective	0.905	0.095
+
+
+Total Matches: 329 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | cTyNYJOXnV2v   | 28.3922142      | μ=31.144, σ=0.917  | 152
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | TRxlQlSmdQh0   | 28.0149808      | μ=30.765, σ=0.917  | 148
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | dQeoN3Drvwa8   | 24.6459114      | μ=27.341, σ=0.898  | 123
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | cmMXeKkBtB2b   | 18.8239661      | μ=21.833, σ=1.003  | 116
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | 8Hzc3RTeCzT1   | 17.0155245      | μ=20.199, σ=1.061  | 119
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective	tranfer_agent_v1
+Tong_Hui_Kang	0.000	36.000	14.286	3.125	8.571
+boost_near_resource	64.000	0.000	36.842	5.882	5.556
+explore_cluster	85.714	63.158	0.000	23.810	32.432
+lux_perspective	96.875	94.118	76.190	0.000	52.632
+tranfer_agent_v1	91.429	94.444	67.568	50.000	0.000
+
+
+
+
 # 2021-09-14
 
 * verify: use last turn and arrival_turns no regression
