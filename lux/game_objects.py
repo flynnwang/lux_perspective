@@ -81,6 +81,11 @@ class Cargo:
     def __eq__(self, other):
       return self.wood == other.wood and self.coal == other.coal and self.uranium == other.uranium
 
+    def clear(self):
+      self.wood = 0
+      self.coal = 0
+      self.uranium = 0
+
 
 class Unit:
     def __init__(self, teamid, u_type, unitid, x, y, cooldown, wood, coal, uranium):
