@@ -1,6 +1,104 @@
 
+==================== 2021-09-22
 
-# 2021-09-21
+
+@141895229 explore_cluster
+* Moving output of dying city
+- Support resource collection on duing quickest path search
+- more accuate resoruce collection on cell (not possible, because of its future and there is other agent)
+- Add citytile burn down during quickent path search.
+
+* worker went to not researched near resource tile.
+  TODO
+* [done] why resource is first fill into small city?
+  - use small weight decay for city tile saving mission
+* [done] goto resource tile at night pass city and die (turn 38, u_13)
+  - fix city_fuel at turn
+
+@885572143 explore_cluster
+* add more worker to citytile count: use 8
+* [not done] move to uranium ASAP. (maybe after coal finished?)
+
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | Wn2kfvy0ASbk   | 27.9354594      | μ=30.526, σ=0.863  | 312
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | tLdgNlZc05Sz   | 26.8007169      | μ=29.324, σ=0.841  | 304
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | xKOJMIlDrJOX   | 24.2862879      | μ=26.779, σ=0.831  | 285
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | DPiD7Fq6xXMk   | 19.2482321      | μ=21.886, σ=0.879  | 266
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | WhpoYcrQ43zB   | 17.4061673      | μ=20.180, σ=0.925  | 239
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective	tranfer_agent_v1
+Tong_Hui_Kang	0.000	45.283	7.937	7.812	5.085
+boost_near_resource	54.717	0.000	19.355	8.451	15.000
+explore_cluster	92.063	80.645	0.000	19.767	32.432
+lux_perspective	92.188	91.549	82.558	0.000	59.341
+tranfer_agent_v1	94.915	85.000	68.919	40.659	0.000
+
+
+@172635463 tranfer_agent_v1: explore late
+@250467351 tranfer_agent_v1: rescue city failed
+@876456571 tranfer_agent_v1: invaded by the other agent.
+
+
+- [Fix] do not move onto tranfer unit.
+- [Fix] sort transfer build positions based on resource
+- [TODO]: moving worker out of dying city.
+- 173181129@explore_agent turn=69, going far into coal? (use unit surviving_turns)
+- remove double calls
+- [fix] positve weight for city that last at night (round factor fix)
+- ?why u_20 move to near source tile @173181129: because the other worker in cooldown_wait_days
+- [TODO]drop opponent citytile count when compute cluster assignment
+- u_8 no weight on turn 20 (becuase of transfer action)
+- [fix] send wood worker back to citytile when full
+
+
+Total Matches: 560 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | zCkP8n1nqX7c   | 28.8291580      | μ=31.514, σ=0.895  | 233
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 5qDR0xSFR2u4   | 25.6965306      | μ=28.232, σ=0.845  | 265
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | nKsP3KbZjH8p   | 22.4311385      | μ=24.903, σ=0.824  | 226
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 5CJzancfDJbx   | 20.1933694      | μ=22.777, σ=0.861  | 213
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | lSm3IZnENou5   | 15.9296517      | μ=18.964, σ=1.011  | 183
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective	tranfer_agent_v1
+Tong_Hui_Kang	0.000	13.333	15.625	2.083	12.281
+boost_near_resource	86.667	0.000	26.230	13.208	19.231
+explore_cluster	84.375	73.770	0.000	22.222	25.641
+lux_perspective	97.917	86.792	77.778	0.000	73.684
+tranfer_agent_v1	87.719	80.769	74.359	26.316	0.000
+
+- Limit the distance to build city time <= 3
+
+
+Total Matches: 292 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | B1OrkEvJvlCa   | 30.7788747      | μ=33.971, σ=1.064  | 135
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | n41aWmmPOFdT   | 25.5638641      | μ=28.464, σ=0.967  | 122
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | mDHA3uafDFIS   | 21.3554740      | μ=24.164, σ=0.936  | 119
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | U3KGF40wlyjt   | 19.9142002      | μ=22.868, σ=0.985  | 108
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | IZSzKxyUHN9Q   | 14.3613748      | μ=18.132, σ=1.257  | 100j
+
+
+opponent_name	Tong_Hui_Kang	boost_near_resource	explore_cluster	lux_perspective	tranfer_agent_v1
+Tong_Hui_Kang	0.000	23.529	17.391	2.857	0.000
+boost_near_resource	76.471	0.000	44.828	8.696	12.821
+explore_cluster	82.609	58.621	0.000	11.628	33.333
+lux_perspective	97.143	91.304	88.372	0.000	82.353
+tranfer_agent_v1	100.000	87.179	66.667	17.647	0.000
+
+
+- Test remove wood worker full boosting rule.
+
+Total Matches: 191 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | Sktv95NG2VPW   | 27.9133737      | μ=31.312, σ=1.133  | 77
+/Users/flynnwang/dev/playground/lux_perspective/main.py | hZhFlRvuYip2   | 26.7752157      | μ=30.109, σ=1.111  | 73
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | kytd9B7hmTsh   | 23.4439667      | μ=26.489, σ=1.015  | 89
+/Users/flynnwang/dev/playground/versions/boost_near_resource/main.py | 8K5iqRQgZoaj   | 19.5275129      | μ=22.903, σ=1.125  | 76
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang/main.py | jwY5pFTEquUC   | 17.8681639      | μ=21.483, σ=1.205  | 67
+
+
+
+=============== 2021-09-21
 
 
 @254213878
@@ -28,7 +126,7 @@ tranfer_agent_v1	96.104	86.869	70.909	35.455	0.000
 
 
 
-# 2021-09-19
+================== 2021-09-19
 
 >> DONE
 * bug: 392744278, not building new citytile at beginning
