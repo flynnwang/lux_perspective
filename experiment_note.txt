@@ -1,3 +1,26 @@
+==================== 2021-09-24 =========================
+
+new baseline for [priority_search] agent
+
+Total Matches: 709 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/versions/priority_search/main.py | S4hr8d5Kg1IW   | 27.6315926      | μ=30.126, σ=0.831  | 337
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 55A7FW7uIJza   | 24.8101631      | μ=27.233, σ=0.808  | 322
+/Users/flynnwang/dev/playground/versions/sazuma_1430/main.py | TdDq6nJ54vGP   | 22.1792386      | μ=24.615, σ=0.812  | 234
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | aYL8jKZVkURa   | 21.8331642      | μ=24.255, σ=0.807  | 289
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 9sESKOT99gZY   | 19.5155309      | μ=22.029, σ=0.838  | 236
+
+
+opponent_name	Tong_Hui_Kang_v4	explore_cluster	priority_search	sazuma_1430	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	24.5	15.4	35.0	20.0
+explore_cluster   	75.5	0.0	24.7	61.1	19.5
+priority_search	    84.6	75.3	0.0	    79.3	67.4
+sazuma_1430	        67.5	38.9	20.7	0.0	   25.8
+tranfer_agent_v1	80.0	80.5	32.6	74.2	0.0
+
+
+
+
 
 ==================== 2021-09-22
 
@@ -66,6 +89,8 @@ explore_cluster	84.375	73.770	0.000	22.222	25.641
 lux_perspective	97.917	86.792	77.778	0.000	73.684
 tranfer_agent_v1	87.719	80.769	74.359	26.316	0.000
 
+
+@195635200 explore_agent: initial explore?
 - Limit the distance to build city time <= 3
 
 
