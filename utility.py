@@ -234,6 +234,11 @@ def get_night_count_this_round(turn):
   return min(CIRCLE_LENGH - turn, NIGHT_LENGTH)
 
 
+def is_first_night(turn):
+  turn %= CIRCLE_LENGH
+  return turn == DAY_LENGTH
+
+
 def get_day_count_this_round(turn):
   turn %= CIRCLE_LENGH
   return max(DAY_LENGTH - turn, 0)

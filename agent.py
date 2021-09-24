@@ -1,16 +1,54 @@
 """
+- [√] remove limit (or limit at 120)
+- [√] 860693002@t10: try build citytile next to each other.
+
+(explore cluster optimization)
+- [√] 242859934: also visit enemy's cluster for city tile building
+- 242859934: why the cluster explorer coming back and forworth?
+- 772744483@t24u3: do not use cluster boost worker to resurce cityhouse
+
+
+- cluster boost with weight decay (so that it will persist)
+- Boost cluster explore task over city build task?
+- collect edge count info for cluster assignment.
+
+- add randomized actions
+- 242859934@t20 Try to resolve global & local conficts.
+
+
+- 796001604@t28: move out of dying citytile (not possible, no resoruce tile or other city.)
+
+
+- Try defend enemy come into my cluster
+
+- save size one coal city: not cheap to build
+- Do not move to coal too early 763344269@t39
+- **Ending pose: build extra city tile with transfer
+
+- boost agent into city building position at next day - 4
+  * remove build city turn limit, so worker will goto near resource tile natually
+
+@668323264
+- [TODO] t=41, u_11, goto remote tile without crossing city
+ * u_2 t=20
+- [x] goto build city tile without crossing city
+  already did that
+
+- [TODO] Should I boost more for near resource tile (for defence?) than resource tile.
+- [TODO] boost worker into resource tile when possible?
+
+- [TODO] wait in the day? for faster arrival.
+
 
 @537926055
 - why u_4 return to cluster 0?
 
-
-
+- search based on enemy city light keep
 - why u_5 goto coal far away at turn 28?
 - wait too long at urnaium
 
 
 @178969124 explore: invaded.
-@195635200 explore_agent: initial explore?
 
 
 
@@ -87,20 +125,20 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 
-DRAW_UNIT_LIST = []
+DRAW_UNIT_LIST = ['u_3']
 MAP_POS_LIST = []
-DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
 
 
 # TODO: add more
-BUILD_CITYTILE_ROUND = 29
+BUILD_CITYTILE_ROUND = CIRCLE_LENGH
 
 MAX_PATH_WEIGHT = 99999
 
-MAX_UNIT_NUM = 60
+MAX_UNIT_NUM = 120
 
 
 def dist_decay(dist, game_map):
@@ -193,13 +231,16 @@ def resource_cell_added_surviving_nights(cell, upkeep, game):
   return turns
 
 
-def get_one_step_collection_values(cell, player, game, move_days=0, surviving_turns=0):
+def get_one_step_collection_values(cell, player, game, move_days=0, surviving_turns=0,
+                                   unit=None):
   game_map = game.map
   amount, fuel = get_cell_resource_values(cell, player, move_days=move_days,
-                                          surviving_turns=surviving_turns)
+                                          surviving_turns=surviving_turns,
+                                          unit=unit)
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
     a, f = get_cell_resource_values(nb_cell, player, move_days=move_days,
-                                    surviving_turns=surviving_turns)
+                                    surviving_turns=surviving_turns,
+                                    unit=unit)
     amount += a
     fuel += f
   return amount, fuel
@@ -243,7 +284,11 @@ class LuxGame(Game):
 
   @property
   def days_this_round(self):
-    return max(DAY_LENGTH - self.circle_turn, 0)
+    return get_day_count_this_round(self.turn)
+
+  @property
+  def night_in_round(self):
+    return get_night_count_this_round(self.turn)
 
 
   def update(self, observation, configuration):
@@ -875,7 +920,7 @@ class Strategy:
           cell.is_uranium_target = is_resource_uranium(cell.resource)
 
         cell.is_near_resource = self.is_near_resource_cell(cell)
-        cell.is_citytile_neighbour = self.has_citytile_neighbours(cell)
+        cell.n_citytile_neighbour = self.count_citytile_neighbours(cell)
 
 
     for unit in self.game.player.units:
@@ -935,12 +980,12 @@ class Strategy:
       unit.cid_to_cluster_turns = {}
 
 
-  def has_citytile_neighbours(self, cell, min_citytile=1):
+  def count_citytile_neighbours(self, cell, min_citytile=1):
     cnt = 0
     for nb_cell in get_neighbour_positions(cell.pos, self.game_map, return_cell=True):
       if cell_has_player_citytile(nb_cell, self.game):
         cnt += 1
-    return cnt >= min_citytile
+    return cnt
 
   def is_near_resource_cell(self, cell):
     def has_resource_tile_neighbour(cell):
@@ -987,7 +1032,7 @@ class Strategy:
             is_target_cell = True
           elif cell.is_near_resource:
             is_target_cell = True
-          elif cell.is_citytile_neighbour:
+          elif cell.n_citytile_neighbour > 0:
             is_target_cell = True
           elif (cell.unit and cell.unit.team == player.team):
             is_target_cell = True
@@ -1055,6 +1100,7 @@ class Strategy:
           and not resource_tile.has_buildable_neighbour):
         # TODO: why it's cell resource value here?
         _, fuel = get_cell_resource_values(resource_tile, player,
+                                           unit=worker,
                                            move_days=arrival_turns,
                                            surviving_turns=worker.surviving_turns)
         fuel /= 2
@@ -1062,6 +1108,7 @@ class Strategy:
           # print(f'triggered demote for no neighbour c[{resource_tile.pos}]')
       else:
         _, fuel = get_one_step_collection_values(resource_tile, player, self.game,
+                                                 unit=worker,
                                                  move_days=arrival_turns,
                                                  surviving_turns=worker.surviving_turns)
       wt += fuel
@@ -1070,6 +1117,7 @@ class Strategy:
       if fuel:
         wt += DEFAULT_RESOURCE_WT
 
+      #TODO: encourage worker into near/resource tile, not necessary dying
       # Try to hide next to resource grid in the night.
       if is_resource_tile_can_save_dying_worker(resource_tile, worker, arrival_turns):
         wt += UNIT_SAVED_BY_RES_WEIGHT
@@ -1139,9 +1187,11 @@ class Strategy:
       _, worker_collect_fuel = get_one_step_collection_values(worker.cell, player, self.game)
       city_last = not city_wont_last
       if worker.is_cargo_not_enough_for_nights:
+        # Hide in the city
         if city_last:
           wt += max(min(city_last_nights(city) / 10, 2), 0) * self.round_factor
         elif cargo_total_amount(worker.cargo) == 0:
+          # Escape from dying city.
           wt = -99999
           return wt
 
@@ -1311,6 +1361,7 @@ class Strategy:
       # TODO(wangfei): merge near resource tile and resource tile weight functon
     def get_near_resource_tile_weight(worker, near_resource_tile, arrival_turns):
       wt = 0
+      # Not using unit so near resource tile will have more weight over resource tile.
       amount, fuel = get_one_step_collection_values(near_resource_tile, player,
                                                     self.game,
                                                     move_days=arrival_turns,
@@ -1348,6 +1399,15 @@ class Strategy:
       # if not is_next_to_target_cluster and worker.target_cluster_id >= 0:
         # build_city_bonus = False
 
+      # Boost worker into city build position when night left = 4 for first city building
+      # 1) circle_round == 36 (DAY_LENGTH - cooldown * 2)
+      # 2) dist == 1
+      # 3) worker.surviving_turns >= 4
+      # if (self.circle_turn == DAY_LENGTH - get_unit_action_cooldown(worker) * 2
+          # and arrival_turns == 1
+          # and worker.surviving_turns >= self.game.night_in_round):
+        # build_city_bonus = True
+
       # Overwrite arrival_turns or not boost city building.
       if self.is_worker_building_citytile(worker, near_resource_tile.pos):
         _, quick_path = self.quickest_path_pairs[worker.id]
@@ -1359,8 +1419,14 @@ class Strategy:
 
       # TODO: test this threshold.
       # Too large the build city bonus will cause worker divergence from its coal mining position
-      if build_city_bonus and arrival_turns <= 3:
+      if (build_city_bonus and arrival_turns <= 3
+          and not is_first_night(self.game.turn)):
         wt += 1000
+
+        # Encourage worker to build connected city tiles.
+        if near_resource_tile.n_citytile_neighbour > 0:
+          wt += 100 * near_resource_tile.n_citytile_neighbour
+
         # mark build city cell
         self.worker_build_city_tasks.add((worker.id, near_resource_tile.pos))
 
@@ -1457,7 +1523,7 @@ class Strategy:
           # v = get_near_resource_tile_weight(worker, target, dest_turns)
           #TODO: use path_wo_cc when build tiles
           v = get_near_resource_tile_weight(worker, target, quicker_dest_turns)
-        elif target.is_citytile_neighbour:
+        elif target.n_citytile_neighbour > 0:
           v = get_city_tile_neighbour_weight(worker, target)
         else:
           v = get_worker_tile_weight(worker, target)
@@ -1690,6 +1756,11 @@ class Strategy:
           and (unit.target_pos and unit.target_pos == unit.pos
                or unit.target_cluster_id >= 0)):
         cell = self.game_map.get_cell_by_pos(unit.pos)
+
+        # Do not build single city on first night:
+        if (is_first_night(self.game.turn) and cell.n_citytile_neighbour == 0):
+          continue
+
         # if cell.is_near_resource:
         self.add_unit_action(unit, unit.build_city())
         unit.is_building_city = True
@@ -1799,11 +1870,11 @@ class Strategy:
                                     surviving_turns=worker.surviving_turns):
         return -9999
 
-      # TODO: is it good? or maybe estimate can we have access to it?
-      n_oppo_citytile = self.cluster_info.oppopent_citytile_count[cid]
-      n_player_citytile = self.cluster_info.player_citytile_count[cid]
-      if n_oppo_citytile > 0 and n_player_citytile == 0:
-        return -9999
+      # TODO: do not ignore enemy cluster, but could try use edge count info.
+      # n_oppo_citytile = self.cluster_info.oppopent_citytile_count[cid]
+      # n_player_citytile = self.cluster_info.player_citytile_count[cid]
+      # if n_oppo_citytile > 0 and n_player_citytile == 0:
+        # return -9999
 
       # if n_tile <= 1:
         # return 1
