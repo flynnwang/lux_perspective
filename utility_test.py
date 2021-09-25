@@ -174,3 +174,10 @@ def test_consume_cargo_at_night():
 
   # night + day
   assert consume_cargo(38, cargo, False, 2, upkeep) == Cargo(96, 0, 0)
+
+
+def test_is_day_and_night():
+  assert is_day(0)
+  assert is_day(29)
+  assert is_night(30)
+  assert is_night(39)

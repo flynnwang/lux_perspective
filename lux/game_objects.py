@@ -91,6 +91,7 @@ class Unit:
     def __init__(self, teamid, u_type, unitid, x, y, cooldown, wood, coal, uranium):
         self.pos = Position(x, y)
         self.team = teamid
+        self.team_id = teamid
         self.id = unitid
         self.type = u_type
         self.cooldown = cooldown

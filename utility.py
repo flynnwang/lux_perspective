@@ -29,7 +29,9 @@ CITY_ACTION_COOLDOWN = params('CITY_ACTION_COOLDOWN')
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
 WORKER_UPKEEP = LIGHT_UPKEEP['WORKER']
 
-MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
+MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]  # old version
+URANIUM_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
+COAL_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["COAL"]
 
 
 # ORDER MATTERS
@@ -134,6 +136,10 @@ def cell_has_player_citytile(cell, game):
   citytile = cell.citytile
   return citytile is not None and citytile.team == game.player.team
 
+
+def cell_has_target_player_citytile(cell, player):
+  citytile = cell.citytile
+  return citytile is not None and citytile.team == player.team
 
 
 def resource_to_cargo(resource):
