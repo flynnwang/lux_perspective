@@ -142,6 +142,10 @@ def cell_has_target_player_citytile(cell, player):
   return citytile is not None and citytile.team == player.team
 
 
+def is_last_night(turn):
+  return (turn % CIRCLE_LENGH) == (CIRCLE_LENGH - 1)
+
+
 def resource_to_cargo(resource):
   cargo = Cargo()
   if resource is None:

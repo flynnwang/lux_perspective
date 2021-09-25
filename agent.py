@@ -18,20 +18,25 @@
 - [√] 699414615/a1/t1: Bias cells towards enemy locations
   - [√] 699414615@t70u27: not moving back city (bug of bias towards enemy)
 
+- [√] 699414615/a1/t39/u1: Agent move out of woods too soon to build city tile, waste one turn.
+  * do not move at last night.
 
+- [X] 796001604@t28: move out of dying citytile (not possible, no resoruce tile or other city.)
 
-
-- Boost cluster explore task over city build task?
-- collect edge count info for cluster assignment.
-- * support wait on days for priority search (for resource research points)?
 
 - add randomized actions
 - ** Defend my city
 
+
+- [] Add cooldown into near_resource_tile discount?
+- Boost cluster explore task over city build task?
+- collect edge count info for cluster assignment.
+- * support wait on days for priority search (for resource research points)?
+
+
 - 242859934@t20 Try to resolve global & local conficts.
 
 
-- [X] 796001604@t28: move out of dying citytile (not possible, no resoruce tile or other city.)
 
 
 - Try defend enemy come into my cluster
@@ -1371,7 +1376,7 @@ class Strategy:
           and arrival_turns <= city_last_turns
           and worker.cargo.wood == WORKER_RESOURCE_CAPACITY
           and not worker.is_cluster_owner):
-        wt += 200
+        wt += 500
 
       # If a worker can arrive at this city with some min fuel (or full cargo)
       if city_wont_last and n_citytile >= 2:
@@ -1550,8 +1555,7 @@ class Strategy:
           arrival_turns = tmp_arrival_turns
 
       # Do not boost cluster owner to build city at night
-      # TODO: replace with focus cluster owner
-      if worker.target_cluster_id >= 0 and self.circle_turn >= 28:
+      if worker.is_cluster_owner and self.circle_turn >= 28:
         build_city_bonus = False
 
       # TODO: test this threshold.
@@ -1743,7 +1747,7 @@ class Strategy:
           and next_cell.citytile.team == self.game.opponent.team):
         return -MAX_MOVE_WEIGHT
 
-      # Do not move onto a transfer worker
+      # Do not move onto a transfer worker or a can not act unit.
       if (next_cell.unit
           and next_cell.unit.team == player.team
           and (next_cell.unit.is_transfer_worker
@@ -1761,24 +1765,19 @@ class Strategy:
         v += (worker.target_score + 10)
         # v += 50
 
-        # # Priority all positions of th dying worker, let others make room for him.
-        # if worker.is_cargo_not_enough_for_nights:
-          # v += 100
+        # Priority all positions of th dying worker, let others make room for him.
+        if worker.is_cargo_not_enough_for_nights:
+          v += 1000
 
-        # target_cell = self.game_map.get_cell_by_pos(worker.target_pos)
-        # if target_cell.has_resource():
-          # v += 1
+        target_cell = self.game_map.get_cell_by_pos(worker.target_pos)
+        if target_cell.has_resource():
+          v += 1
 
-        # # TODO: this may not be needed
-        # if (target_cell.is_near_resource
-            # and cell_has_player_citytile(next_cell, self.game)):
-          # v -= 5
-
-        # # Try step on resource: the worker version is better, maybe because
-        # # other worker can use that.
-        # amount, fuel = get_cell_resource_values(next_cell, g.player)
-        # if fuel > 0:
-          # v += 1
+        # Try step on resource: the worker version is better, maybe because
+        # other worker can use that.
+        amount, fuel = get_cell_resource_values(next_cell, g.player)
+        if fuel > 0:
+          v += 1
 
         if next_position in worker.transfer_build_locations:
           v += 1000
@@ -1877,7 +1876,17 @@ class Strategy:
               file=sys.stderr)
         assert wt >= 0
 
+
       next_position = next_positions[poi_idx]
+      next_cell = self.game_map.get_cell_by_pos(next_position)
+
+      # Do not take any action at last night, unless go into citytile
+      if (is_last_night(self.game.turn)
+          and next_position != worker.pos
+          and not cell_has_player_citytile(next_cell, self.game)):
+        print(f"ignore w[{worker.id}]@{worker.pos}=>[{next_position}]")
+        continue
+
       move_dir = worker.pos.direction_to(next_position)
       self.add_unit_action(worker, worker.move(move_dir))
 
