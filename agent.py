@@ -24,6 +24,16 @@
 - [X] 796001604@t28: move out of dying citytile (not possible, no resoruce tile or other city.)
 
 
+- [√] 762995151@t3: resource tile and near, max amount at 40, more won't help.
+
+- [√] 709680438: all workers dies on days 1
+  * Do not boost city build for cluster owner near non-target cluster with player city tiles
+- [-] 709680438: t10/u_3, target far away cluster tile position
+  * because the other two tiles are blocked by city tile or opponent unit.
+- [√] u_3/t8: not boost to near enemy position.
+  * Increase defend weight
+  * Use manhatten distance.
+
 - add randomized actions
 - ** Defend my city
 
@@ -145,7 +155,7 @@ DRAW_UNIT_CLUSTER_PAIR = 1
 
 
 DRAW_UNIT_LIST = []
-MAP_POS_LIST = [(15, 0)]
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
@@ -287,13 +297,31 @@ def get_one_step_collection_values(cell, player, game, move_days=0, surviving_tu
   amount, fuel_wt = get_cell_resource_values(cell, player, move_days=move_days,
                                           surviving_turns=surviving_turns,
                                           unit=unit)
+  # Use neighbour average as resource weight
+  nb_fuel_wt = 0
+  nb_count = 0
+  nb_amt = 0
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
     a, f = get_cell_resource_values(nb_cell, player, move_days=move_days,
                                     surviving_turns=surviving_turns,
                                     unit=unit)
-    amount += a
-    fuel_wt += f
-  return amount, fuel_wt
+    nb_amt = max(nb_amt, a)
+    nb_fuel_wt += f
+    if a > 0:
+      nb_count += 1
+
+  if nb_count > 0:
+    fuel_wt += nb_fuel_wt / nb_count
+
+  return amount + nb_amt, fuel_wt
+
+
+def collect_amount_at_cell(cell, player, game_map):
+  amount, _ = get_cell_resource_values(cell, player)
+  for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
+    nb_amt, _ = get_cell_resource_values(nb_cell, player)
+    amount += nb_amt
+  return amount
 
 
 class LuxGame(Game):
@@ -1068,25 +1096,26 @@ class Strategy:
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_turns = {}
 
-    for unit in self.game.opponent.units:
-      unit.cell = self.game_map.get_cell_by_pos(unit.pos)
-      quickest_path = QuickestPath(self.game, unit, debug=debug)
-      quickest_path.compute()
-      self.quickest_path_pairs[unit.id] = (quickest_path, None)
+    # for unit in self.game.opponent.units:
+      # unit.cell = self.game_map.get_cell_by_pos(unit.pos)
+      # quickest_path = QuickestPath(self.game, unit)
+      # quickest_path.compute()
+      # self.quickest_path_pairs[unit.id] = (quickest_path, None)
 
   @functools.lru_cache(maxsize=1024, typed=False)
   def get_cell_opponent_unit_min_arrival_turns(self, cell):
-    min_turns = MAX_PATH_WEIGHT
-    min_turn_cnt = 0
+    min_dist = MAX_PATH_WEIGHT
+    min_dist_cnt = 0
     for unit in self.game.opponent.units:
-      path, _ = self.quickest_path_pairs[unit.id]
-      arrival_turns = path.query_dest_turns(cell.pos)
-      if arrival_turns < min_turns:
-        min_turn_cnt = 1
-        min_turns = arrival_turns
-      elif arrival_turns == min_turns:
-        min_turn_cnt += 1
-    return min_turns, min_turn_cnt
+      # path, _ = self.quickest_path_pairs[unit.id]
+      # arrival_turns = path.query_dest_turns(cell.pos)
+      dist = cell.pos.distance_to(unit.pos)
+      if dist < min_dist:
+        min_dist_cnt = 1
+        min_dist = dist
+      elif dist == min_dist:
+        min_dist_cnt += 1
+    return min_dist, min_dist_cnt
 
   def count_citytile_neighbours(self, cell, min_citytile=1):
     cnt = 0
@@ -1263,7 +1292,7 @@ class Strategy:
       # TODO: Consider drop cluster boosting when dist <= 1
       cid = self.cluster_info.get_cid(resource_tile.pos)
       boost_cluster = 0
-      if (worker.target_cluster_id >= 0 and worker.target_cluster_id == cid):
+      if (worker.is_cluster_owner and worker.target_cluster_id == cid):
           # worker.cid_to_cluster_turns[cid] > 1):
         cluster_fuel_factor = self.cluster_info.query_cluster_fuel_factor(resource_tile.pos)
         boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
@@ -1332,8 +1361,8 @@ class Strategy:
           # wt = -99999
           # return wt
 
-      # if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-        # print(f"city_crash_boost 1:wt={wt}, [{city_cell.pos}] city_last={city_last_nights(city)}")
+      if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
+        print(f"city_crash_boost 1:wt={wt}, [{city_cell.pos}] city_last={city_last_nights(city)}")
 
 
       # TODO(wangfei): estimate worker will full
@@ -1389,6 +1418,7 @@ class Strategy:
           not_full_woker_goto_city = (
               city_last_turns - arrival_turns_wo_city <= 6   # do not goto city too earlier.
               and dest_state.arrival_fuel >= 60
+              and cargo_total_fuel(worker.cargo) >= 60
           )
           full_worker_goto_city = (
             worker.get_cargo_space_left() == 0
@@ -1400,8 +1430,8 @@ class Strategy:
             # Fuel city task.
             self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
 
-            # if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-              # print(f"city_crash_boost 2: {city_crash_boost}, wt={wt}")
+            if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
+              print(f"city_crash_boost 2: {city_crash_boost}, wt={wt}")
 
       # TODO-IMPORTANT: maybe go back to cargo, to make it transfer to other worker.
       # THIS IS: we should distribute resource evenly for all city tiles.
@@ -1427,8 +1457,8 @@ class Strategy:
           self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
 
 
-      # if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-        # print(f"city_crash_boost 3: {city_crash_boost}, wt={wt}")
+      if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
+        print(f"city_crash_boost 3: {city_crash_boost}, wt={wt}")
 
       # Boost when worker has resource and city tile won't last.
       days_left = DAY_LENGTH - self.circle_turn
@@ -1473,8 +1503,8 @@ class Strategy:
         if arrival_turns >= MAX_PATH_WEIGHT:
           return -9999
 
-      # if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-        # print(f" wt={wt}, city_crash_boost={city_crash_boost}")
+      if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
+        print(f" 4.wt={wt}, city_crash_boost={city_crash_boost}")
       # return (wt + city_crash_boost) / (arrival_turns + 1)
       return (wt) / (arrival_turns + 1) + (city_crash_boost / (arrival_turns / 5 + 1))
       # return (wt + ) / (arrival_turns + 1) + city_crash_boost
@@ -1490,6 +1520,19 @@ class Strategy:
         cid = self.cluster_info.get_cid(newpos)
         if cid == worker.target_cluster_id:
           return True
+      return False
+
+    def cell_has_player_citytile_on_target_cluster(worker, near_resource_tile):
+      if worker.target_cluster_id < 0:
+        return False
+
+      for nb_cell in get_neighbour_positions(near_resource_tile.pos, g.game_map, return_cell=True):
+        newpos = nb_cell.pos
+        cid = self.cluster_info.get_cid(newpos)
+        if cid != worker.target_cluster_id:
+          n_citytile = self.cluster_info.player_citytile_count[cid]
+          if n_citytile > 0:
+            return True
       return False
 
     self.worker_build_city_tasks = set()
@@ -1554,8 +1597,9 @@ class Strategy:
         else:
           arrival_turns = tmp_arrival_turns
 
-      # Do not boost cluster owner to build city at night
-      if worker.is_cluster_owner and self.circle_turn >= 28:
+      # Do not boost cluster owner to build city on non-target cluster with player citytile
+      if (worker.is_cluster_owner and not is_next_to_target_cluster
+          and cell_has_player_citytile_on_target_cluster(worker, near_resource_tile)):
         build_city_bonus = False
 
       # TODO: test this threshold.
@@ -1566,13 +1610,13 @@ class Strategy:
 
         # Encourage worker to build connected city tiles.
         if near_resource_tile.n_citytile_neighbour > 0:
-          wt += 100 * near_resource_tile.n_citytile_neighbour
+          wt += near_resource_tile.n_citytile_neighbour / 10
 
         # mark build city cell
         self.worker_build_city_tasks.add((worker.id, near_resource_tile.pos))
 
-      if near_resource_tile.pos in MAP_POS_LIST:
-        print(f'c[{near_resource_tile.pos}] @1, wt={wt}, arrival_turns={arrival_turns}')
+      # if near_resource_tile.pos in MAP_POS_LIST:
+        # print(f'c[{near_resource_tile.pos}] @1, wt={wt}, arrival_turns={arrival_turns}')
 
       # Try to hide next to resource grid.
       if is_resource_tile_can_save_dying_worker(near_resource_tile, worker,
@@ -1590,7 +1634,7 @@ class Strategy:
       opponent_weight = 0
       if fuel_wt > 0:
         min_turns, min_turn_cnt = self.get_cell_opponent_unit_min_arrival_turns(near_resource_tile)
-        opponent_weight = min_turn_cnt / (min_turns or 1)
+        opponent_weight = 10 * min_turn_cnt / (min_turns or 1)
 
       # return wt / (arrival_turns + 1) + boost_cluster / (arrival_turns // 2 + 1)
       return (wt / (arrival_turns + 1)
@@ -1902,13 +1946,18 @@ class Strategy:
       if not unit.is_worker():
         continue
 
+      cluster_owner_build_city = False
+      if (unit.is_cluster_owner and unit.cargo.uranium < 50):
+        cluster_owner_build_city = True
+
       # Sitting on th cell of target position for city building.
       # Sit and build.
       if (self.circle_turn < BUILD_CITYTILE_ROUND
           and unit.can_act()
           and unit.can_build(self.game.game_map)
-          and (unit.target_pos and unit.target_pos == unit.pos
-               or unit.target_cluster_id >= 0)):
+          and (unit.target_pos
+               and (unit.target_pos == unit.pos
+                    or cluster_owner_build_city))):
         cell = self.game_map.get_cell_by_pos(unit.pos)
 
         # Do not build single city on first night:
@@ -1985,6 +2034,7 @@ class Strategy:
     if self.cluster_info.max_cluster_id == 0:
       return
 
+    # TODO: use datastructure for cluster info.
     def worker_cluster_turns_info(worker, cid):
       # TODO: also count as arrival for near_resource_tile
       x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
@@ -2145,6 +2195,10 @@ class Strategy:
           wt += 100
         elif is_resource_researched(nb_cell.resource, self.player):
           wt += 1000
+
+        # Boost position of opponent near cells.
+        min_turns, min_turn_cnt = self.get_cell_opponent_unit_min_arrival_turns(cell)
+        wt += min_turn_cnt / (min_turns or 1)
       return wt
 
     def neighbour_worker_with_enough_resource(worker):
@@ -2164,8 +2218,7 @@ class Strategy:
 
         # TODO: try make one step collections value more accurate
         # Worker can collect on its own.
-        collect_amt, _ = get_one_step_collection_values(target_cell, self.game.player, self.game)
-        # collect_amt = 0
+        collect_amt = collect_amount_at_cell(target_cell, self.player, self.game_map)
         if worker_amt + collect_amt >= CITY_BUILD_COST:
         # collect_amt /= 2  # Discount this value
         # if worker_amt + collect_amt >= CITY_BUILD_COST:
