@@ -13,6 +13,26 @@
 - [√] Fix bug on consume_cargo_resource
 
 
+Total Matches: 255 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | umiACyYx7wtf   | 25.8101985      | μ=28.416, σ=0.869  | 255
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | iCg8YnAxSwm2   | 18.9773384      | μ=21.584, σ=0.869  | 255
+
+
+win_loss	win	loss
+lux_perspective	    227	48
+tranfer_agent_v1	48	227
+
+	win_loss	loss	win	win_pct
+short_name	map_size
+lux_perspective
+12	15	56	78.9
+16	15	55	78.6
+24	8	59	88.1
+32	10	57	85.1
+
+
+
 ==================== 2021-09-26 =========================
 
 

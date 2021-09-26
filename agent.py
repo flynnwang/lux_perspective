@@ -1,5 +1,8 @@
 """
 
+- [√] 376379665: t117/u19, worker die out side city
+  * Fixed: not change the params duplicate_positions function
+
 
 - 467255781: should securing wood first.
 - 799353898: seems large city tile seems to easy to fail.
@@ -124,11 +127,11 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_19']
+MAP_POS_LIST = [(6, 1)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
-DRAW_UNIT_MOVE_VALUE = 0
+DRAW_UNIT_MOVE_VALUE = 1
 DRAW_QUICK_PATH_VALUE = 0
 
 
@@ -139,6 +142,9 @@ BUILD_CITYTILE_ROUND = CIRCLE_LENGH
 MAX_PATH_WEIGHT = 99999
 
 MAX_UNIT_NUM = 80
+
+
+MAX_UNIT_PER_CITY = 8
 
 
 def timeit(func):
@@ -1102,7 +1108,6 @@ class Strategy:
             and has_resource_tile_neighbour(cell))
 
   def assign_worker_target(self):
-    MAX_UNIT_PER_CITY = 8
     g = self.game
     player = g.player
 
@@ -1812,8 +1817,7 @@ class Strategy:
       for pos in positions:
         cell = self.game.game_map.get_cell_by_pos(pos)
         if cell.citytile is not None and cell.citytile.team == self.game.id:
-          # TODO: inc
-          for _ in range(4):
+          for _ in range(MAX_UNIT_PER_CITY):
             yield pos
         else:
           yield pos
