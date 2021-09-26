@@ -1,6 +1,9 @@
 """
 
 
+- 467255781: should securing wood first.
+- 799353898: seems large city tile seems to easy to fail.
+
 - add randomized actions
 - ** Defend my city
 
@@ -135,7 +138,7 @@ BUILD_CITYTILE_ROUND = CIRCLE_LENGH
 
 MAX_PATH_WEIGHT = 99999
 
-MAX_UNIT_NUM = 71
+MAX_UNIT_NUM = 80
 
 
 def timeit(func):
@@ -1014,8 +1017,9 @@ class Strategy:
 
   # @timeit
   def update_unit_info(self):
+
     self.quickest_path_pairs = {}
-    empty_set = set()
+    n_units = len(self.game.player.units)
     for unit in self.game.player.units:
       unit.cell = self.game_map.get_cell_by_pos(unit.pos)
       unit.has_planned_action = False
@@ -1039,22 +1043,18 @@ class Strategy:
       left_turns_this_round = get_left_turns_this_round(self.game.turn)
       unit.is_cargo_not_enough_for_nights = unit.surviving_turns < left_turns_this_round
 
-      # round_night_count = get_night_count_this_round(self.game.turn)
-      # dying = unit.unit_night_count < round_night_count
-      # assert dying == unit.is_cargo_not_enough_for_nights
 
       debug = False
-
-      debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
-      quickest_path = QuickestPath(self.game, unit, debug=debug)
-      quickest_path.compute()
-      self.actions.extend(quickest_path.actions)
-
-
-      # debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
       quickest_path_wo_citytile = QuickestPath(self.game, unit,
                                                not_leaving_citytile=True, debug=debug)
       quickest_path_wo_citytile.compute()
+
+      quickest_path = quickest_path_wo_citytile
+      if n_units < 50:
+        debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
+        quickest_path = QuickestPath(self.game, unit, debug=debug)
+        quickest_path.compute()
+        self.actions.extend(quickest_path.actions)
       # self.actions.extend(quickest_path_wo_citytile.actions)
 
       self.quickest_path_pairs[unit.id] = (quickest_path, quickest_path_wo_citytile)
@@ -1062,11 +1062,6 @@ class Strategy:
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_turns = {}
 
-    # for unit in self.game.opponent.units:
-      # unit.cell = self.game_map.get_cell_by_pos(unit.pos)
-      # quickest_path = QuickestPath(self.game, unit)
-      # quickest_path.compute()
-      # self.quickest_path_pairs[unit.id] = (quickest_path, None)
 
   @functools.lru_cache(maxsize=1024, typed=False)
   def get_cell_opponent_unit_min_arrival_turns(self, cell):
