@@ -1,7 +1,6 @@
 """
 
 
-
 - add randomized actions
 - ** Defend my city
 
@@ -136,7 +135,17 @@ BUILD_CITYTILE_ROUND = CIRCLE_LENGH
 
 MAX_PATH_WEIGHT = 99999
 
-MAX_UNIT_NUM = 120
+MAX_UNIT_NUM = 71
+
+
+def timeit(func):
+  def dec(*args, **kwargs):
+    t1 = time.time()
+    r = func(*args, **kwargs)
+    t2 = time.time()
+    print(f"f[{func.__name__}], t={(t2-t1):.2f}", file=sys.stderr)
+    return r
+  return dec
 
 
 def dist_decay(dist, game_map):
@@ -448,7 +457,6 @@ class ShortestPath:
 class SearchState:
 
   def __init__(self, turn, cell, cargo, cooldown):
-    # print('SearchState ', type(turn), cell.pos, type(cooldown), cooldown)
     self.turn = turn
     self.cell = cell
     self.cargo = cargo
@@ -456,14 +464,12 @@ class SearchState:
     self.prev_positions = []
     self.deleted = False
     self.arrival_fuel = 0
+    self.fuel = cargo_total_fuel(cargo)
 
   @property
   def pos(self):
     return self.cell.pos
 
-  @property
-  def fuel(self):
-    return cargo_total_fuel(self.cargo)
 
   # @property
   # def key(self):
@@ -477,6 +483,38 @@ class SearchState:
     return self.turn == other.turn and self.fuel == other.fuel
 
 
+@functools.lru_cache(maxsize=1024)
+def get_res_type_to_resource(cell, game_map, player):
+  # count the number of neighbour resource types (assume cell not change)
+  collect_cells = (get_neighbour_positions(cell.pos, game_map, return_cell=True)
+                  + [cell])
+  res_type_to_cells = defaultdict(list)
+  for c in collect_cells:
+    # TODO: Should i use estimate?
+    if c.resource and is_resource_researched(c.resource, player):
+      res_type_to_cells[c.resource.type.upper()].append(c.resource.amount)
+  return res_type_to_cells
+
+
+@functools.lru_cache(maxsize=1024)
+def consume_cargo_resource(resource_amt, request_amt, fuel_rate):
+  consumed_res_amt = min(int(math.ceil(request_amt / fuel_rate)),
+                         resource_amt)
+  return (resource_amt - consumed_res_amt,
+          max(request_amt - consumed_res_amt * fuel_rate, 0))
+
+
+@functools.lru_cache(maxsize=1024)
+def consume_worker_resource(wood, coal, uranium, unit_upkeep):
+  request_amt = unit_upkeep
+  wood, request_amt = consume_cargo_resource(wood, request_amt, WOOD_FUEL_RATE)
+  coal, request_amt = consume_cargo_resource(coal, request_amt, COAL_FUEL_RATE)
+  uranium, request_amt = consume_cargo_resource(uranium, request_amt, URANIUM_FUEL_RATE)
+  if request_amt > 0:
+    return None
+  return Cargo(wood, coal, uranium)
+
+
 def sim_on_cell(turn, cargo, unit_type, next_cell, game,
                 player, sim_turns, debug=False):
   """Sim one turn for worker move onto some cell, return cargo.
@@ -488,67 +526,41 @@ def sim_on_cell(turn, cargo, unit_type, next_cell, game,
     - if city gone, unit gone with it
   """
   cargo = Cargo(cargo.wood, cargo.coal, cargo.uranium)
+  capacity = get_unit_capacity_by_type(unit_type)
 
-  def request_amount(cargo, res_type, n_res_type):
-    if n_res_type == 0:
-      return 0
-
-    total = cargo_total_amount(cargo)
-    if total == WORKER_RESOURCE_CAPACITY:
-      return 0
-
-    left_amount = WORKER_RESOURCE_CAPACITY - total
+  def _request_amount(cargo_amount, res_type, n_res_type):
+    left_amount = capacity - cargo_amount
     amt = min(int(math.ceil(left_amount / n_res_type)),
               WORKER_COLLECTION_RATE[res_type])
     return amt
 
   def collect_resource(cargo):
+    cargo_amount = cargo_total_amount(cargo)
+    if cargo_amount >= capacity:
+      return
+
+    if len(res_type_to_cells) == 0:
+      return
+
     # TODO: may die because of other workers
     # For each type of resource, collect resource (assume no other wokers)
     for res_type in ALL_RESOURCE_TYPES:
-      res_cells = res_type_to_cells[res_type]
-      req_amt = request_amount(cargo, res_type, len(res_cells))
+      resource_amounts = res_type_to_cells.get(res_type)
+      if not resource_amounts:
+        continue
+
+      req_amt = _request_amount(cargo_amount, res_type, len(resource_amounts))
       if req_amt == 0:
         continue
 
-      collect_amt = 0
-      for c in res_cells:
-        collect_amt += min(c.resource.amount, req_amt)
-      add_resource_to_cargo(cargo, collect_amt, res_type)
+      collect_amt = sum(min(amt, req_amt) for amt in resource_amounts)
+      add_resource_to_cargo(cargo, capacity, collect_amt, res_type)
 
   unit_upkeep = get_unit_upkeep_by_type(unit_type)
-  def consume_cargo_resource(resource_amt, fuel_rate, request_amt):
-    if request_amt == 0:
-      return resource_amt, 0
+  def consume_worker_resource_by_cargo(cargo):
+    return consume_worker_resource(cargo.wood, cargo.coal, cargo.uranium, unit_upkeep)
 
-    one_night_amount = int(math.ceil(unit_upkeep / fuel_rate))
-    if resource_amt >= one_night_amount:
-      return resource_amt - one_night_amount, 0
-    return 0, request_amt - resource_amt * fuel_rate
-
-  def consume_worker_resource(cargo, debug=False):
-    request_amt = unit_upkeep
-    # if debug:
-      # print(f' r0={request_amt}')
-    cargo.wood, request_amt = consume_cargo_resource(cargo.wood, WOOD_FUEL_RATE, request_amt)
-    # if debug:
-      # print(f' r1={request_amt}')
-    cargo.coal, request_amt = consume_cargo_resource(cargo.coal, COAL_FUEL_RATE, request_amt)
-    # if debug:
-      # print(f' r2={request_amt}')
-    cargo.uranium, request_amt = consume_cargo_resource(cargo.uranium, URANIUM_FUEL_RATE, request_amt)
-    # if debug:
-      # print(f' r3={request_amt}')
-    return request_amt <= 0
-
-  # count the number of neighbour resource types (assume cell not change)
-  collect_cells = (get_neighbour_positions(next_cell.pos, game.game_map, return_cell=True)
-                   + [next_cell])
-  res_type_to_cells = defaultdict(list)
-  for c in collect_cells:
-    # TODO: Should i use estimate?
-    if c.resource and is_resource_researched(c.resource, player):
-      res_type_to_cells[c.resource.type.upper()].append(c)
+  res_type_to_cells = get_res_type_to_resource(next_cell, game.game_map, player)
 
   city_fuel = 0
   unit_on_citytile = cell_has_target_player_citytile(next_cell, player)
@@ -570,19 +582,15 @@ def sim_on_cell(turn, cargo, unit_type, next_cell, game,
       city_fuel += cargo_total_fuel(cargo)
       cargo.clear()
 
-    if debug:
-      print(f't = {t}, is_night={is_night(t)}')
     if is_night(t):
-      consumed = consume_worker_resource(cargo, debug=debug)
-      if debug:
-        print(f't = {t}, unit_on_citytile={unit_on_citytile}, consumed={consumed}')
-      # unit die on non-city tile after resource consumption.
-      if (not unit_on_citytile) and not consumed:
+      if not unit_on_citytile:
+        new_cargo = consume_worker_resource_by_cargo(cargo)
+        if new_cargo is None:
           return None
-
-      # TODO: this is buggy, because city might already crash.
-      # unit die on citytile at night.
-      if unit_on_citytile:
+        cargo = new_cargo
+      else:
+        # TODO: this is buggy, because city might already crash.
+        # unit die on citytile at night.
         city_fuel -= city.light_upkeep
         if city_fuel < 0:
           return None
@@ -634,18 +642,14 @@ class QuickestPath:
       cooldown = 1  # 1 - 1 to get 0
 
     # Look ahead for cooldown to see whether worker will die on next move.
-    cargo = sim_on_cell(state.turn, state.cargo, self.worker.type,
-                        next_cell, self.game, self.player, sim_turns=cooldown)
-    if cargo is None:
-      return None
+    # cargo = sim_on_cell(state.turn, state.cargo, self.worker.type,
+                        # next_cell, self.game, self.player, sim_turns=cooldown)
+    # if cargo is None:
+      # return None
 
     debug = False
-    if self.worker.id in DRAW_UNIT_LIST and self.turn == 39 and next_cell.pos == Position(11, 5):
-      debug = True
     cargo = sim_on_cell(state.turn, state.cargo, self.worker.type,
                         next_cell, self.game, self.player, sim_turns=1, debug=debug)
-    if debug:
-      print(f' turn={state.turn} cargo_0: {state.cargo}, cargo_1: {cargo}, next={next_cell.pos}')
     if cargo is None:
       return None
 
@@ -691,8 +695,6 @@ class QuickestPath:
         cur_state = self.wait_for_cooldown(cur_state,
                                            extra_wait_days=extra_wait_days)
         if cur_state is None:
-          # if self.debug:
-            # print(f' skip from cooldown')
           return
 
       assert cur_state.cooldown < 1
@@ -722,8 +724,6 @@ class QuickestPath:
     heap_push(None, start_state)
     while q:
       cur_state = heapq.heappop(q)
-      # if self.debug:
-        # print(f' visting: {cur_state.pos} turn={cur_state.turn}')
       if cur_state.deleted:
         continue
 
@@ -855,7 +855,7 @@ class ClusterInfo:
   def get_cid(self, pos):
     return self.position_to_cid[pos.x][pos.y]
 
-  def compute(self):
+  def cluster(self):
     def is_valid_resource_cell(cell):
       return cell.has_resource()
 
@@ -985,10 +985,7 @@ class Strategy:
       return quicker_path, quicker_dest_turns
 
   def update_game_map_info(self):
-
     # def nearest_opponent_worker_dist(cell):
-
-
 
     # TODO: ref citytile to city
     for y in range(self.game.map_height):
@@ -1015,6 +1012,7 @@ class Strategy:
       cell = self.game_map.get_cell_by_pos(unit.pos)
       cell.unit = unit
 
+  # @timeit
   def update_unit_info(self):
     self.quickest_path_pairs = {}
     empty_set = set()
@@ -1726,7 +1724,6 @@ class Strategy:
         self.actions.extend([c, line])
 
 
-
   def compute_worker_moves(self):
     g = self.game
     player = g.player
@@ -1969,8 +1966,6 @@ class Strategy:
         cur_research_points += 1
         self.actions.append(citytile.research())
 
-
-
   def update_player_info(self):
     # Estimate number of research point in left day times.
     # n_city = len(self.player.cities)
@@ -1981,16 +1976,12 @@ class Strategy:
 
   def update_game_info(self):
     self.cluster_info = ClusterInfo(self.game)
-    self.cluster_info.compute()
+    self.cluster_info.cluster()
 
     self.update_player_info()
     self.update_game_map_info()
 
-    # t1 = time.time()
     self.update_unit_info()
-    # t2 = time.time()
-    # print(f'....T_unit={t2-t1} seconds.')
-
 
   def assign_worker_to_resource_cluster(self, multi_worker=False):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
@@ -2346,6 +2337,7 @@ class Strategy:
     self.assign_worker_target()
 
     self.try_build_citytile()
+
     self.compute_worker_moves()
 
 

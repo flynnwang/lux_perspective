@@ -1,3 +1,18 @@
+
+==================== 2021-09-26 (2) =========================
+
+
+- [√] Optimize runtime.
+  * remove look ahead during move.
+  * [√] Limit worker 71
+  * [√] cache fuel in SearchState
+  * [√] cache √ utility.is_day / √ is_night / √ cargo_total_fuel
+      / √ get_unit_action_cooldown /
+      / cell_has_target_player_citytile / [removed] get_unit_upkeep_by_type
+  * [] Optimize sim_on_cell
+- [√] Fix bug on consume_cargo_resource
+
+
 ==================== 2021-09-26 =========================
 
 

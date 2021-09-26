@@ -1,4 +1,5 @@
 
+import functools
 import math
 from copy import deepcopy
 
@@ -21,39 +22,59 @@ CIRCLE_LENGH = DAY_LENGTH + NIGHT_LENGTH
 
 UNIT_ACTION_COOLDOWN = params('UNIT_ACTION_COOLDOWN')
 WORKER_ACTION_COOLDOWN = UNIT_ACTION_COOLDOWN["WORKER"]
+CART_ACTION_COOLDOWN = UNIT_ACTION_COOLDOWN["CART"]
+
 WORKER_RESOURCE_CAPACITY = params('RESOURCE_CAPACITY')['WORKER']
+CART_RESOURCE_CAPACITY = params('RESOURCE_CAPACITY')['CART']
+
 WORKER_COLLECTION_RATE = params('WORKER_COLLECTION_RATE')
 CITY_BUILD_COST = params('CITY_BUILD_COST')
 CITY_ACTION_COOLDOWN = params('CITY_ACTION_COOLDOWN')
 
 LIGHT_UPKEEP = params('LIGHT_UPKEEP')
 WORKER_UPKEEP = LIGHT_UPKEEP['WORKER']
+CART_UPKEEP = LIGHT_UPKEEP['CART']
 
 MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]  # old version
 URANIUM_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
 COAL_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["COAL"]
 
 
+
 # ORDER MATTERS
 ALL_RESOURCE_TYPES = ["URANIUM", "COAL", "WOOD"]
-
 
 
 def is_within_map_range(pos, game_map):
   return 0 <= pos.x < game_map.width and 0 <= pos.y < game_map.height
 
 
-def get_unit_type_string(unit_type):
-  return 'WORKER' if unit_type == Constants.UNIT_TYPES.WORKER else 'CART'
-
 def get_unit_upkeep(unit):
-  return LIGHT_UPKEEP[get_unit_type_string(unit.type)]
+  if unit.is_worker():
+    return WORKER_UPKEEP
+  assert unit.is_cart()
+  return CART_UPKEEP
 
+# Deprecated
 def get_unit_upkeep_by_type(unit_type):
-  return LIGHT_UPKEEP[get_unit_type_string(unit_type)]
+  if unit_type == Constants.UNIT_TYPES.WORKER:
+    return WORKER_UPKEEP
+  assert unit_type == Constants.UNIT_TYPES.CART
+  return CART_UPKEEP
+
+
+def get_unit_capacity_by_type(unit_type):
+  if unit_type == Constants.UNIT_TYPES.WORKER:
+    return WORKER_RESOURCE_CAPACITY
+  assert unit_type == Constants.UNIT_TYPES.CART
+  return CART_RESOURCE_CAPACITY
+
 
 def get_unit_action_cooldown(unit):
-  return UNIT_ACTION_COOLDOWN[get_unit_type_string(unit.type)]
+  if unit.is_worker():
+    return WORKER_ACTION_COOLDOWN
+  assert unit.is_cart()
+  return CART_ACTION_COOLDOWN
 
 
 def get_city_no(city):
@@ -79,10 +100,16 @@ def get_worker_collection_rate(resource):
 
 
 def cargo_total_amount(cargo):
-  return (cargo.wood + cargo.coal + cargo.uranium)
+  v = getattr(cargo, 'total_amount', None)
+  if v is None:
+    v = cargo.wood + cargo.coal + cargo.uranium
+    cargo.total_amount = v
+  return v
 
 
-def add_resource_to_cargo(cargo, amt, res_type):
+def add_resource_to_cargo(cargo, capacity, amt, res_type):
+  total_amount = cargo_total_amount(cargo)
+  amt = min(capacity - total_amount, amt)
   if res_type == 'WOOD':
     cargo.wood += amt
   elif res_type == 'COAL':
@@ -102,9 +129,14 @@ def is_worker_cargo_full(worker):
 
 
 def cargo_total_fuel(cargo):
-  return (cargo.wood * WOOD_FUEL_RATE
-          + cargo.coal * COAL_FUEL_RATE
-          + cargo.uranium * URANIUM_FUEL_RATE)
+  # Cache the fuel on cargo
+  v = getattr(cargo, 'fuel', None)
+  if v is None:
+    v = (cargo.wood * WOOD_FUEL_RATE
+         + cargo.coal * COAL_FUEL_RATE
+         + cargo.uranium * URANIUM_FUEL_RATE)
+    cargo.fuel = v
+  return v
 
 
 def worker_total_fuel(worker):
@@ -137,6 +169,7 @@ def cell_has_player_citytile(cell, game):
   return citytile is not None and citytile.team == game.player.team
 
 
+@functools.lru_cache(maxsize=2048)
 def cell_has_target_player_citytile(cell, player):
   citytile = cell.citytile
   return citytile is not None and citytile.team == player.team
@@ -228,13 +261,13 @@ def consume_cargo(turn, cargo, is_citytile, sim_turns, upkeep):
   return cargo
 
 
-
-
+@functools.lru_cache(maxsize=MAX_DAYS)
 def is_day(turn):
   turn %= CIRCLE_LENGH
   return turn < DAY_LENGTH
 
 
+@functools.lru_cache(maxsize=MAX_DAYS)
 def is_night(turn):
   return not is_day(turn)
 
