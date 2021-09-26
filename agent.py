@@ -1,38 +1,6 @@
 """
-- [√] remove limit (or limit at 120)
-- [√] 860693002@t10: try build citytile next to each other.
-
-(explore cluster optimization)
-- [√] 242859934: also visit enemy's cluster for city tile building
-- [√] 242859934: why the cluster explorer coming back and forworth?
-      (cause resource weight is larger, use unit cargo as hint)
-
-- [-] cluster boost with weight decay (so that it will persist)
-  * This is already the case.
-- [√ ]969408840@0t32u3: Do not move to coal too early
-  * limit on wait_turns <= 6
-  * count as arrival for near_resource_tile
-  * t39: worker dying => fix sim_on_cell sim turn ref.
-- [√] 969408840: do not use cluster boost worker to resurce cityhouse when it's wood full
-
-- [√] 699414615/a1/t1: Bias cells towards enemy locations
-  - [√] 699414615@t70u27: not moving back city (bug of bias towards enemy)
-
-- [√] 699414615/a1/t39/u1: Agent move out of woods too soon to build city tile, waste one turn.
-  * do not move at last night.
-
-- [X] 796001604@t28: move out of dying citytile (not possible, no resoruce tile or other city.)
 
 
-- [√] 762995151@t3: resource tile and near, max amount at 40, more won't help.
-
-- [√] 709680438: all workers dies on days 1
-  * Do not boost city build for cluster owner near non-target cluster with player city tiles
-- [-] 709680438: t10/u_3, target far away cluster tile position
-  * because the other two tiles are blocked by city tile or opponent unit.
-- [√] u_3/t8: not boost to near enemy position.
-  * Increase defend weight
-  * Use manhatten distance.
 
 - add randomized actions
 - ** Defend my city

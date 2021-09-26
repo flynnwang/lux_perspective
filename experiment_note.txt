@@ -1,3 +1,58 @@
+==================== 2021-09-26 =========================
+
+
+- [√] remove limit (or limit at 120)
+- [√] 860693002@t10: try build citytile next to each other.
+
+(explore cluster optimization)
+- [√] 242859934: also visit enemy's cluster for city tile building
+- [√] 242859934: why the cluster explorer coming back and forworth?
+      (cause resource weight is larger, use unit cargo as hint)
+
+- [-] cluster boost with weight decay (so that it will persist)
+  * This is already the case.
+- [√ ]969408840@0t32u3: Do not move to coal too early
+  * limit on wait_turns <= 6
+  * count as arrival for near_resource_tile
+  * t39: worker dying => fix sim_on_cell sim turn ref.
+- [√] 969408840: do not use cluster boost worker to resurce cityhouse when it's wood full
+
+- [√] 699414615/a1/t1: Bias cells towards enemy locations
+  - [√] 699414615@t70u27: not moving back city (bug of bias towards enemy)
+
+- [√] 699414615/a1/t39/u1: Agent move out of woods too soon to build city tile, waste one turn.
+  * do not move at last night.
+
+- [X] 796001604@t28: move out of dying citytile (not possible, no resoruce tile or other city.)
+
+
+- [√] 762995151@t3: resource tile and near, max amount at 40, more won't help.
+
+- [√] 709680438: all workers dies on days 1
+  * Do not boost city build for cluster owner near non-target cluster with player city tiles
+- [-] 709680438: t10/u_3, target far away cluster tile position
+  * because the other two tiles are blocked by city tile or opponent unit.
+- [√] u_3/t8: not boost to near enemy position.
+  * Increase defend weight
+  * Use manhatten distance.
+
+Total Matches: 486 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/Users/flynnwang/dev/playground/lux_perspective/main.py | FIX2U80TMqO8   | 28.5648778      | μ=31.233, σ=0.890  | 214
+/Users/flynnwang/dev/playground/versions/priority_search/main.py | c7SAYR8ya57R   | 25.9923043      | μ=28.533, σ=0.847  | 203
+/Users/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | FBCo7ik7x56K   | 23.0569513      | μ=25.584, σ=0.842  | 208
+/Users/flynnwang/dev/playground/versions/explore_cluster/main.py | 5zI2xK3KYqKN   | 19.3174706      | μ=21.965, σ=0.883  | 170
+/Users/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | hOUiTnS0glmo   | 16.4214701      | μ=19.255, σ=0.944  | 177
+
+opponent_name	Tong_Hui_Kang_v4	explore_cluster	lux_perspective	priority_search	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	27.8	8.7	17.1	9.8
+explore_cluster	72.2	0.0	12.7	15.6	28.6
+lux_perspective	91.3	89.1	0.0	67.2	85.4
+priority_search	82.9	84.4	32.8	0.0	70.4
+tranfer_agent_v1	90.2	71.4	16.7	29.6	0.0
+
+
+
 ==================== 2021-09-24 =========================
 
 new baseline for [priority_search] agent
