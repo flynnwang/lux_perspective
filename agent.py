@@ -8,7 +8,10 @@
 * [√] Make use of idle worker! (send idle worker again)
 * [√] Worker not moving to the cloest point to target within city at night
   (how to handle surviving_turns and wait_turns: use surviving_turns at search state.)
-* [] Multiple worker move and collide
+* [√] t63/u_14, not moving onto coal resource tile
+  (fix wait condition: move_days + surviving_turns < wait_turns)
+
+* [] t23/u_2: move back to original cluster.
 * [] Secure the resource if opponent units is around (do not leave)
 * [] Use multiple dest tile for cluster boosting (already?)
 
@@ -143,12 +146,12 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 
-DRAW_UNIT_LIST = ['u_2']
-MAP_POS_LIST = [(0, 0)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = [(0, 0), (6, 6)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
-DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
-DRAW_QUICK_PATH_VALUE = 1
+DRAW_QUICK_PATH_VALUE = 0
 
 
 
@@ -248,9 +251,11 @@ def resource_researched_wait_turns(resource, player, move_days,
     more_points = max(0, more_points)
     point_growth_rate = player.avg_research_point_growth + 0.01
     wait_turns = more_points / point_growth_rate
-    if move_days + wait_turns > surviving_turns:
-      if debug:
-        print(f"move_days={move_days}, wait_turns={wait_turns}, surviving_turns={surviving_turns}")
+
+    if debug:
+      print(f"move_days={move_days}, wait_turns={wait_turns}, surviving_turns={surviving_turns}")
+    if move_days + surviving_turns < wait_turns:
+    # if wait_turns > surviving_turns:
       return -1
     return wait_turns
 
@@ -270,8 +275,6 @@ def get_cell_resource_values(cell, player, unit=None, move_days=0,
     return 0, 0
 
   resource = cell.resource
-  if unit and unit.id in DRAW_UNIT_LIST and cell.pos in MAP_POS_LIST:
-    debug = True
   wait_turns = resource_researched_wait_turns(resource, player, move_days,
                                               surviving_turns, debug=debug)
   if debug:
@@ -1314,7 +1317,7 @@ class Strategy:
                                                  move_days=arrival_turns,
                                                  surviving_turns=surviving_turns, debug=debug)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
-        print(f"{resource_tile.pos} 1. fuel_wt={fuel_wt}")
+        print(f"res_wt = {resource_tile.pos} 1. fuel_wt={fuel_wt}")
       if fuel_wt:
         wt += DEFAULT_RESOURCE_WT
 
@@ -1324,7 +1327,7 @@ class Strategy:
         wt += UNIT_SAVED_BY_RES_WEIGHT
 
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
-        print(f"{resource_tile.pos} 2. wt={wt}")
+        print(f"res_wt = {resource_tile.pos} 2. wt={wt}")
 
         # if worker.is_cargo_not_enough_for_nights and g.turn > 65:
           # wt += 1000
@@ -1395,14 +1398,14 @@ class Strategy:
       if worker.is_cargo_not_enough_for_nights:
         # Hide in the city
         if city_last:
-          wt += max(min(city_last_nights(city) / 10, 2), 0) * self.round_factor
+          wt += max(min(city_last_nights(city) / 10, 1), 0) * 0.5 * self.round_factor
         # elif cargo_total_amount(worker.cargo) == 0:
           # Escape from dying city.
           # wt = -99999
           # return wt
 
       if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-        print(f"city_crash_boost 1:wt={wt}, [{city_cell.pos}] city_last={city_last_nights(city)}")
+        print(f"ccw: city_crash_boost 1:wt={wt}, [{city_cell.pos}] city_last={city_last_nights(city)}")
 
 
       # TODO(wangfei): estimate worker will full
@@ -1445,7 +1448,7 @@ class Strategy:
           and arrival_turns <= city_last_turns
           and worker.cargo.wood == WORKER_RESOURCE_CAPACITY
           and not worker.is_cluster_owner):
-        wt += 500
+        wt += 1
 
       # If a worker can arrive at this city with some min fuel (or full cargo)
       if city_wont_last and n_citytile >= 2:
@@ -1470,8 +1473,8 @@ class Strategy:
             # Fuel city task.
             self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
 
-            if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-              print(f"city_crash_boost 2: {city_crash_boost}, wt={wt}")
+      if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
+        print(f"ccw-2: city_crash_boost 2: {city_crash_boost}, wt={wt}")
 
       # TODO-IMPORTANT: maybe go back to cargo, to make it transfer to other worker.
       # THIS IS: we should distribute resource evenly for all city tiles.
@@ -1488,17 +1491,20 @@ class Strategy:
           and (self.game.turn + city_last_turns) < MAX_DAYS):
           # and self.game.turn + city_last_turns < MAX_DAYS):
         # wt += worker_total_fuel(worker) * n_citytile
-        if n_citytile >= 2:
-          city_crash_boost += worker_total_fuel(worker) * n_citytile
-          self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
+        if city_last:
+          surviving_turns_ratio = city_last_turns / (MAX_DAYS-self.game.turn+1)
+          city_crash_boost += (1 - surviving_turns_ratio)
+        else:
+          if n_citytile >= 2:
+            city_crash_boost += worker_total_fuel(worker) * n_citytile
+          else:
+            city_crash_boost += 0.2
 
-        if n_citytile == 1 and no_resoruce_on_map:
-          city_crash_boost += 0.2
-          self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
+        self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
 
 
       if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-        print(f"city_crash_boost 3: {city_crash_boost}, wt={wt}")
+        print(f"ccw-3: city_crash_boost 3: {city_crash_boost}, wt={wt}, city_last_turns={city_last_turns}")
 
       # Boost when worker has resource and city tile won't last.
       days_left = DAY_LENGTH - self.circle_turn
@@ -1544,7 +1550,7 @@ class Strategy:
           return -9999
 
       if worker.id in DRAW_UNIT_LIST and city_cell.pos in MAP_POS_LIST:
-        print(f" 4.wt={wt}, city_crash_boost={city_crash_boost}")
+        print(f"ccw-4:  wt={wt}, city_crash_boost={city_crash_boost}")
       # return (wt + city_crash_boost) / (arrival_turns + 1)
       return (wt) / (arrival_turns + 1) + (city_crash_boost / (arrival_turns / 5 + 1))
       # return (wt + ) / (arrival_turns + 1) + city_crash_boost
@@ -2126,7 +2132,7 @@ class Strategy:
       surviving_turns = get_surviving_turns_at_cell(worker, quick_path, cell)
       wait_turns = resource_researched_wait_turns(cell.resource, self.player,
                                                   move_days=arrival_turns,
-                                                  surviving_turns=surviving_turns, debug=debug)
+                                                  surviving_turns=surviving_turns)
       # TODO: should i limit it?
       MAX_WAIT_ON_CLUSTER_TURNS = 6
       if wait_turns < 0 or wait_turns > MAX_WAIT_ON_CLUSTER_TURNS:
