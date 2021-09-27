@@ -1,7 +1,7 @@
 
 
-from utility import *
-from lux.game_objects import Cargo, City
+from utility2 import *
+from lux.game_objects import Cargo, City, Unit
 
 
 def _make_cargo(w, c, u):
@@ -65,28 +65,28 @@ def test_get_night_count_by_days():
 def test_get_night_count_by_dist():
   cooldown = 2
 
-  assert get_night_count_by_dist(0, 1, 0, cooldown) == 0
-  assert get_night_count_by_dist(0, 5, 0, cooldown) == 0
-  assert get_night_count_by_dist(0, 15, 0, cooldown) == 0
+  assert get_night_count_by_dist(0, 1, 0, cooldown) == (0, 1)
+  assert get_night_count_by_dist(0, 5, 0, cooldown) == (0, 9)
+  assert get_night_count_by_dist(0, 15, 0, cooldown) == (0, 29)
 
-  # dist=15 for 30 days, dist 2 for 8 night days
-  # one night cost double cooldown
-  assert get_night_count_by_dist(0, 16, 0, cooldown) == 1
-  assert get_night_count_by_dist(0, 17, 0, cooldown) == 5
-  assert get_night_count_by_dist(0, 18, 0, cooldown) == 9
-  assert get_night_count_by_dist(0, 19, 0, cooldown) == 10
+  # # # dist=15 for 30 days, dist 2 for 8 night days
+  # # # one night cost double cooldown
+  assert get_night_count_by_dist(0, 16, 0, cooldown) == (1, 30+1)
+  assert get_night_count_by_dist(0, 17, 0, cooldown) == (5, 30+5)
+  assert get_night_count_by_dist(0, 18, 0, cooldown) == (9, 30+9)
+  assert get_night_count_by_dist(0, 19, 0, cooldown) == (10, 30+4+4+4+1)
 
-  # test unit_cooldown
-  assert get_night_count_by_dist(0, 15, 1, cooldown) == 0
-  assert get_night_count_by_dist(0, 15, 2, cooldown) == 1
-  assert get_night_count_by_dist(0, 15, 3, cooldown) == 2
-  assert get_night_count_by_dist(0, 15, 4, cooldown) == 5
+  # # # test unit_cooldown
+  assert get_night_count_by_dist(0, 15, 1, cooldown) == (0, 29+1)
+  assert get_night_count_by_dist(0, 15, 2, cooldown) == (1, 2+14*2+1)
+  assert get_night_count_by_dist(0, 15, 3, cooldown) == (2, 3+13*2+2+1)
+  assert get_night_count_by_dist(0, 15, 4, cooldown) == (5, 4+13*2+4+1)
 
-  # test initial turn
-  assert get_night_count_by_dist(1, 15, 0, cooldown) == 0
-  assert get_night_count_by_dist(2, 15, 0, cooldown) == 1
-  assert get_night_count_by_dist(3, 15, 0, cooldown) == 2
-  assert get_night_count_by_dist(4, 15, 0, cooldown) == 5
+  # # test initial turn
+  # assert get_night_count_by_dist(1, 15, 0, cooldown) == 0
+  # assert get_night_count_by_dist(2, 15, 0, cooldown) == 1
+  # assert get_night_count_by_dist(3, 15, 0, cooldown) == 2
+  # assert get_night_count_by_dist(4, 15, 0, cooldown) == 5
 
 
 def test_get_city_no():
@@ -181,3 +181,22 @@ def test_is_day_and_night():
   assert is_day(29)
   assert is_night(30)
   assert is_night(39)
+
+
+
+def test_unit_arrival_turns():
+  teamid = 0
+  unitid = 'c_1'
+  unit = Unit(teamid, Constants.UNIT_TYPES.WORKER,
+              unitid, x=0, y=0, cooldown=1, wood=0, coal=0, uranium=0)
+
+  turn = 13
+  dist = 5
+  action_cooldown = get_unit_action_cooldown(unit)
+  assert action_cooldown == 2
+
+  nights, days = get_night_count_by_dist(turn, dist, unit.cooldown, action_cooldown)
+  assert nights == 0
+  assert days == 10
+
+  assert unit_arrival_turns(turn, unit, dist) == 10

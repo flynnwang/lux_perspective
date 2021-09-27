@@ -316,38 +316,40 @@ def get_night_count_by_days(turn, days):
 
 def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
   if dist <= 0:
-    return 0
+    return 0, 0
 
   def estimate_days(d, c):
     return (d - 1) * c + 1
 
   # Initial cooldown
+  total_turns = unit_cooldown
   nights = get_night_count_by_days(turn, unit_cooldown)
   turn += unit_cooldown
   turn %= CIRCLE_LENGH
   if is_day(turn):
     days_left = DAY_LENGTH - turn
-    # print(f'days_left = {days_left}, {dist * cooldown}')
-    if days_left >= estimate_days(dist, cooldown):
-      return nights
+    move_days = estimate_days(dist, cooldown)
+    # print(f'days_left = {days_left}, move_days={move_days}')
+    if days_left >= move_days:
+      return nights, total_turns + move_days
 
     turn += days_left
     step = int(math.ceil(days_left / cooldown))
-    # print(f'turn={turn}, step={step}, dist={dist}')
-    # dist -= step
     next_dist = dist - step
+    # print(f'turn={turn}, next_dist={next_dist}')
     assert step > 0
     unit_cooldown = step * cooldown - days_left
-    other = get_night_count_by_dist(turn, next_dist, unit_cooldown, cooldown)
+    other_night_turns, other_day_turns = get_night_count_by_dist(turn, next_dist, unit_cooldown, cooldown)
     # print(f'nights={nights}, remain={other}')
-    return nights + other
+    return (nights + other_night_turns,
+            total_turns + days_left + other_day_turns)
   else:
     night_cooldown = cooldown * 2 # double at nihght
     nights_left = CIRCLE_LENGH - turn
     night_travel_days = estimate_days(dist, night_cooldown)
     if nights_left >= night_travel_days:
       # print(f'night-1: nights={nights}, night_travel_days={night_travel_days}')
-      return nights + night_travel_days
+      return nights + night_travel_days, total_turns + night_travel_days
 
     turn += nights_left
     step = int(math.ceil(nights_left / night_cooldown))
@@ -355,8 +357,10 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
     next_dist = dist - step
     unit_cooldown = step * night_cooldown - nights_left
     # print(f'night-2, nights_left={nights_left}, step={step}, unit_cooldown={unit_cooldown}')
-    return nights + nights_left + get_night_count_by_dist(turn, next_dist,
-                                                           unit_cooldown, cooldown)
+    other_night_turns, other_day_turns  = get_night_count_by_dist(turn, next_dist, unit_cooldown, cooldown)
+    return (nights + nights_left + other_night_turns,
+            total_turns + nights_left + other_day_turns)
+
 
 
 def city_last_nights(city, add_fuel=0):
@@ -391,8 +395,8 @@ def unit_surviving_turns(turn, unit):
 
 def unit_arrival_turns(turn, unit, dist):
   cooldown = get_unit_action_cooldown(unit)
-  last_nights = get_night_count_by_dist(turn, dist, unit.cooldown, cooldown)
-  return nights_to_last_turns(turn, last_nights)
+  _, turns = get_night_count_by_dist(turn, dist, unit.cooldown, cooldown)
+  return turns
 
 
 def resource_surviving_nights(turn, resource, upkeep):

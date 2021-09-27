@@ -1,4 +1,34 @@
 
+======================== 2021-09-27 =============================
+
+- [√] 376379665: t117/u19, worker die out side city
+  * Fixed: not change the params duplicate_positions function
+
+- 906223639/1632651940339_uU5rIqfsgA0h
+* [√] Make use of idle worker! (send idle worker again)
+* [√] Worker not moving to the cloest point to target within city at night
+  (how to handle surviving_turns and wait_turns: use surviving_turns at search state.)
+* [√] t63/u_14, not moving onto coal resource tile
+  (fix wait condition: move_days + surviving_turns < wait_turns)
+
+* [-] t23/u_2: move back to original cluster.
+  (go back because of city crash boost, no cluster because of opponent unit occupy.)
+* [-] Use multiple dest tile for cluster boosting (already?)
+
+Total Matches: 259 | Matches Queued: 6
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | BTlhwLz4dYgW   | 24.7549387      | μ=27.226, σ=0.824  | 259
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | FahgWlwlaVRR   | 20.3019452      | μ=22.774, σ=0.824  | 259
+
+  win_loss	loss	win	win_pct
+short_name	map_size
+lux_perspective	12	11	47	81.0
+16	19	47	71.2
+24	12	54	81.8
+32	13	54	80.6
+
+
+
 ==================== 2021-09-26 (2) =========================
 
 

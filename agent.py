@@ -1,21 +1,18 @@
 """
 
-- [√] 376379665: t117/u19, worker die out side city
-  * Fixed: not change the params duplicate_positions function
 
-
-- 906223639/1632651940339_uU5rIqfsgA0h
-* [√] Make use of idle worker! (send idle worker again)
-* [√] Worker not moving to the cloest point to target within city at night
-  (how to handle surviving_turns and wait_turns: use surviving_turns at search state.)
-* [√] t63/u_14, not moving onto coal resource tile
-  (fix wait condition: move_days + surviving_turns < wait_turns)
-
-* [] t23/u_2: move back to original cluster.
-
-* [] Secure the resource if opponent units is around (do not leave)
+- 863040340/t98: enemy go into my coal cluster.
+  * [√] Secure the resource if opponent units is around with large weight (do not leave)
+  * [√] If cell in danger, do not move away to save city tile (defend city > save city)
+    (just use a large weight to do defend)
+  * [√] Should I ignore unit for resource weight cell value computation? YES, to stitch unit
   (would be better to use cart for resuce city.)
-* [] Use multiple dest tile for cluster boosting (already?)
+- 863040340/t30/u_3: going out of city and die.
+  * [√] Should check fuel_wt before making enemy boost
+- 863040340/t12/u_5: why goto (3, 4) instead of (1, 4)?
+  * [-] Becauce (3, 4) has a citytile neighbour (cooldown=0)
+  * [√] why the opponent weight of (3, 4) is not larger: bug of |unit_arrival_turns|
+
 
 
 
@@ -24,6 +21,7 @@
 - add randomized actions
 
 - Refactor cell weights into Factors
+- Use shortest path for enemy movement estimation.
 
 
 # Defend cluster
@@ -151,7 +149,7 @@ from lux.game_map import Cell, RESOURCE_TYPES, Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
-from utility import *
+from utility2 import *
 
 DEBUG = True
 
@@ -161,9 +159,9 @@ DRAW_UNIT_CLUSTER_PAIR = 1
 
 
 DRAW_UNIT_LIST = []
-MAP_POS_LIST = [(0, 0), (6, 6)]
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
-DRAW_UNIT_TARGET_VALUE = 1
+DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
@@ -1142,9 +1140,10 @@ class Strategy:
 
 
   @functools.lru_cache(maxsize=1024, typed=False)
-  def get_cell_opponent_unit_min_arrival_turns(self, cell):
+  def get_cell_opponent_unit_min_arrival_turns(self, cell, debug=False):
     min_dist = MAX_PATH_WEIGHT
     min_dist_cnt = 0
+    min_unit = None
     for unit in self.game.opponent.units:
       # path, _ = self.quickest_path_pairs[unit.id]
       # arrival_turns = path.query_dest_turns(cell.pos)
@@ -1152,9 +1151,17 @@ class Strategy:
       if dist < min_dist:
         min_dist_cnt = 1
         min_dist = dist
+        min_unit = unit
       elif dist == min_dist:
         min_dist_cnt += 1
-    return min_dist, min_dist_cnt
+
+    if debug and min_unit:
+      print(f' c={cell.pos}, nearest oppo {min_unit.pos} dist={min_dist}')
+
+    min_turns = MAX_PATH_WEIGHT
+    if unit:
+      min_turns = unit_arrival_turns(self.game.turn, min_unit, min_dist)
+    return min_turns, min_dist_cnt
 
   def count_citytile_neighbours(self, cell, min_citytile=1):
     cnt = 0
@@ -1301,9 +1308,11 @@ class Strategy:
       # Give a small weight for any resource 0.1 TODO: any other option?
       wt = 0
 
+      fuel_wt_type = 0
       if is_deficient_resource_tile(resource_tile):
         # do not goto resource tile at night if there is not much.
         fuel_wt = 0
+        fuel_wt_type = 'deficient'
       elif (is_resource_wood(resource_tile.resource)
           and not resource_tile.has_buildable_neighbour):
         # For wood cell with no buildable neightbor, demote its weight
@@ -1313,10 +1322,11 @@ class Strategy:
 
         # Use cell value as a way of demote weighting.
         _, fuel_wt = get_cell_resource_values(resource_tile, player,
-                                           unit=worker,
+                                           # unit=worker,
                                            move_days=arrival_turns,
                                            surviving_turns=surviving_turns)
         fuel_wt /= 2
+        fuel_wt_type = 'wood_not_buildable'
         # if resource_tile.pos == Position(5, 28):
           # print(f'triggered demote for no neighbour c[{resource_tile.pos}]')
       else:
@@ -1327,11 +1337,12 @@ class Strategy:
         # Use surviving_turns at the arrival state.
         surviving_turns = get_surviving_turns_at_cell(worker, quick_path, resource_tile)
         _, fuel_wt = get_one_step_collection_values(resource_tile, player, self.game,
-                                                 unit=worker,
+                                                 # unit=worker,
                                                  move_days=arrival_turns,
                                                  surviving_turns=surviving_turns, debug=debug)
+        fuel_wt_type = 'normal'
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
-        print(f"res_wt = {resource_tile.pos} 1. fuel_wt={fuel_wt}")
+        print(f"res_wt = {resource_tile.pos} 1. fuel_wt={fuel_wt} type={fuel_wt_type}")
       if fuel_wt:
         wt += DEFAULT_RESOURCE_WT
 
@@ -1360,11 +1371,29 @@ class Strategy:
       # Do not boost cluster at night
       # if self.game.is_night:
         # boost_cluster = 0
+      debug = False
+      if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
+        print(f"res_wt = {resource_tile.pos} 3. boost_cluster={boost_cluster}, wt={wt}")
+        debug = True
 
       opponent_weight = 0
+      # Test can collect weight first (ignore can not mine cell)
+      min_turns, _ = self.get_cell_opponent_unit_min_arrival_turns(resource_tile, debug=debug)
       if fuel_wt > 0:
-        min_turns, min_turn_cnt = self.get_cell_opponent_unit_min_arrival_turns(resource_tile)
-        opponent_weight = min_turn_cnt / (min_turns or 1)
+       # min_turns, _ = self.get_cell_opponent_unit_min_arrival_turns(resource_tile)
+
+        # Use a small weight to bias the position towards opponent's positions.
+        opponent_weight = 1 / (min_turns or 1)
+
+        # Use a large weight to defend my resource
+        # 0) opponent unit is near
+        # 1) worker can arrive at this cell quicker than opponent
+        if (min_turns <= 8 and arrival_turns <= min_turns):
+          opponent_weight += 10000
+
+      if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
+        print(f"res_wt = {resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_unit_turn={min_turns}")
+
       return (wt / (arrival_turns + 1)
               + boost_cluster
               + fuel_wt
@@ -1692,11 +1721,16 @@ class Strategy:
       # if self.game.is_night:
         # boost_cluster = 0
 
-      # TODO: this can be used to defend my tile.
       opponent_weight = 0
       if fuel_wt > 0:
         min_turns, min_turn_cnt = self.get_cell_opponent_unit_min_arrival_turns(near_resource_tile)
-        opponent_weight = 10 * min_turn_cnt / (min_turns or 1)
+        opponent_weight = min_turn_cnt / (min_turns or 1)
+
+        # Use a large weight to defend my resource
+        # 0) opponent unit is near
+        # 1) worker can arrive at this cell quicker than opponent
+        if (min_turns <= 8 and arrival_turns <= min_turns):
+          opponent_weight += 20000
 
       # return wt / (arrival_turns + 1) + boost_cluster / (arrival_turns // 2 + 1)
       return (wt / (arrival_turns + 1)
@@ -2147,8 +2181,11 @@ class Strategy:
       wait_turns = resource_researched_wait_turns(cell.resource, self.player,
                                                   move_days=arrival_turns,
                                                   surviving_turns=surviving_turns)
+
+      # if debug:
+        # print(f"send worker{worker.id} to cluster{tile_pos}, survive={surviving_turns}, wait_turns={wait_turns}")
       # TODO: should i limit it?
-      MAX_WAIT_ON_CLUSTER_TURNS = 6
+      MAX_WAIT_ON_CLUSTER_TURNS = 8
       if wait_turns < 0 or wait_turns > MAX_WAIT_ON_CLUSTER_TURNS:
         return -9999
 
