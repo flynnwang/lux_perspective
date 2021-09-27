@@ -16,3 +16,6 @@
 * Move away from coal and let other player's units collect my coal.
 * Idle worker, not helping!
 
+
+- 467255781: should securing wood first.
+- 799353898: seems large city tile seems to easy to fail.

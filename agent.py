@@ -12,21 +12,35 @@
   (fix wait condition: move_days + surviving_turns < wait_turns)
 
 * [] t23/u_2: move back to original cluster.
+
 * [] Secure the resource if opponent units is around (do not leave)
+  (would be better to use cart for resuce city.)
 * [] Use multiple dest tile for cluster boosting (already?)
 
 
 
 - Visit resource far away (need to check whether it will across citytile)
-- Refactor cell weights into Factors
+- better degradation: to keep as much as path without cc as possible.
 - add randomized actions
-- ** Defend my city
+
+- Refactor cell weights into Factors
+
+
+# Defend cluster
+- [] If opponent unit is very close (dist <= 3 or 4), add more weight to near resource tile or resoure in danger.
+
+
+# resource assignment.
+- If multiple worker goto citytile, e.g. 5, but 3 is enough, how to deal with that?
+  - another case is, if both of the worker went to city, but city will still die, what should they do?
+
+imagine every city is a hive, and there is a queue.
+- cart will deliver the resource to the queen on city (transfer)
+- worker focus on resource mining and only transfer the resource to cart
+- cart will maintain all the available resource in its cargo, and use left over resource for more city building.
 
 
 
-
-- 467255781: should securing wood first.
-- 799353898: seems large city tile seems to easy to fail.
 
 
 
