@@ -14,6 +14,10 @@
   * [√] why the opponent weight of (3, 4) is not larger: bug of |unit_arrival_turns|
 
 
+- 24989078@a0:
+  * [√] |nights_to_last_turns| Recursion unlimited: fixed by check turn < 360
+  * [√] Resource larger than capacity during quick path search: cache problem
+
 
 
 - Visit resource far away (need to check whether it will across citytile)
@@ -521,10 +525,6 @@ class SearchState:
     last_nights = cargo_night_endurance(self.cargo, upkeep)
     return nights_to_last_turns(self.turn, last_nights)
 
-  # @property
-  # def key(self):
-    # return (self.turn, self.pos.x, self.pos.y)
-
   def __lt__(self, other):
     return self.turn < other.turn or (self.turn == other.turn
                                       and self.fuel > other.fuel)
@@ -555,14 +555,15 @@ def consume_cargo_resource(resource_amt, request_amt, fuel_rate):
 
 
 @functools.lru_cache(maxsize=1024)
-def consume_worker_resource(wood, coal, uranium, unit_upkeep):
+def consume_worker_resource(wood0, coal0, uranium0, unit_upkeep):
   request_amt = unit_upkeep
-  wood, request_amt = consume_cargo_resource(wood, request_amt, WOOD_FUEL_RATE)
-  coal, request_amt = consume_cargo_resource(coal, request_amt, COAL_FUEL_RATE)
-  uranium, request_amt = consume_cargo_resource(uranium, request_amt, URANIUM_FUEL_RATE)
+  wood, request_amt = consume_cargo_resource(wood0, request_amt, WOOD_FUEL_RATE)
+  coal, request_amt = consume_cargo_resource(coal0, request_amt, COAL_FUEL_RATE)
+  uranium, request_amt = consume_cargo_resource(uranium0, request_amt, URANIUM_FUEL_RATE)
   if request_amt > 0:
     return None
-  return Cargo(wood, coal, uranium)
+  cargo = Cargo(wood, coal, uranium)
+  return cargo
 
 
 def sim_on_cell(turn, cargo, unit_type, next_cell, game,
@@ -789,6 +790,7 @@ class QuickestPath:
     start_state = SearchState(self.turn, self.worker.cell, self.worker.cargo,
                               int(self.worker.cooldown))
     start_state.arrival_fuel = cargo_total_fuel(self.worker.cargo)
+
     heap_push(None, start_state)
     while q:
       cur_state = heapq.heappop(q)
@@ -954,7 +956,7 @@ class ClusterInfo:
             if cell_has_opponent_citytile(nb_cell, self.game):
               opponent_citytile_positions.add(nb_cell.pos)
             else:
-              assert cell_has_player_citytile(nb_cell, self.game)
+              # assert cell_has_player_citytile(nb_cell, self.game)
               player_citytile_positions.add(nb_cell.pos)
 
           if not is_valid_resource_cell(nb_cell):
@@ -1264,7 +1266,7 @@ class Strategy:
                                                     surviving_turns=surviving_turns)
         if wait_turns < 0:
           return 0
-        cargo = resource_to_cargo(cell.resource)
+        cargo = resource_to_cargo(cell.resource, )
         return cargo_night_endurance(cargo, upkeep)
 
       def estimate_cell_night_count(cell, upkeep, game_map):

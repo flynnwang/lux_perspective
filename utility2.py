@@ -100,15 +100,17 @@ def get_worker_collection_rate(resource):
 
 
 def cargo_total_amount(cargo):
-  v = getattr(cargo, 'total_amount', None)
-  if v is None:
-    v = cargo.wood + cargo.coal + cargo.uranium
-    cargo.total_amount = v
-  return v
+  return cargo.wood + cargo.coal + cargo.uranium
+  # v = getattr(cargo, 'total_amount', None)
+  # if v is None:
+    # v = cargo.wood + cargo.coal + cargo.uranium
+    # cargo.total_amount = v
+  # return v
 
 
 def add_resource_to_cargo(cargo, capacity, amt, res_type):
   total_amount = cargo_total_amount(cargo)
+  assert total_amount < capacity, f"amt={amt}, total={total_amount}"
   amt = min(capacity - total_amount, amt)
   if res_type == 'WOOD':
     cargo.wood += amt
@@ -129,13 +131,16 @@ def is_worker_cargo_full(worker):
 
 
 def cargo_total_fuel(cargo):
-  # Cache the fuel on cargo
-  v = getattr(cargo, 'fuel', None)
-  if v is None:
-    v = (cargo.wood * WOOD_FUEL_RATE
+  return (cargo.wood * WOOD_FUEL_RATE
          + cargo.coal * COAL_FUEL_RATE
          + cargo.uranium * URANIUM_FUEL_RATE)
-    cargo.fuel = v
+  # Cache the fuel on cargo
+  # v = getattr(cargo, 'fuel', None)
+  # if v is None:
+    # v = (cargo.wood * WOOD_FUEL_RATE
+         # + cargo.coal * COAL_FUEL_RATE
+         # + cargo.uranium * URANIUM_FUEL_RATE)
+    # cargo.fuel = v
   return v
 
 
@@ -370,6 +375,9 @@ def city_last_nights(city, add_fuel=0):
 
 
 def nights_to_last_turns(turn, last_nights):
+  if turn >= MAX_DAYS:
+    return 0
+
   if is_day(turn):
     days = get_day_count_this_round(turn)
     return nights_to_last_turns(turn+days, last_nights) + days
