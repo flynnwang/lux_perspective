@@ -110,7 +110,7 @@ def cargo_total_amount(cargo):
 
 def add_resource_to_cargo(cargo, capacity, amt, res_type):
   total_amount = cargo_total_amount(cargo)
-  assert total_amount < capacity, f"amt={amt}, total={total_amount}"
+  assert total_amount <= capacity, f"amt={amt}, total={total_amount}"
   amt = min(capacity - total_amount, amt)
   if res_type == 'WOOD':
     cargo.wood += amt
