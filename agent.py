@@ -20,6 +20,10 @@
 
 - [√] 467381596@a1/u2: move onto citytile when try build new one.
 
+- [√] 442988189@a0 vs simple: do not boosting opponent for unit in one cluster
+  (Should escape cells which is not the nearest cluster cell to opponent unit)
+- [√] Should also clear tasks for the second round of assignment.
+
 
 - Visit resource far away (need to check whether it will across citytile)
 - better degradation: to keep as much as path without cc as possible.
@@ -163,10 +167,10 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 
-DRAW_UNIT_LIST = []
+DRAW_UNIT_LIST = ['u_2']
 MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
-DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
@@ -1143,28 +1147,25 @@ class Strategy:
 
 
   @functools.lru_cache(maxsize=1024, typed=False)
-  def get_cell_opponent_unit_min_arrival_turns(self, cell, debug=False):
+  def get_nearest_opponent_unit_to_cell(self, cell, debug=False):
     min_dist = MAX_PATH_WEIGHT
-    min_dist_cnt = 0
     min_unit = None
     for unit in self.game.opponent.units:
       # path, _ = self.quickest_path_pairs[unit.id]
       # arrival_turns = path.query_dest_turns(cell.pos)
       dist = cell.pos.distance_to(unit.pos)
       if dist < min_dist:
-        min_dist_cnt = 1
         min_dist = dist
         min_unit = unit
-      elif dist == min_dist:
-        min_dist_cnt += 1
 
     if debug and min_unit:
       print(f' c={cell.pos}, nearest oppo {min_unit.pos} dist={min_dist}')
 
+    # opponent units could be empty
     min_turns = MAX_PATH_WEIGHT
-    if unit:
+    if min_unit:
       min_turns = unit_arrival_turns(self.game.turn, min_unit, min_dist)
-    return min_turns, min_dist_cnt
+    return min_turns, min_unit
 
   def count_citytile_neighbours(self, cell, min_citytile=1):
     cnt = 0
@@ -1188,6 +1189,19 @@ class Strategy:
     return (not cell.has_resource()
             and cell.citytile is None
             and has_resource_tile_neighbour(cell))
+
+  @functools.lru_cache(maxsize=1023, typed=False)
+  def get_min_cluster_arrival_turns_for_opponent_unit(self, cid, unit):
+    min_dist = MAX_PATH_WEIGHT
+    x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
+    for x, y in zip(x_pos, y_pos):
+      cluster_pos = Position(x, y)
+      dist = cluster_pos.distance_to(unit.pos)
+      if dist < min_dist:
+        min_dist = dist
+
+    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
+    return min_turns
 
   def assign_worker_target(self, workers):
     g = self.game
@@ -1381,17 +1395,23 @@ class Strategy:
 
       opponent_weight = 0
       # Test can collect weight first (ignore can not mine cell)
-      min_turns, _ = self.get_cell_opponent_unit_min_arrival_turns(resource_tile, debug=debug)
+      min_turns = MAX_PATH_WEIGHT
       if fuel_wt > 0:
-       # min_turns, _ = self.get_cell_opponent_unit_min_arrival_turns(resource_tile)
+        min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(resource_tile)
 
         # Use a small weight to bias the position towards opponent's positions.
-        opponent_weight = 1 / (min_turns or 1)
+        if nearest_oppo_unit:
+          opponent_weight = 1 / (min_turns or 1)
 
         # Use a large weight to defend my resource
         # 0) opponent unit is near
-        # 1) worker can arrive at this cell quicker than opponent
-        if (min_turns <= 8 and arrival_turns <= min_turns):
+        # 1) opponent unit not already on cluster (resource tile)
+        # 1) this cell is the nearest one in cluster to the opponent unit.
+        # 2) worker can arrive at this cell quicker than opponent
+        if (min_turns <= 8
+            and self.cluster_info.get_cid(nearest_oppo_unit.pos) < 0
+            and (self.get_min_cluster_arrival_turns_for_opponent_unit(cid, nearest_oppo_unit) == min_turns)
+            and arrival_turns <= min_turns):
           opponent_weight += 10000
 
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
@@ -1603,16 +1623,24 @@ class Strategy:
       # return wt / dist_decay(dist, g.game_map)
       # return wt / (dist + 0.1)
 
-    def cell_next_to_target_cluster(worker, near_resource_tile):
-      if worker.target_cluster_id < 0:
-        return False
-
+    @functools.lru_cache(maxsize=512)
+    def get_near_resource_tile_cluster_ids(near_resource_tile):
+      cluster_ids = []
       for nb_cell in get_neighbour_positions(near_resource_tile.pos, g.game_map, return_cell=True):
         newpos = nb_cell.pos
         cid = self.cluster_info.get_cid(newpos)
+        if cid >= 0:
+          cluster_ids.append(cid)
+      return cluster_ids
+
+    def cell_next_to_target_cluster(worker, near_resource_tile):
+      if worker.target_cluster_id < 0:
+        return False
+      for cid in get_near_resource_tile_cluster_ids(near_resource_tile):
         if cid == worker.target_cluster_id:
           return True
       return False
+
 
     def cell_has_player_citytile_on_target_cluster(worker, near_resource_tile):
       if worker.target_cluster_id < 0:
@@ -1720,14 +1748,20 @@ class Strategy:
 
       opponent_weight = 0
       if fuel_wt > 0:
-        min_turns, min_turn_cnt = self.get_cell_opponent_unit_min_arrival_turns(near_resource_tile)
-        opponent_weight = min_turn_cnt / (min_turns or 1)
+        min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(near_resource_tile)
+        opponent_weight = 1 / (min_turns or 1)
 
         # Use a large weight to defend my resource
         # 0) opponent unit is near
         # 1) worker can arrive at this cell quicker than opponent
-        if (min_turns <= 8 and arrival_turns <= min_turns):
-          opponent_weight += 20000
+        if (min_turns <= 8
+            and self.cluster_info.get_cid(nearest_oppo_unit.pos) < 0
+            and arrival_turns <= min_turns):
+          cluster_ids = get_near_resource_tile_cluster_ids(near_resource_tile)
+          could_be_oppo_unit_target = any(self.get_min_cluster_arrival_turns_for_opponent_unit(cid, nearest_oppo_unit) == min_turns
+                                          for cid in cluster_ids)
+          if could_be_oppo_unit_target:
+            opponent_weight += 20000
 
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
         print(f'nrt[{near_resource_tile.pos}] @last, wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt}, opponent={opponent_weight}')
@@ -1834,7 +1868,7 @@ class Strategy:
     for worker_idx, target_idx in zip(rows, cols):
       worker = workers[worker_idx]
       wt = weights[worker_idx, target_idx]
-      if wt <= 1e-4:
+      if wt <= 1e-5:
         idle_workers.append(worker)
         continue
 
@@ -2298,8 +2332,9 @@ class Strategy:
           wt += 1000
 
         # Boost position of opponent near cells.
-        min_turns, min_turn_cnt = self.get_cell_opponent_unit_min_arrival_turns(cell)
-        wt += min_turn_cnt / (min_turns or 1)
+        min_turns, min_oppo_unit = self.get_nearest_opponent_unit_to_cell(cell)
+        if min_oppo_unit:
+          wt += 1 / (min_turns or 1)
       return wt
 
     def neighbour_worker_with_enough_resource(worker):
@@ -2462,8 +2497,20 @@ class Strategy:
     self.worker_build_city_tasks = set()
     self.worker_fuel_city_tasks = set()
 
+    def clear_idle_worker_tasks(tasks, worker_ids):
+      remove_tasks = {(uid, pos)
+                      for uid, pos in tasks if uid in worker_ids}
+      return tasks - remove_tasks
+
     workers = self.player_available_workers()
     idle_workers = self.assign_worker_target(workers)
+    idle_worker_ids = {w.id for w in idle_workers}
+
+    # TODO: Is it needed?
+    self.worker_build_city_tasks = clear_idle_worker_tasks(self.worker_build_city_tasks,
+                                                           idle_worker_ids)
+    self.worker_fuel_city_tasks = clear_idle_worker_tasks(self.worker_fuel_city_tasks,
+                                                          idle_worker_ids)
     idle_workers2 = self.assign_worker_target(idle_workers)
     # print(f"I1={len(idle_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
 
