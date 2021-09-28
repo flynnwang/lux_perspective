@@ -18,6 +18,7 @@
   * [√] |nights_to_last_turns| Recursion unlimited: fixed by check turn < 360
   * [√] Resource larger than capacity during quick path search: cache problem
 
+- [√] 467381596@a1/u2: move onto citytile when try build new one.
 
 
 - Visit resource far away (need to check whether it will across citytile)
@@ -802,7 +803,7 @@ class QuickestPath:
           and self.not_leaving_citytile == False):
       # if self.worker.id in DRAW_UNIT_LIST:
         debug = True
-        print(f'target state matched: cur_state.pos={cur_state.pos}')
+        # print(f'target state matched: cur_state.pos={cur_state.pos}')
 
       # Do not leave citytile.
       is_player_citytile = cell_has_target_player_citytile(cur_state.cell,
@@ -813,8 +814,8 @@ class QuickestPath:
           print(f' - continue')
         continue
 
-      if debug:
-        print(f' wait_then_move (1): citytile={is_player_citytile}, night={is_night(cur_state.turn)}')
+      # if debug:
+        # print(f' wait_then_move (1): citytile={is_player_citytile}, night={is_night(cur_state.turn)}')
       wait_then_move(cur_state)
 
       # TODO: test wait in the days
@@ -1123,16 +1124,16 @@ class Strategy:
 
 
       debug = False
+      debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
       quickest_path_wo_citytile = QuickestPath(self.game, unit,
                                                not_leaving_citytile=True, debug=debug)
       quickest_path_wo_citytile.compute()
+      self.actions.extend(quickest_path_wo_citytile.actions)
 
       quickest_path = quickest_path_wo_citytile
       if n_units < 50:
-        debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
-        quickest_path = QuickestPath(self.game, unit, debug=debug)
+        quickest_path = QuickestPath(self.game, unit)
         quickest_path.compute()
-        self.actions.extend(quickest_path.actions)
       # self.actions.extend(quickest_path_wo_citytile.actions)
 
       self.quickest_path_pairs[unit.id] = (quickest_path, quickest_path_wo_citytile)
@@ -1626,9 +1627,6 @@ class Strategy:
             return True
       return False
 
-    self.worker_build_city_tasks = set()
-    self.worker_fuel_city_tasks = set()
-
       # TODO(wangfei): merge near resource tile and resource tile weight functon
     def get_near_resource_tile_weight(worker, near_resource_tile, arrival_turns, quick_path):
       wt = 0
@@ -1641,9 +1639,6 @@ class Strategy:
       fuel_wt /= 3  # Use smaller weight for near resource tile
       if fuel_wt > 0:
         wt += DEFAULT_RESOURCE_WT / 2
-
-      if near_resource_tile.pos in MAP_POS_LIST:
-        print(f'c[{near_resource_tile.pos}] @1, wt={wt}')
 
       # Boost the target collect amount by 2 (for cooldown) to test for citytile building.
       # it's 2, because one step move and one step for cooldown
@@ -1733,6 +1728,10 @@ class Strategy:
         # 1) worker can arrive at this cell quicker than opponent
         if (min_turns <= 8 and arrival_turns <= min_turns):
           opponent_weight += 20000
+
+      if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+        print(f'nrt[{near_resource_tile.pos}] @last, wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt}, opponent={opponent_weight}')
+        print(f' {self.worker_build_city_tasks}')
 
       # return wt / (arrival_turns + 1) + boost_cluster / (arrival_turns // 2 + 1)
       return (wt / (arrival_turns + 1)
@@ -1976,13 +1975,14 @@ class Strategy:
 
       quick_path, _ = self.select_quicker_path(worker, worker.target_pos)
       target_pos = worker.target.pos
-      if (#cell_has_player_citytile(worker.target, self.game)
-          self.is_worker_building_citytile(worker, target_pos)
+      is_worker_deliver_resource = (cell_has_player_citytile(worker.target, self.game)
+                                    and cargo_total_amount(worker.cargo) > 0)
+      if (is_worker_deliver_resource
+          or self.is_worker_building_citytile(worker, target_pos)
           or self.is_worker_fuel_city_task(worker, target_pos)):
-          # or worker.target.is_near_resource):
         # Use path no passing citytile
         _, quick_path = self.quickest_path_pairs[worker.id]
-        # if worker.id in ['u_2']:
+        # if worker.id in DRAW_UNIT_LIST:
           # a, b = self.quickest_path_pairs[worker.id]
           # print(f' a={a.not_leaving_citytile}, b={b.not_leaving_citytile}')
 
@@ -1997,7 +1997,7 @@ class Strategy:
 
       next_step_positions = quick_path.get_next_step_path_points(worker.target_pos, worker.pos)
       # if worker.id in DRAW_UNIT_LIST:
-        # print(f'next_step_positions: {next_step_positions}')
+        # print(f'next_step_positions: {next_step_positions}, is_building_city={self.is_worker_building_citytile(worker, target_pos)}, {self.worker_build_city_tasks}, target_pos={worker.target_pos}')
       self.actions.extend(quick_path.actions)
 
       for next_position in gen_next_positions(worker):
@@ -2357,7 +2357,7 @@ class Strategy:
             transfer_amount = CITY_BUILD_COST - (worker_amt + collect_amt)
             # transfer_amount = CITY_BUILD_COST - (worker_amt)
             # transfer_amount = nb_unit.cargo.wood
-            print(f'$A {worker.id}{worker.cargo}@{worker.pos} accept transfer from {nb_unit.id}{nb_unit.cargo} ${transfer_amount} to goto {target_cell.pos}')
+            print(f'$A {worker.id}{worker.cargo}@{worker.pos} accept transfer from {nb_unit.id}{nb_unit.cargo} ${transfer_amount} to goto {target_cell.pos}', file=sys.stderr)
             self.add_unit_action(nb_unit,
                                  nb_unit.transfer(worker.id, RESOURCE_TYPES.WOOD, transfer_amount))
             nb_unit.is_transfer_worker = True
@@ -2459,10 +2459,13 @@ class Strategy:
     return (worker.id, target_pos) in self.worker_fuel_city_tasks
 
   def send_worker_to_target(self):
+    self.worker_build_city_tasks = set()
+    self.worker_fuel_city_tasks = set()
+
     workers = self.player_available_workers()
     idle_workers = self.assign_worker_target(workers)
     idle_workers2 = self.assign_worker_target(idle_workers)
-    print(f"I1={len(idle_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
+    # print(f"I1={len(idle_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
 
   def execute(self):
     actions = self.actions
