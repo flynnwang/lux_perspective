@@ -1,38 +1,15 @@
 """
 
 
-- 863040340/t98: enemy go into my coal cluster.
-  * [√] Secure the resource if opponent units is around with large weight (do not leave)
-  * [√] If cell in danger, do not move away to save city tile (defend city > save city)
-    (just use a large weight to do defend)
-  * [√] Should I ignore unit for resource weight cell value computation? YES, to stitch unit
-  (would be better to use cart for resuce city.)
-- 863040340/t30/u_3: going out of city and die.
-  * [√] Should check fuel_wt before making enemy boost
-- 863040340/t12/u_5: why goto (3, 4) instead of (1, 4)?
-  * [-] Becauce (3, 4) has a citytile neighbour (cooldown=0)
-  * [√] why the opponent weight of (3, 4) is not larger: bug of |unit_arrival_turns|
 
 
-- 24989078@a0:
-  * [√] |nights_to_last_turns| Recursion unlimited: fixed by check turn < 360
-  * [√] Resource larger than capacity during quick path search: cache problem
-
-- [√] 467381596@a1/u2: move onto citytile when try build new one.
-
-- [√] 442988189@a0 vs simple: do not boosting opponent for unit in one cluster
-  (Should escape cells which is not the nearest cluster cell to opponent unit)
-- [√] Should also clear tasks for the second round of assignment.
-- [√] 846993828@a1 v.s. tranfer_agent: boosting far away clsuter, why?
-  (only boost opponent unit's nearest cell of nearest cluster's )
-- [√] 846993828:t39: u16 transfer to u13
-  (do not transfer if nb unit can collect and build)
+- Use shortest path for enemy threat estimation: limit max distance to 5.
 
 
 - Visit resource far away (need to check whether it will across citytile)
-- better degradation: to keep as much as path without cc as possible.
+- better degradation: to keep as much as path without cc as possible; map size;
+  (is it the case that user should not leave citytile when amount > 0?)
 - add randomized actions
-
 - Refactor cell weights into Factors
 - Use shortest path for enemy movement estimation.
 
