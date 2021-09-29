@@ -1,4 +1,3 @@
-
 import functools
 import math
 from copy import deepcopy
@@ -39,8 +38,6 @@ MAX_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]  # old version
 URANIUM_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["URANIUM"]
 COAL_RESEARCH_POINTS = params("RESEARCH_REQUIREMENTS")["COAL"]
 
-
-
 # ORDER MATTERS
 ALL_RESOURCE_TYPES = ["URANIUM", "COAL", "WOOD"]
 
@@ -54,6 +51,7 @@ def get_unit_upkeep(unit):
     return WORKER_UPKEEP
   assert unit.is_cart()
   return CART_UPKEEP
+
 
 # Deprecated
 def get_unit_upkeep_by_type(unit_type):
@@ -92,6 +90,7 @@ WOOD_FUEL_RATE = get_resource_to_fuel_rate('WOOD')
 COAL_FUEL_RATE = get_resource_to_fuel_rate('COAL')
 URANIUM_FUEL_RATE = get_resource_to_fuel_rate('URANIUM')
 
+
 def get_worker_collection_rate(resource):
   type_name = resource
   if isinstance(resource, Resource):
@@ -103,8 +102,8 @@ def cargo_total_amount(cargo):
   return cargo.wood + cargo.coal + cargo.uranium
   # v = getattr(cargo, 'total_amount', None)
   # if v is None:
-    # v = cargo.wood + cargo.coal + cargo.uranium
-    # cargo.total_amount = v
+  # v = cargo.wood + cargo.coal + cargo.uranium
+  # cargo.total_amount = v
   # return v
 
 
@@ -131,16 +130,15 @@ def is_worker_cargo_full(worker):
 
 
 def cargo_total_fuel(cargo):
-  return (cargo.wood * WOOD_FUEL_RATE
-         + cargo.coal * COAL_FUEL_RATE
-         + cargo.uranium * URANIUM_FUEL_RATE)
+  return (cargo.wood * WOOD_FUEL_RATE + cargo.coal * COAL_FUEL_RATE +
+          cargo.uranium * URANIUM_FUEL_RATE)
   # Cache the fuel on cargo
   # v = getattr(cargo, 'fuel', None)
   # if v is None:
-    # v = (cargo.wood * WOOD_FUEL_RATE
-         # + cargo.coal * COAL_FUEL_RATE
-         # + cargo.uranium * URANIUM_FUEL_RATE)
-    # cargo.fuel = v
+  # v = (cargo.wood * WOOD_FUEL_RATE
+  # + cargo.coal * COAL_FUEL_RATE
+  # + cargo.uranium * URANIUM_FUEL_RATE)
+  # cargo.fuel = v
   return v
 
 
@@ -153,21 +151,24 @@ def worker_cargo_full_rate(worker):
 
 
 def is_resource_wood(resource):
-  return (resource.type == Constants.RESOURCE_TYPES.WOOD
-          and resource.amount > 0)
+  return (resource.type == Constants.RESOURCE_TYPES.WOOD and
+          resource.amount > 0)
+
 
 def is_resource_coal(resource):
-  return (resource.type == Constants.RESOURCE_TYPES.COAL
-          and resource.amount > 0)
+  return (resource.type == Constants.RESOURCE_TYPES.COAL and
+          resource.amount > 0)
+
 
 def is_resource_uranium(resource):
-  return (resource.type == Constants.RESOURCE_TYPES.URANIUM
-          and resource.amount > 0)
+  return (resource.type == Constants.RESOURCE_TYPES.URANIUM and
+          resource.amount > 0)
 
 
 def cell_has_opponent_citytile(cell, game):
   citytile = cell.citytile
   return citytile is not None and citytile.team == game.opponent.team
+
 
 def cell_has_player_citytile(cell, game):
   citytile = cell.citytile
@@ -249,7 +250,7 @@ def consume_cargo(turn, cargo, is_citytile, sim_turns, upkeep):
 
   cargo = Cargo(cargo.wood, cargo.coal, cargo.uranium)
   # for t in range(turn+1, turn+sim_turns+1):
-  for t in range(turn+1, turn+sim_turns+1):
+  for t in range(turn + 1, turn + sim_turns + 1):
     # Cargo won't change during the day.
     if is_day(t):
       continue
@@ -289,6 +290,7 @@ def is_first_night(turn):
 def get_day_count_this_round(turn):
   turn %= CIRCLE_LENGH
   return max(DAY_LENGTH - turn, 0)
+
 
 def get_left_turns_this_round(turn):
   return CIRCLE_LENGH - turn % CIRCLE_LENGH
@@ -343,12 +345,13 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
     # print(f'turn={turn}, next_dist={next_dist}')
     assert step > 0
     unit_cooldown = step * cooldown - days_left
-    other_night_turns, other_day_turns = get_night_count_by_dist(turn, next_dist, unit_cooldown, cooldown)
+    other_night_turns, other_day_turns = get_night_count_by_dist(
+        turn, next_dist, unit_cooldown, cooldown)
     # print(f'nights={nights}, remain={other}')
     return (nights + other_night_turns,
             total_turns + days_left + other_day_turns)
   else:
-    night_cooldown = cooldown * 2 # double at nihght
+    night_cooldown = cooldown * 2  # double at nihght
     nights_left = CIRCLE_LENGH - turn
     night_travel_days = estimate_days(dist, night_cooldown)
     if nights_left >= night_travel_days:
@@ -361,10 +364,10 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
     next_dist = dist - step
     unit_cooldown = step * night_cooldown - nights_left
     # print(f'night-2, nights_left={nights_left}, step={step}, unit_cooldown={unit_cooldown}')
-    other_night_turns, other_day_turns  = get_night_count_by_dist(turn, next_dist, unit_cooldown, cooldown)
+    other_night_turns, other_day_turns = get_night_count_by_dist(
+        turn, next_dist, unit_cooldown, cooldown)
     return (nights + nights_left + other_night_turns,
             total_turns + nights_left + other_day_turns)
-
 
 
 def city_last_nights(city, add_fuel=0):
@@ -379,7 +382,7 @@ def nights_to_last_turns(turn, last_nights):
 
   if is_day(turn):
     days = get_day_count_this_round(turn)
-    return nights_to_last_turns(turn+days, last_nights) + days
+    return nights_to_last_turns(turn + days, last_nights) + days
 
   # The night case
   nights = get_night_count_this_round(turn)
@@ -387,7 +390,7 @@ def nights_to_last_turns(turn, last_nights):
     return last_nights
 
   last_nights -= nights
-  return nights_to_last_turns(turn+nights, last_nights)
+  return nights_to_last_turns(turn + nights, last_nights)
 
 
 def city_last_days(turn, city):
@@ -412,11 +415,7 @@ def resource_surviving_nights(turn, resource, upkeep):
   return nights_to_last_turns(turn, nights)
 
 
-
 def city_wont_last_at_nights(turn, city, add_fuel=0):
   round_nights = get_night_count_this_round(turn)
   city_nights = city_last_nights(city, add_fuel)
   return city_nights < round_nights
-
-
-

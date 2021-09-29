@@ -8,9 +8,14 @@ from kaggle_environments import make
 
 from agent import agent
 
-env = make("lux_ai_2021", configuration={"loglevel": 2, "annotations": True,
-                                         'episodeSteps': 75,
-                                         "actTimeout": 30}, debug=True)
+env = make("lux_ai_2021",
+           configuration={
+               "loglevel": 2,
+               "annotations": True,
+               'episodeSteps': 75,
+               "actTimeout": 30
+           },
+           debug=True)
 
 config = Config(max_depth=20)
 graphviz = GraphvizOutput(output_file="agent.perf_v5.png")
