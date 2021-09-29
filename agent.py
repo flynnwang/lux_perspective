@@ -6,16 +6,21 @@
 
 - [√] Use shortest path for enemy threat estimation: limit max distance to 5.
 
+
+
+
+
+
 - 207136199@a0 v.s. priority_search
   [] u_16@t207: goes to (10, 1) to deliver resource.
 
 
 
+- [] better degradation: to keep as much as path without cc as possible; map size;
 
 - Transfer resource to other unit to save it.
 
 - Visit resource far away (need to check whether it will across citytile)
-- better degradation: to keep as much as path without cc as possible; map size;
   (is it the case that user should not leave citytile when amount > 0?)
 - add randomized actions
 - Refactor cell weights into Factors
@@ -153,10 +158,12 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_16']
-MAP_POS_LIST = [(11, 2), (6, 0), (8, 1)]
+# DRAW_UNIT_LIST = ['u_16']
+# MAP_POS_LIST = [(11, 2), (6, 0), (8, 1)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
-DRAW_UNIT_TARGET_VALUE = 1
+DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
@@ -165,7 +172,7 @@ BUILD_CITYTILE_ROUND = CIRCLE_LENGH
 
 MAX_PATH_WEIGHT = 99999
 
-MAX_UNIT_NUM = 80
+MAX_UNIT_NUM = 71
 
 MAX_UNIT_PER_CITY = 8
 
@@ -1152,8 +1159,7 @@ class Strategy:
   # @timeit
   def update_unit_info(self):
     self.quickest_path_pairs = {}
-    n_units = len(self.game.player.units)
-    for unit in self.game.player.units:
+    for i, unit in enumerate(self.game.player.units):
       unit.cell = self.game_map.get_cell_by_pos(unit.pos)
       unit.has_planned_action = False
       unit.target_pos = unit.pos
@@ -1186,7 +1192,7 @@ class Strategy:
       self.actions.extend(quickest_path_wo_citytile.actions)
 
       quickest_path = quickest_path_wo_citytile
-      if n_units < 50:
+      if i < 50 or self.game_map.width < 32:
         quickest_path = QuickestPath(self.game, unit)
         quickest_path.compute()
       # self.actions.extend(quickest_path_wo_citytile.actions)
