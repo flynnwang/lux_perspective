@@ -1134,18 +1134,17 @@ class Strategy:
 
       debug = False
       debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
-      quickest_path_wo_citytile = QuickestPath(self.game, unit,
-                                               not_leaving_citytile=True, debug=debug)
-      quickest_path_wo_citytile.compute()
-      self.actions.extend(quickest_path_wo_citytile.actions)
 
-      quickest_path = quickest_path_wo_citytile
-      if n_units < 50:
-        quickest_path = QuickestPath(self.game, unit)
-        quickest_path.compute()
+      amt = cargo_total_amount(unit.cargo)
+      not_leaving_citytile = bool(amt > 0)
+      quickest_path = QuickestPath(self.game, unit, not_leaving_citytile=True,
+                                   debug=debug)
+      quickest_path.compute()
+      self.actions.extend(quickest_path.actions)
+
       # self.actions.extend(quickest_path_wo_citytile.actions)
 
-      self.quickest_path_pairs[unit.id] = (quickest_path, quickest_path_wo_citytile)
+      self.quickest_path_pairs[unit.id] = (quickest_path, quickest_path)
 
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_turns = {}
