@@ -4,14 +4,10 @@
 * [√]1st step is not good. should use geometry dist instead of manhatten dist
   > Use shortest_path for enemy dist estimation.
 
-- [√ ]Use shortest path for enemy threat estimation: limit max distance to 5.
-
-
-
-
+- [√] Use shortest path for enemy threat estimation: limit max distance to 5.
 
 - 207136199@a0 v.s. priority_search
-  * u_1 goes into (10, 1) do deliver resource.
+  [] u_16@t207: goes to (10, 1) to deliver resource.
 
 
 
@@ -157,8 +153,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(3, 4), (5, 6)]
+DRAW_UNIT_LIST = ['u_16']
+MAP_POS_LIST = [(11, 2), (6, 0), (8, 1)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
@@ -1679,7 +1675,7 @@ class Strategy:
         if city_last:
           surviving_turns_ratio = city_last_turns / (MAX_DAYS - self.game.turn +
                                                      1)
-          city_crash_boost += (1 - surviving_turns_ratio)
+          city_crash_boost += (1 - surviving_turns_ratio) * n_citytile
         else:
           if n_citytile >= 2:
             city_crash_boost += worker_total_fuel(worker) * n_citytile
@@ -2700,7 +2696,7 @@ class Strategy:
 
     # MAIN_PRINT
     print((
-        f'>> turn={g.turn}, #W={len(player.units)}, #C={player.city_tile_count} '
+        f'>D turn={g.turn}, #W={len(player.units)}, #C={player.city_tile_count} '
         f'R={player.research_points}'),
           file=sys.stderr)
 
