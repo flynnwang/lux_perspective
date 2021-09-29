@@ -174,7 +174,6 @@ def cell_has_player_citytile(cell, game):
   return citytile is not None and citytile.team == game.player.team
 
 
-@functools.lru_cache(maxsize=2048)
 def cell_has_target_player_citytile(cell, player):
   citytile = cell.citytile
   return citytile is not None and citytile.team == player.team

@@ -1,4 +1,36 @@
 
+
+=========================== 2021-09-29 ==========================
+
+1632866005241_xSXOQR6hhtOg
+* ignore map cluster size of 1 might hurt
+* [] possible use neighbour 9 for clustering.
+
+1632852541420_hQdIsp4cXzes
+* [] too much resource goes into a small city.
+
+1632868877878_MWgS2BJ4wiUU
+* more than expected worker goes into one city tile: because of double send.
+* [] is large city good? (should I limit the largest city?) large city are prone to single point of failure.
+
+1632867917915_ZnnoOZBzQtwn / 729530937
+* wait more time during the round, if there is nothing else todo
+
+1632851793695_H5t6ytzg3d1b
+* 1st step is not good. should use geometry dist instead of manhatten dist
+
+
+1632867154525_2HCXuFmq0666
+1632872281265_fL8BkMIUIHXd
+* cases that a large city is not easy to maintain and prone to fail.
+
+1632867357037_UOSdkL8dGy1o
+* when post resource, should not waste too much on small cities.
+
+
+==================== before 2021-09-28 ==========================
+
+
 996962832/1632663007579_TaTsGtW89bb8
 * sending more than 1 agent may help!
 

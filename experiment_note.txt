@@ -44,6 +44,24 @@ priority_search	88.9	78.1	25.0	0.0	72.6
 tranfer_agent_v1	77.3	71.7	11.8	27.4	0.0
 
 
+Total Matches: 680 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | mZUa7uKASQBN   | 27.8964206      | μ=30.439, σ=0.847  | 311
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | pNLJsGbsgBGJ   | 25.8077776      | μ=28.297, σ=0.830  | 287
+/home/flynnwang/dev/playground/versions/priority_search/main.py | ZKnTHz9m05gy   | 24.4658152      | μ=26.914, σ=0.816  | 301
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 6oy3d5rEcDki   | 21.0924362      | μ=23.612, σ=0.840  | 244
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | ocTULjPcaFoo   | 13.7129074      | μ=16.951, σ=1.079  | 217
+
+
+opponent_name	Tong_Hui_Kang_v4	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	    0.0	    3.3	    6.5	    0.0	    16.7
+lux_perspective	        96.7	0.0	    65.2	65.9	83.1
+priority_search	        93.5	34.8	0.0	    43.4	68.2
+simple_defend	        100.0	34.1	56.6	0.0	    83.6
+tranfer_agent_v1	    83.3	16.9	31.8	16.4	0.0
+
+
+
 * Evaluation results: to use city path when agent amt > 0 (not good)
 
 Total Matches: 402 | Matches Queued: 5

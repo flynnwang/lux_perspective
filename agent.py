@@ -1,10 +1,20 @@
 """
 
-
+1632851793695_H5t6ytzg3d1b/s=724271278
+* [√]1st step is not good. should use geometry dist instead of manhatten dist
+  > Use shortest_path for enemy dist estimation.
 
 
 - Use shortest path for enemy threat estimation: limit max distance to 5.
 
+
+- 207136199@a0 v.s. priority_search
+  * u_1 goes into (10, 1) do deliver resource.
+
+
+
+
+- Transfer resource to other unit to save it.
 
 - Visit resource far away (need to check whether it will across citytile)
 - better degradation: to keep as much as path without cc as possible; map size;
@@ -18,7 +28,7 @@
 - [] If opponent unit is very close (dist <= 3 or 4), add more weight to near resource tile or resoure in danger.
 
 
-# resource assignment.
+# resource assignment. (resource delivery)
 - If multiple worker goto citytile, e.g. 5, but 3 is enough, how to deal with that?
   - another case is, if both of the worker went to city, but city will still die, what should they do?
 
@@ -148,8 +158,8 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_1']
+MAP_POS_LIST = [(3, 4), (5, 6)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
@@ -396,12 +406,22 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  def __init__(self, game, start_pos, forbidden_positions):
+  MAX_SEARCH_DIST = 8
+
+  def __init__(self, game, unit):
     self.game = game
     self.game_map = game.game_map
-    self.start_pos = start_pos
-    self.forbidden_positions = forbidden_positions
+    self.unit = unit
+    self.start_pos = self.unit.pos
     self.dist = np.ones((self.game_map.width, self.game_map.height)) * MAX_PATH_WEIGHT
+
+  @property
+  def player(self):
+    return self.game.players[self.unit.team]
+
+  @property
+  def opponent(self):
+    return self.game.players[1 - self.unit.team]
 
   def compute(self):
     q = deque([self.start_pos])
@@ -410,25 +430,25 @@ class ShortestPath:
     while q:
       cur = q.popleft()
       cur_dist = self.dist[cur.x, cur.y]
-      for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
+      for nb_cell in get_neighbour_positions(cur, self.game_map,
+                                             return_cell=True):
         # Can not go pass through enemy citytile.
-        if cell_has_opponent_citytile(nb_cell, self.game):
+        if cell_has_target_player_citytile(nb_cell, self.opponent):
           continue
 
-        # Skip player unit in cooldown.
-        if (nb_cell.unit and
-            nb_cell.unit.team == self.game.opponent_id and not nb_cell.unit.can_act()):
+        # Skip opponent unit.
+        if (nb_cell.unit and nb_cell.unit.team == self.opponent.team):
           continue
 
         newpos = nb_cell.pos
-        if newpos in self.forbidden_positions:
-          continue
-
         nb_dist = self.dist[newpos.x, newpos.y]
         if cur_dist + 1 >= nb_dist:
           continue
 
         self.dist[newpos.x, newpos.y] = cur_dist + 1
+        if cur_dist + 1 > self.MAX_SEARCH_DIST:
+          continue
+
         q.append(newpos)
         # print(f' start_from {self.start_pos}, append {newpos}, cur_dist={cur_dist}', file=sys.stderr)
 
@@ -1080,7 +1100,6 @@ class Strategy:
 
   # @timeit
   def update_unit_info(self):
-
     self.quickest_path_pairs = {}
     n_units = len(self.game.player.units)
     for unit in self.game.player.units:
@@ -1089,8 +1108,6 @@ class Strategy:
       unit.target_pos = unit.pos
       unit.target = self.game_map.get_cell_by_pos(unit.pos)
       unit.target_score = 0
-      # unit.target_pos = None
-      # unit.target = None
 
       unit.transfer_build_locations = set()
       unit.target_cluster_id = -1
@@ -1127,15 +1144,20 @@ class Strategy:
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_turns = {}
 
+    for unit in self.game.opponent.units:
+      shortest_path = ShortestPath(self.game, unit)
+      shortest_path.compute()
+      self.quickest_path_pairs[unit.id] = (shortest_path, None)
+
 
   @functools.lru_cache(maxsize=1024, typed=False)
   def get_nearest_opponent_unit_to_cell(self, cell, debug=False):
+    """The shortest path dist is capped at a max dist of 6."""
     min_dist = MAX_PATH_WEIGHT
     min_unit = None
     for unit in self.game.opponent.units:
-      # path, _ = self.quickest_path_pairs[unit.id]
-      # arrival_turns = path.query_dest_turns(cell.pos)
-      dist = cell.pos.distance_to(unit.pos)
+      shortest_path, _ = self.quickest_path_pairs[unit.id]
+      dist = shortest_path.shortest_dist(cell.pos)
       if dist < min_dist:
         min_dist = dist
         min_unit = unit
@@ -1178,10 +1200,29 @@ class Strategy:
     x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
     for x, y in zip(x_pos, y_pos):
       cluster_pos = Position(x, y)
-      dist = cluster_pos.distance_to(unit.pos)
+
+      shortest_path, _ = self.quickest_path_pairs[unit.id]
+      dist = shortest_path.shortest_dist(cluster_pos)
       if dist < min_dist:
         min_dist = dist
 
+    if min_dist == MAX_PATH_WEIGHT:
+      return MAX_PATH_WEIGHT
+    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
+    return min_turns
+
+  @functools.lru_cache(maxsize=1023, typed=False)
+  def get_min_near_cluster_arrival_turns_for_opponent_unit(self, cid, unit):
+    min_dist = MAX_PATH_WEIGHT
+    for pos in self.get_cluster_boundary_cell_positions(self.game.turn, cid):
+
+      shortest_path, _ = self.quickest_path_pairs[unit.id]
+      dist = shortest_path.shortest_dist(pos)
+      if dist < min_dist:
+        min_dist = dist
+
+    if min_dist == MAX_PATH_WEIGHT:
+      return MAX_PATH_WEIGHT
     min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
     return min_turns
 
@@ -1196,17 +1237,6 @@ class Strategy:
         if nb_cell.is_near_resource:
           boundary_positions.add(nb_cell.pos)
     return boundary_positions
-
-  @functools.lru_cache(maxsize=1023, typed=False)
-  def get_min_near_cluster_arrival_turns_for_opponent_unit(self, cid, unit):
-    min_dist = MAX_PATH_WEIGHT
-    for pos in self.get_cluster_boundary_cell_positions(self.game.turn, cid):
-      dist = pos.distance_to(unit.pos)
-      if dist < min_dist:
-        min_dist = dist
-
-    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
-    return min_turns
 
   def assign_worker_target(self, workers):
     g = self.game
@@ -1768,7 +1798,10 @@ class Strategy:
 
       opponent_weight = 0
       if fuel_wt > 0:
-        min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(near_resource_tile)
+        debug = False
+        if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+          debug = True
+        min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(near_resource_tile, debug=debug)
         opponent_weight = 1 / (min_turns or 1)
 
         # Use a large weight to defend my resource
@@ -1791,7 +1824,8 @@ class Strategy:
 
 
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-        print(f'nrt[{near_resource_tile.pos}] @last, wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt}, opponent={opponent_weight}')
+        print(f'nrt[{near_resource_tile.pos}] @last, wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt:.3f}'
+              f' opponent={opponent_weight}, arr_turns={arrival_turns}')
         print(f' {self.worker_build_city_tasks}')
 
       # return wt / (arrival_turns + 1) + boost_cluster / (arrival_turns // 2 + 1)
