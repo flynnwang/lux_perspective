@@ -1,33 +1,5 @@
 """
 
-1632851793695_H5t6ytzg3d1b/s=724271278
-* [√]1st step is not good. should use geometry dist instead of manhatten dist
-  > Use shortest_path for enemy dist estimation.
-
-- [√] Use shortest path for enemy threat estimation: limit max distance to 5.
-
-Total Matches: 595 | Matches Queued: 7
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/home/flynnwang/dev/playground/lux_perspective/main.py | LsgjEGM2VPw6   | 28.3515887      | μ=30.973, σ=0.874  | 253
-/home/flynnwang/dev/playground/versions/simple_defend/main.py | zWp2YOVao21C   | 27.2141759      | μ=29.733, σ=0.840  | 272
-/home/flynnwang/dev/playground/versions/priority_search/main.py | o7QfPxu7wNtR   | 24.5052853      | μ=26.941, σ=0.812  | 266
-/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | a8eE48WYEuZC   | 21.1710017      | μ=23.753, σ=0.861  | 206
-/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | HCVLxH37TlVV   | 15.3688777      | μ=18.423, σ=1.018  | 193
-
-opponent_name	Tong_Hui_Kang_v4	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
-Tong_Hui_Kang_v4	0.0	6.2	13.3	5.0	12.5
-lux_perspective	93.8	0.0	75.6	57.1	96.3
-priority_search	86.7	24.4	0.0	38.8	72.7
-simple_defend	95.0	42.9	62.4	0.0	77.6
-tranfer_agent_v1	87.5	3.7	27.3	22.4	0.0
-
-
-
-- [√] 627256722: agent not building city at initial rounds.
-- [√] 222071549: similiar issue
-  * Merge small cluster with n9 search
-
-
 
 - 207136199@a0 v.s. priority_search
   [] u_16@t207: goes to (10, 1) to deliver resource.
@@ -1575,7 +1547,7 @@ class Strategy:
             cid in get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit) and
             (self.get_min_cluster_arrival_turns_for_opponent_unit(
                 cid, nearest_oppo_unit) == min_turns)):
-          opponent_weight += 500
+          opponent_weight += 100
 
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
         print(

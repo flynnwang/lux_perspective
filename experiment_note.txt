@@ -1,5 +1,53 @@
 
 
+======================================= 2021-09-30 ==============================================
+
+
+1632851793695_H5t6ytzg3d1b/s=724271278
+* [√]1st step is not good. should use geometry dist instead of manhatten dist
+  > Use shortest_path for enemy dist estimation.
+
+- [√] Use shortest path for enemy threat estimation: limit max distance to 5.
+
+Total Matches: 595 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | LsgjEGM2VPw6   | 28.3515887      | μ=30.973, σ=0.874  | 253
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | zWp2YOVao21C   | 27.2141759      | μ=29.733, σ=0.840  | 272
+/home/flynnwang/dev/playground/versions/priority_search/main.py | o7QfPxu7wNtR   | 24.5052853      | μ=26.941, σ=0.812  | 266
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | a8eE48WYEuZC   | 21.1710017      | μ=23.753, σ=0.861  | 206
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | HCVLxH37TlVV   | 15.3688777      | μ=18.423, σ=1.018  | 193
+
+opponent_name	Tong_Hui_Kang_v4	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	6.2	13.3	5.0	12.5
+lux_perspective	93.8	0.0	75.6	57.1	96.3
+priority_search	86.7	24.4	0.0	38.8	72.7
+simple_defend	95.0	42.9	62.4	0.0	77.6
+tranfer_agent_v1	87.5	3.7	27.3	22.4	0.0
+
+
+- [√] 627256722: agent not building city at initial rounds.
+- [√] 222071549: similiar issue
+  * Merge small cluster with n9 search
+
+Total Matches: 436 | Matches Queued: 6
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | NIgBvwEIdtnv   | 30.8770502      | μ=33.678, σ=0.934  | 204
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | 5oJa5X29PMNP   | 27.2281869      | μ=29.792, σ=0.855  | 201
+/home/flynnwang/dev/playground/versions/priority_search/main.py | yubYvoCHyF1V   | 24.3441973      | μ=26.932, σ=0.863  | 182
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | qXJyFHKEv3ns   | 21.1249851      | μ=23.935, σ=0.937  | 151
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | OLZushZMy4sn   | 15.5163013      | μ=19.202, σ=1.228  | 134
+
+opponent_name	Tong_Hui_Kang_v4	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	6.8	10.3	0.0	16.7
+lux_perspective	93.2	0.0	83.1	71.7	100.0
+priority_search	89.7	16.9	0.0	31.0	69.2
+simple_defend	100.0	28.3	69.0	0.0	76.6
+tranfer_agent_v1	83.3	0.0	30.8	23.4	0.0
+
+
+================================= 2021-09-29 ==============================================
+
+
 - 863040340/t98: enemy go into my coal cluster.
   * [√] Secure the resource if opponent units is around with large weight (do not leave)
   * [√] If cell in danger, do not move away to save city tile (defend city > save city)

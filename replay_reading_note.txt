@@ -1,5 +1,25 @@
 
 
+=========================== 2021-09-30 ==========================
+
+> 367314353: https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-27412393
+* defend and lose the oppotunity to build more citytile.
+* should defend only happens on the boundary?
+
+
+> 1632993872376_6uA8TOq7yRQH
+* Dying on the city, rather than dying on the resource.
+* When staying on cell, my worker will move away to resuce citytile, thus lose a lot of resource
+
+> 1632985513127_2avQ6hzN7Fm0
+* Failed due to protect resource against opponent unit, instead of building on its own.
+
+
+> 716943516
+* build too much city tile and die on the first night.
+
+
+
 =========================== 2021-09-29 ==========================
 
 1632866005241_xSXOQR6hhtOg
