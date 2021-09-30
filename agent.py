@@ -6,8 +6,26 @@
 
 - [√] Use shortest path for enemy threat estimation: limit max distance to 5.
 
+Total Matches: 595 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | LsgjEGM2VPw6   | 28.3515887      | μ=30.973, σ=0.874  | 253
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | zWp2YOVao21C   | 27.2141759      | μ=29.733, σ=0.840  | 272
+/home/flynnwang/dev/playground/versions/priority_search/main.py | o7QfPxu7wNtR   | 24.5052853      | μ=26.941, σ=0.812  | 266
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | a8eE48WYEuZC   | 21.1710017      | μ=23.753, σ=0.861  | 206
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | HCVLxH37TlVV   | 15.3688777      | μ=18.423, σ=1.018  | 193
+
+opponent_name	Tong_Hui_Kang_v4	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	6.2	13.3	5.0	12.5
+lux_perspective	93.8	0.0	75.6	57.1	96.3
+priority_search	86.7	24.4	0.0	38.8	72.7
+simple_defend	95.0	42.9	62.4	0.0	77.6
+tranfer_agent_v1	87.5	3.7	27.3	22.4	0.0
 
 
+
+- [√] 627256722: agent not building city at initial rounds.
+- [√] 222071549: similiar issue
+  * Merge small cluster with n9 search
 
 
 
@@ -15,10 +33,21 @@
   [] u_16@t207: goes to (10, 1) to deliver resource.
 
 
+- Transfer resource to other unit to save it.
+  [] add a tranfer resource to citytile produce when condition matched
+     * agent who do transfer:
+       1. coal > 0 or uranium > 0
+       2. citytile has any unit
+       3. fuel > city_fuel_ask + 50
+       4. only for the first citytile (ignore other duplicated citytile)
+     * only transfer required amout for city to last to game end
+  [] raise the trageted city tile weight for on citytile idle worker during the
+     second round of target assignment
+
+
 
 - [] better degradation: to keep as much as path without cc as possible; map size;
 
-- Transfer resource to other unit to save it.
 
 - Visit resource far away (need to check whether it will across citytile)
   (is it the case that user should not leave citytile when amount > 0?)
@@ -160,10 +189,10 @@ DRAW_UNIT_CLUSTER_PAIR = 1
 
 # DRAW_UNIT_LIST = ['u_16']
 # MAP_POS_LIST = [(11, 2), (6, 0), (8, 1)]
-DRAW_UNIT_LIST = []
+DRAW_UNIT_LIST = ['u_2']
 MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
-DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
@@ -226,11 +255,13 @@ def get_neighbour_positions(pos, game_map, return_cell=False):
 N9_DIRS = [(-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
 
 
-def get_nb9_positions(pos, game_map):
+def get_nb9_positions(pos, game_map, return_cell=True):
   positions = []
   for dx, dy in N9_DIRS:
     newpos = Position(pos.x + dx, pos.y + dy)
     if is_within_map_range(newpos, game_map):
+      if return_cell:
+        newpos = game_map.get_cell_by_pos(newpos)
       positions.append(newpos)
   return positions
 
@@ -437,13 +468,14 @@ class ShortestPath:
 
   MAX_SEARCH_DIST = 8
 
-  def __init__(self, game, unit):
+  def __init__(self, game, unit, ignore_unit=False):
     self.game = game
     self.game_map = game.game_map
     self.unit = unit
     self.start_pos = self.unit.pos
     self.dist = np.ones(
         (self.game_map.width, self.game_map.height)) * MAX_PATH_WEIGHT
+    self.ignore_unit = ignore_unit
 
   @property
   def player(self):
@@ -468,7 +500,8 @@ class ShortestPath:
           continue
 
         # Skip opponent unit.
-        if (nb_cell.unit and nb_cell.unit.team == self.opponent.team):
+        if (not self.ignore_unit and nb_cell.unit and
+            nb_cell.unit.team == self.opponent.team):
           continue
 
         newpos = nb_cell.pos
@@ -1013,9 +1046,10 @@ class ClusterInfo:
       while q:
         cur = q.popleft()
         cur_cell = self.game_map.get_cell_by_pos(cur)
-        for nb_cell in get_neighbour_positions(cur,
-                                               self.game_map,
-                                               return_cell=True):
+        # for nb_cell in get_neighbour_positions(cur,
+        # self.game_map,
+        # return_cell=True):
+        for nb_cell in get_nb9_positions(cur, self.game_map, return_cell=True):
           newpos = nb_cell.pos
 
           # Count citytile.
@@ -1159,6 +1193,7 @@ class Strategy:
   # @timeit
   def update_unit_info(self):
     self.quickest_path_pairs = {}
+    n_unit = len(self.game.player.units)
     for i, unit in enumerate(self.game.player.units):
       unit.cell = self.game_map.get_cell_by_pos(unit.pos)
       unit.has_planned_action = False
@@ -1192,7 +1227,7 @@ class Strategy:
       self.actions.extend(quickest_path_wo_citytile.actions)
 
       quickest_path = quickest_path_wo_citytile
-      if i < 50 or self.game_map.width < 32:
+      if self.game_map.width < 32 or n_unit < 40 or i < MAX_UNIT_NUM - n_unit:
         quickest_path = QuickestPath(self.game, unit)
         quickest_path.compute()
       # self.actions.extend(quickest_path_wo_citytile.actions)
@@ -1204,7 +1239,7 @@ class Strategy:
       unit.cid_to_cluster_turns = {}
 
     for unit in self.game.opponent.units:
-      shortest_path = ShortestPath(self.game, unit)
+      shortest_path = ShortestPath(self.game, unit, ignore_unit=True)
       shortest_path.compute()
       self.quickest_path_pairs[unit.id] = (shortest_path, None)
 
@@ -1530,7 +1565,7 @@ class Strategy:
             cid in get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit) and
             (self.get_min_cluster_arrival_turns_for_opponent_unit(
                 cid, nearest_oppo_unit) == min_turns)):
-          opponent_weight += 10000
+          opponent_weight += 500
 
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
         print(
@@ -1870,7 +1905,7 @@ class Strategy:
       # Too large the build city bonus will cause worker divergence from its coal mining position
       if (build_city_bonus and arrival_turns <= 3 and
           not is_first_night(self.game.turn)):
-        wt += 1000
+        wt += 1001
 
         # Encourage worker to build connected city tiles.
         if near_resource_tile.n_citytile_neighbour > 0:
@@ -1915,7 +1950,7 @@ class Strategy:
               for cid in cell_cluster_ids)
           if (unit_nearest_cluster_ids & cell_cluster_ids and
               cell_is_nearest_in_cluster):
-            opponent_weight += 20000
+            opponent_weight += 10001
 
         # if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
         # print(f"cid={cell_cluster_ids}")

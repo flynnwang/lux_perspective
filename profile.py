@@ -12,8 +12,9 @@ env = make("lux_ai_2021",
            configuration={
                "loglevel": 2,
                "annotations": True,
-               'episodeSteps': 75,
-               "actTimeout": 30
+               'episodeSteps': 50,
+               "actTimeout": 30,
+               "seed": 222071549
            },
            debug=True)
 
