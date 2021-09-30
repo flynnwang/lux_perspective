@@ -721,8 +721,6 @@ def sim_on_cell(turn,
           return None
         cargo = new_cargo
       else:
-        # TODO: this is buggy, because city might already crash.
-        # unit die on citytile at night.
         city_fuel -= city.light_upkeep
         if city_fuel < 0:
           return None
@@ -818,6 +816,14 @@ class QuickestPath:
   def compute(self):
     q = []
 
+    def is_pushable_state(pos, arrival_turn):
+      state = self.state_map[pos.x][pos.y]
+      if state is None or arrival_turn < state.turn:
+        return 1
+      if arrival_turn == state.turn:
+        return 0
+      return -1
+
     def heap_push(prev_state, new_state):
       # Limit the search space to one circle.
       if new_state.turn > self.max_turns:
@@ -853,6 +859,10 @@ class QuickestPath:
       for nb_cell in get_neighbour_positions(cur_state.pos,
                                              self.game_map,
                                              return_cell=True):
+        pushable = is_pushable_state(nb_cell.pos, cur_state.turn + 1)
+        if pushable < 0:
+          continue
+
         # Can not go pass through enemy citytile.
         if cell_has_target_player_citytile(nb_cell, self.opponent):
           if debug:
@@ -1227,7 +1237,7 @@ class Strategy:
       self.actions.extend(quickest_path_wo_citytile.actions)
 
       quickest_path = quickest_path_wo_citytile
-      if self.game_map.width < 32 or n_unit < 40 or i < MAX_UNIT_NUM - n_unit:
+      if self.game_map.width < 32 or n_unit < 50 or i < MAX_UNIT_NUM - n_unit:
         quickest_path = QuickestPath(self.game, unit)
         quickest_path.compute()
       # self.actions.extend(quickest_path_wo_citytile.actions)
@@ -2727,7 +2737,9 @@ class Strategy:
         self.worker_build_city_tasks, idle_worker_ids)
     self.worker_fuel_city_tasks = clear_idle_worker_tasks(
         self.worker_fuel_city_tasks, idle_worker_ids)
-    idle_workers2 = self.assign_worker_target(idle_workers)
+
+    if idle_workers:
+      idle_workers2 = self.assign_worker_target(idle_workers)
     # print(f"I1={len(idle_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
 
   def execute(self):
