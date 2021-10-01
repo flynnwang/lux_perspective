@@ -382,15 +382,17 @@ def nights_to_last_turns(turn, last_nights):
 
   if is_day(turn):
     days = get_day_count_this_round(turn)
+    # print(f'add days={days}')
     return nights_to_last_turns(turn + days, last_nights) + days
 
   # The night case
   nights = get_night_count_this_round(turn)
-  if last_nights <= nights:
+  if last_nights < nights:
     return last_nights
 
   last_nights -= nights
-  return nights_to_last_turns(turn + nights, last_nights)
+  # print(f'add nights={days}')
+  return nights_to_last_turns(turn + nights, last_nights) + nights
 
 
 def city_last_days(turn, city):
@@ -419,3 +421,15 @@ def city_wont_last_at_nights(turn, city, add_fuel=0):
   round_nights = get_night_count_this_round(turn)
   city_nights = city_last_nights(city, add_fuel)
   return city_nights < round_nights
+
+
+def get_remaining_round(turn):
+  """Not including this round."""
+  return (MAX_DAYS - turn - 1) // CIRCLE_LENGH
+
+
+def get_remaining_nights(turn):
+  """nights remaining, including current turn."""
+  nights = get_night_count_this_round(turn)
+  round = get_remaining_round(turn)
+  return nights + round * NIGHT_LENGTH

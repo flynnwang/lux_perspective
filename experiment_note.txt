@@ -1,5 +1,28 @@
 
 
+======================================= 2021-10-01 ==============================================
+
+- lower the weight for resource opponent_weight to 100
+- [√] better degradation: to keep as much as path without cc as possible; map size;
+  * test before sim during quickest path search.
+
+Total Matches: 965 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | TCepg3MqESRg   | 31.0931944      | μ=33.725, σ=0.877  | 417
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | fUEPUW0qw1wU   | 28.6360688      | μ=31.112, σ=0.825  | 436
+/home/flynnwang/dev/playground/versions/priority_search/main.py | JcYU4N92un0e   | 26.0095676      | μ=28.443, σ=0.811  | 408
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | WP14s8TvoBIP   | 24.2830651      | μ=26.808, σ=0.842  | 355
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 6sHeBQ2S0cSS   | 17.4098439      | μ=20.334, σ=0.975  | 314
+
+Tong_Hui_Kang_v4	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	2.4	17.1	16.7	10.8
+lux_perspective	97.6	0.0	82.8	73.0	95.1
+priority_search	82.9	17.2	0.0	36.1	69.7
+simple_defend	83.3	27.0	65.6	0.0	71.2
+tranfer_agent_v1	89.2	4.9	30.3	28.8	0.0
+
+
+
 ======================================= 2021-09-30 ==============================================
 
 

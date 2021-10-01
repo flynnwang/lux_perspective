@@ -1,4 +1,4 @@
-from utility2 import *
+from utility3 import *
 from lux.game_objects import Cargo, City, Unit
 
 
@@ -143,6 +143,10 @@ def test_compute_last_turns():
   assert nights_to_last_turns(29, 1) == 1 + 1
   assert nights_to_last_turns(29, 0) == 0 + 1
 
+  assert nights_to_last_turns(0, 10) == 70
+  assert nights_to_last_turns(1, 10) == 69
+  assert nights_to_last_turns(213, 40) == 147
+
 
 def test_consume_cargo_at_citytile():
   turn = 0
@@ -205,3 +209,25 @@ def test_unit_arrival_turns():
   assert days == 10
 
   assert unit_arrival_turns(turn, unit, dist) == 10
+
+
+def test_remaining_round():
+
+  assert get_remaining_round(0) == 8
+  assert get_remaining_round(1) == 8
+  assert get_remaining_round(39) == 8
+  assert get_remaining_round(40) == 7
+  assert get_remaining_round(79) == 7
+  assert get_remaining_round(80) == 6
+
+
+def test_remaining_nights():
+
+  assert get_remaining_nights(0) == 9 * 10
+  assert get_remaining_nights(1) == 9 * 10
+
+  assert get_remaining_nights(29) == 9 * 10
+  assert get_remaining_nights(30) == 9 * 10
+
+  assert get_remaining_nights(39) == 8 * 10 + 1
+  assert get_remaining_nights(40) == 8 * 10
