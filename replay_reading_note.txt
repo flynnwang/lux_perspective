@@ -1,4 +1,9 @@
 
+=========================== 2021-10-04 ==========================
+
+64989738: https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-27577280
+- First step not right, lose territory.
+
 
 =========================== 2021-09-30 ==========================
 

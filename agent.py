@@ -89,6 +89,13 @@
     > also limit non-last city for the second rules.
     > [√] Could we just move the elimenation rule out of current rule?
 
+- [] Use KEEP_RESOURCE_OPEN 1.
+
+
+
+
+
+
 - [] Keep at least two near resource tile for a coal or urnaium cluster
   > Current impl will failed due to worker build city tile on same turn.
 
@@ -2017,9 +2024,8 @@ class Strategy:
                                                      near_resource_tile)):
         build_city_bonus = False
 
-      # TODO: use 1
       # Keep at least two near resource tile for a coal or urnaium cluster
-      KEEP_RESOURCE_OPEN = 2
+      KEEP_RESOURCE_OPEN = 1
       n_bounday_near_resource_tile = count_min_boundary_near_resource_tiles(near_resource_tile)
       if n_bounday_near_resource_tile <= KEEP_RESOURCE_OPEN:
         build_city_bonus = False
