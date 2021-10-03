@@ -1,5 +1,20 @@
 
 
+======================================= 2021-10-02 ==============================================
+
+git@786227919ae7c6598d72a9adffbcc67851567b24
+* try add resource distribution
+
+Total Matches: 2617 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | YgPng6PGu5dd   | 25.9639346      | μ=28.421, σ=0.819  | 1135
+/home/flynnwang/dev/playground/versions/priority_search/main.py | nkAoBMACEYRr   | 24.8751408      | μ=27.286, σ=0.804  | 1210
+/home/flynnwang/dev/playground/lux_perspective/main.py | EDFsfBkTFUvg   | 22.2943904      | μ=24.643, σ=0.783  | 1045
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 8NHCgMcchYHr   | 21.7176567      | μ=24.143, σ=0.808  | 975
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | mhJUcsOVjE8Y   | 17.3786813      | μ=19.936, σ=0.853  | 869
+
+
+
 ======================================= 2021-10-01 ==============================================
 
 - lower the weight for resource opponent_weight to 100
