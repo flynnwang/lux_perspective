@@ -34,6 +34,10 @@ Map Seed: 890013982, a0
 - [√] u_1 going in a circle to build first citytile.
   * inc dd from 1.4 to 1.8, and add 1 move_days to nb fuel wt.
 
+Map: 580916241 a0 v.s. trans agent
+* [] resource stavation due to city building at all boundary of uranium
+* [] t10, u_3, make cluster owner assignment more stable
+* [] implement other resource transfer and not build citytile.
 
 
 
@@ -182,8 +186,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(28, 1), (29, 2)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
@@ -197,6 +201,8 @@ MAX_PATH_WEIGHT = 99999
 MAX_UNIT_NUM = 71
 
 MAX_UNIT_PER_CITY = 8
+
+KEEP_RESOURCE_OPEN = 1
 
 
 def timeit(func):
@@ -411,6 +417,7 @@ def get_player_city_by_citytile(citytile, game):
   return game.player.cities[citytile.cityid]
 
 
+
 class LuxGame(Game):
 
   @property
@@ -470,7 +477,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  MAX_SEARCH_DIST = 8
+  MAX_SEARCH_DIST = 40
 
   def __init__(self, game, unit, ignore_unit=False):
     self.game = game
@@ -1130,6 +1137,7 @@ class Strategy:
     self.accepted_transfer_offers = {}
     self.fuel_city_by_transfer_positions = {}
     self.is_city_tile_made_from_wood = set()
+    self.blacklist_city_building_positions = set()
 
   @property
   def circle_turn(self):
@@ -1274,6 +1282,29 @@ class Strategy:
       shortest_path = ShortestPath(self.game, unit, ignore_unit=True)
       shortest_path.compute()
       self.quickest_path_pairs[unit.id] = (shortest_path, None)
+
+  @functools.lru_cache(maxsize=512)
+  def get_near_resource_tile_cluster_ids(self, near_resource_tile):
+    cluster_ids = set()
+    for nb_cell in get_neighbour_positions(near_resource_tile.pos,
+                                            self.game_map,
+                                            return_cell=True):
+      newpos = nb_cell.pos
+      cid = self.cluster_info.get_cid(newpos)
+      if cid >= 0:
+        cluster_ids.add(cid)
+    return cluster_ids
+
+
+  @functools.lru_cache(maxsize=512)
+  def get_cluster_type(self, turn, cid):
+    x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
+    for x, y in zip(x_pos, y_pos):
+      cluster_pos = Position(x, y)
+      cell = self.game.game_map.get_cell_by_pos(cluster_pos)
+      return cell.resource.type
+
+
 
   @functools.lru_cache(maxsize=1024, typed=False)
   def get_nearest_opponent_unit_to_cell(self, cell, debug=False):
@@ -1836,31 +1867,12 @@ class Strategy:
         # print(f"city={city.id}, f={city.fuel}, keep={city.light_upkeep}, last_turns={city.last_turns}, nights={city_last_nights(city)}")
       return v
 
-    @functools.lru_cache(maxsize=512)
-    def get_near_resource_tile_cluster_ids(near_resource_tile):
-      cluster_ids = set()
-      for nb_cell in get_neighbour_positions(near_resource_tile.pos,
-                                             g.game_map,
-                                             return_cell=True):
-        newpos = nb_cell.pos
-        cid = self.cluster_info.get_cid(newpos)
-        if cid >= 0:
-          cluster_ids.add(cid)
-      return cluster_ids
-
-    @functools.lru_cache(maxsize=512)
-    def get_cluster_type(turn, cid):
-      x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
-      for x, y in zip(x_pos, y_pos):
-        cluster_pos = Position(x, y)
-        cell = self.game.game_map.get_cell_by_pos(cluster_pos)
-        return cell.resource.type
 
     def count_min_boundary_near_resource_tiles(near_resource_tile):
       n_open, n_boundary = 999, 999
-      cluster_ids = get_near_resource_tile_cluster_ids(near_resource_tile)
+      cluster_ids = self.get_near_resource_tile_cluster_ids(near_resource_tile)
       for cid in cluster_ids:
-        cluster_type = get_cluster_type(self.game.turn, cid)
+        cluster_type = self.get_cluster_type(self.game.turn, cid)
         if cluster_type == Constants.RESOURCE_TYPES.WOOD:
           continue
         boundary_positions, open_positions = self.get_cluster_boundary_near_resource_positions(
@@ -1908,7 +1920,7 @@ class Strategy:
     def cell_next_to_target_cluster(worker, near_resource_tile):
       if worker.target_cluster_id < 0:
         return False
-      for cid in get_near_resource_tile_cluster_ids(near_resource_tile):
+      for cid in self.get_near_resource_tile_cluster_ids(near_resource_tile):
         if cid == worker.target_cluster_id:
           return True
       return False
@@ -2010,14 +2022,13 @@ class Strategy:
                                                      near_resource_tile)):
         build_city_bonus = False
 
-      # Keep at least two near resource tile for a coal or urnaium cluster
-      KEEP_RESOURCE_OPEN = 2
+      # Keep at least X near resource tile for a coal or urnaium cluster
       n_boundary, n_open = count_min_boundary_near_resource_tiles(
           near_resource_tile)
-      # if (n_boundary <= 3 and n_open <= KEEP_RESOURCE_OPEN
-          # or n_boundary > 3 and n_open <= 2):
-      if n_open <= KEEP_RESOURCE_OPEN:
+      if (n_open <= KEEP_RESOURCE_OPEN
+          or near_resource_tile.pos in self.blacklist_city_building_positions):
         build_city_bonus = False
+
 
       # TODO: test this threshold.
       # Too large the build city bonus will cause worker divergence from its coal mining position
@@ -2061,7 +2072,7 @@ class Strategy:
             arrival_turns <= min_turns):
           unit_nearest_cluster_ids = get_opponent_unit_nearest_cluster_ids(
               nearest_oppo_unit)
-          cell_cluster_ids = get_near_resource_tile_cluster_ids(
+          cell_cluster_ids = self.get_near_resource_tile_cluster_ids(
               near_resource_tile)
           cell_is_nearest_in_cluster = any(
               (self.
@@ -2401,8 +2412,9 @@ class Strategy:
       # f"v={C[worker_idx, poi_idx]}, target={worker.target_pos}"),
       # file=sys.stderr)
 
-  def try_build_citytile(self):
+  def try_build_citytile(self, dry_run=False):
     t = self.game.turn % CIRCLE_LENGH
+    city_building_units = []
     for unit in self.game.player.units:
       unit.is_building_city = False
       if not unit.is_worker():
@@ -2425,12 +2437,17 @@ class Strategy:
         if (is_first_night(self.game.turn) and cell.n_citytile_neighbour == 0):
           continue
 
+        city_building_units.append(unit)
+        if dry_run:
+          continue
+
         # if cell.is_near_resource:
         self.add_unit_action(unit, unit.build_city())
         unit.is_building_city = True
 
         if unit.cargo.wood == CITY_BUILD_COST:
           self.is_city_tile_made_from_wood.add(unit.pos)
+    return city_building_units
 
   def compute_citytile_actions(self):
     player = self.game.player
@@ -2876,6 +2893,9 @@ class Strategy:
     self.keep_city_alive_till_next_day = set()  # (unit.id, city.id)
     self.transfer_resource_to_city_tile()
 
+    self.blacklist_city_building_positions = set()
+    self.check_cluster_closed_boundary()
+
     self.worker_build_city_tasks = set()
     self.worker_fuel_city_tasks = set()
     workers = self.player_available_workers() # worker may do tranfer and become no avialable.
@@ -2891,6 +2911,32 @@ class Strategy:
     if replan_workers:
       idle_workers2 = self.assign_worker_target(replan_workers, plan_idx=2)
     # print(f"I1={len(replan_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
+
+  def check_cluster_closed_boundary(self):
+    city_building_units = self.try_build_citytile(dry_run=True)
+    city_building_positions = {
+      unit.pos for unit in city_building_units
+    }
+
+    cluster_ids = set()
+    for unit in city_building_units:
+      cids = self.get_near_resource_tile_cluster_ids(unit.target)
+      cluster_ids |= cids
+
+    for cid in cluster_ids:
+      # Only check coal and uranium cluster.
+      if self.get_cluster_type(self.game.turn, cid) == Constants.RESOURCE_TYPES.WOOD:
+        continue
+
+      _, open_positions = self.get_cluster_boundary_near_resource_positions(self.game.turn,
+                                                                            cid)
+      build_positions = open_positions & city_building_positions
+      if len(open_positions) - len(build_positions) < KEEP_RESOURCE_OPEN:
+        max_build = max(len(open_positions) - KEEP_RESOURCE_OPEN, 0)
+        n = len(build_positions) - max_build
+
+        for pos in list(build_positions)[:n]:
+          self.blacklist_city_building_positions.add(pos)
 
   def transfer_resource_to_city_tile(self):
     """Use transfer resoruce to city if:
@@ -2945,7 +2991,7 @@ class Strategy:
       if unit_fuel - fuel_req - later_nights_fuel < 40:
         # this is move to fuel
         print(
-            f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_on_rond={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
+            f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
         )
         return -1
 
