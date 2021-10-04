@@ -5,6 +5,10 @@
 - First step not right, lose territory.
 
 
+565897300: a0 vs transfer
+- Not building enough citytile, fast enough
+
+
 =========================== 2021-09-30 ==========================
 
 > 367314353: https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-27412393
