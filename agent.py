@@ -1962,7 +1962,7 @@ class Strategy:
             return True
       return False
 
-    MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 6
+    MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 8
 
     # TODO(wangfei): merge near resource tile and resource tile weight functon
     def get_near_resource_tile_weight(worker, near_resource_tile, arrival_turns,
@@ -2042,11 +2042,12 @@ class Strategy:
         build_city_bonus = False
 
       # Keep at least two near resource tile for a coal or urnaium cluster
-      KEEP_RESOURCE_OPEN = 1
+      KEEP_RESOURCE_OPEN = 2
       n_boundary, n_open = count_min_boundary_near_resource_tiles(
           near_resource_tile)
-      if (n_boundary <= 3 and n_open <= KEEP_RESOURCE_OPEN
-          or n_boundary > 3 and n_open <= 2):
+      # if (n_boundary <= 3 and n_open <= KEEP_RESOURCE_OPEN
+          # or n_boundary > 3 and n_open <= 2):
+      if n_open <= KEEP_RESOURCE_OPEN:
         build_city_bonus = False
 
       # TODO: test this threshold.
