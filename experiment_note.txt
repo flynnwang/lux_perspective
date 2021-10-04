@@ -2,6 +2,69 @@
 
 ======================================= 2021-10-04 ==============================================
 
+207136199@a1
+- [√] t21/u5: u5 not moving away from after receiving transfer
+  missing transfer build weight for near resource tile.
+- [-] t141: u_3 not transfer resource to u_1 on the citytile.
+  because u_1 is not a idle worker
+- [√] t133: u_7 not doing transfer, and try build city tile but move onto city tile.
+  * worker should not force into position, due to v=0 when computing next move.
+  * Fixed by using negative weight for non-intentional next move.
+  * Or could be fixed by removed force into citytile case only
+- [√] $B u_51 repeated try to transfer resource to city tile.
+  * a bug of `nights_to_last_turns` not count nights
+- [√] t131: worker move away after building city. why?
+  * main reason: not saving size=1 citytile
+  * direct reason: other city is last nights to track the unit.
+  * Fixed after giving same amout of non-last city crash boost for non-wood made city.
+
+
+
+- [√] t162, u_16 not using transfer resource deposit to (10, 1)
+  * it's because u-16 is go to some uranium resource cell
+  * Resource collection and leak resource to citytile.
+  * When is resource target OK for resource losing? (try coal or uranium path)
+  * Solved by using not_leaving_citytile path for unit with coal or uranium
+
+- [√] t125/u_40: not moving forward.
+- [√] u16, u23, not moving to optimal position for resource collection.
+  * Solved by using 1.4 ** dist as dist decay weight.
+
+- [√] t62, crash due to no cityile neighbour transfer build (after weight decay change)
+  * Solved by checking move and build for neighbor transfer unit
+
+- [√] t208/u_49: Why there is mult target drawing?
+  * Only dry for the first plan.
+
+- [√] t225: can't move into city tile (5, 8) because of 8 is full.
+  * Possible fixed by checking the boosting rule with unit on cell.
+
+(build city tile at wrong locations)
+* [√] t27, u7, build city tile in the midlle of ground
+  * fixed: woker is build city task and at build position
+* [√] t17/u5, not build city after transfer into (7, 0), but why build on t21
+  * t17 not build: not using transfer_build_wt as test conditon (after change to use is_worker_building_citytile)
+
+* [√] t180, u37, not stick onto (1, 4) for resource tranfer
+  * Fix is_first_citytile by deepcopy both first and other cells.
+
+- [√] t228, u_10, move_fuel=0?
+  * missing unit_fuel > 0 for city_crash_boost-3, boosted by no_resoruce_on_map
+- [] t153, u_7 die at night, should switch with others.
+  * fix it later
+* [] t162, seems limit resource deposit is not working.
+  * This is because when you ignore one edge, a new edge might still deliver more than needed resource.
+  * [√] Use keep resource connection + city_game_end_fuel_req for plan_idx=1
+  * [] t174, u35, u17, why u17 follows u35 goto (1, 4)
+  * [√] t92, all unit with coal went into (1, 7)
+    > This is because there is no limit on how many worker to use to save for current night.
+    > [√] Support limit and transfer for worker save city for this night.
+  * [√] t87, all workers goto (1, 4)
+    > becuase two city_crash_boost rule has overlap.
+    > also limit non-last city for the second rules.
+    > [√] Could we just move the elimenation rule out of current rule?
+
+
 * MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 6
 * use open 2 for b>3 and open 1 for b<=3
 

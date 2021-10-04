@@ -8,6 +8,21 @@
 565897300: a0 vs transfer
 - Not building enough citytile, fast enough
 
+1633288264780_WOjF7FyY4jmT
+- large city crash, and not building city with fuel.
+- [] not defend at first severl steps.
+
+
+1633294295214_P5661ky7w0Bg
+- [] not go into center cluster at beginning.
+- failed due to late research point.
+
+
+1633295917603_2vcpnRPvbnWA
+- [] t9/u3: why goto remote cluster through city tile
+- need collision avoidence with enemy
+
+
 
 =========================== 2021-09-30 ==========================
 

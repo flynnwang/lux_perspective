@@ -1,7 +1,4 @@
 """
-
-
-
 - Transfer resource to other unit to save it.
   [√] add a tranfer resource to citytile procedure when condition matched
      * agent who do transfer:
@@ -25,82 +22,17 @@
   * A: Support transfer for other resource, but not use the resource to build citytile.
   * [√] B: keep one boundary open for coal and uranium cluster
 
-207136199@a1
-- [√] t21/u5: u5 not moving away from after receiving transfer
-  missing transfer build weight for near resource tile.
-- [-] t141: u_3 not transfer resource to u_1 on the citytile.
-  because u_1 is not a idle worker
-- [√] t133: u_7 not doing transfer, and try build city tile but move onto city tile.
-  * worker should not force into position, due to v=0 when computing next move.
-  * Fixed by using negative weight for non-intentional next move.
-  * Or could be fixed by removed force into citytile case only
-- [√] $B u_51 repeated try to transfer resource to city tile.
-  * a bug of `nights_to_last_turns` not count nights
-- [√] t131: worker move away after building city. why?
-  * main reason: not saving size=1 citytile
-  * direct reason: other city is last nights to track the unit.
-  * Fixed after giving same amout of non-last city crash boost for non-wood made city.
 
-- [] Try not build on non near resource tile (except for connection point), limit city size
-- [] Try transfer coal and uranium? why we need it? (build city faster?)
-
-
-- [√] t162, u_16 not using transfer resource deposit to (10, 1)
-  * it's because u-16 is go to some uranium resource cell
-  * Resource collection and leak resource to citytile.
-  * When is resource target OK for resource losing? (try coal or uranium path)
-  * Solved by using not_leaving_citytile path for unit with coal or uranium
-
-- [√] t125/u_40: not moving forward.
-- [√] u16, u23, not moving to optimal position for resource collection.
-  * Solved by using 1.4 ** dist as dist decay weight.
-
-- [√] t62, crash due to no cityile neighbour transfer build (after weight decay change)
-  * Solved by checking move and build for neighbor transfer unit
-
-- [√] t208/u_49: Why there is mult target drawing?
-  * Only dry for the first plan.
-
-- [√] t225: can't move into city tile (5, 8) because of 8 is full.
-  * Possible fixed by checking the boosting rule with unit on cell.
-
-(build city tile at wrong locations)
-* [√] t27, u7, build city tile in the midlle of ground
-  * fixed: woker is build city task and at build position
-* [√] t17/u5, not build city after transfer into (7, 0), but why build on t21
-  * t17 not build: not using transfer_build_wt as test conditon (after change to use is_worker_building_citytile)
-
-* [√] t180, u37, not stick onto (1, 4) for resource tranfer
-  * Fix is_first_citytile by deepcopy both first and other cells.
-
-- [√] t228, u_10, move_fuel=0?
-  * missing unit_fuel > 0 for city_crash_boost-3, boosted by no_resoruce_on_map
-- [] t153, u_7 die at night, should switch with others.
-  * fix it later
-* [] t162, seems limit resource deposit is not working.
-  * This is because when you ignore one edge, a new edge might still deliver more than needed resource.
-  * [√] Use keep resource connection + city_game_end_fuel_req for plan_idx=1
-  * [] t174, u35, u17, why u17 follows u35 goto (1, 4)
-  * [√] t92, all unit with coal went into (1, 7)
-    > This is because there is no limit on how many worker to use to save for current night.
-    > [√] Support limit and transfer for worker save city for this night.
-  * [√] t87, all workers goto (1, 4)
-    > becuase two city_crash_boost rule has overlap.
-    > also limit non-last city for the second rules.
-    > [√] Could we just move the elimenation rule out of current rule?
-
-- [] Use KEEP_RESOURCE_OPEN 1.
-
-
-
-
+map: 281801529 a1
+- [√] t9, u2 not going to (9, 8)
+  * This is a bug for not add nb_fuel_wt for return from get_one_step_collection_values
+- [] not blocking enemy from coming into my cluster, why?
 
 
 - [] Keep at least two near resource tile for a coal or urnaium cluster
   > Current impl will failed due to worker build city tile on same turn.
-
-- [] u_26 dying on turn 70
-
+- [] Try not build on non near resource tile (except for connection point), limit city size
+- [] Try transfer coal and uranium? why we need it? (build city faster?)
 
 
 - Should also estimate whether a large city is saveable given the resource on the map.
@@ -242,8 +174,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_2']
+MAP_POS_LIST = [(6, 8), (8, 7)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
@@ -435,7 +367,7 @@ def get_one_step_collection_values(cell,
                                              unit=unit,
                                              debug=debug)
   if debug:
-    print(f" cell value: amt={amount} fuel={fuel_wt}")
+    print(f" cell value [{cell.pos}]: amt={amount} fuel={fuel_wt}")
   # Use neighbour average as resource weight
   nb_fuel_wt = 0
   nb_count = 0
@@ -454,7 +386,9 @@ def get_one_step_collection_values(cell,
   if nb_count > 0:
     fuel_wt += nb_fuel_wt / nb_count
 
-  return amount + nb_amt, fuel_wt
+  if debug:
+    print(f" nb value [{cell.pos}]: amt={nb_amt} fuel={nb_fuel_wt}")
+  return amount + nb_amt, fuel_wt + nb_fuel_wt
 
 
 def collect_amount_at_cell(cell, player, game_map):
@@ -1967,6 +1901,9 @@ class Strategy:
     # TODO(wangfei): merge near resource tile and resource tile weight functon
     def get_near_resource_tile_weight(worker, near_resource_tile, arrival_turns,
                                       quick_path):
+      debug = False
+      if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+        debug = True
       wt = 0
       # Not using unit so near resource tile will have more weight over resource tile.
       surviving_turns = get_surviving_turns_at_cell(worker, quick_path,
@@ -1976,7 +1913,7 @@ class Strategy:
           player,
           self.game,
           move_days=arrival_turns,
-          surviving_turns=surviving_turns)
+          surviving_turns=surviving_turns, debug=debug)
       is_fuelable_near_resource_tile = bool(fuel_wt > 0)
 
       fuel_wt /= 3  # Use smaller weight for near resource tile
