@@ -183,7 +183,7 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(6, 0), (6, 2)]
+MAP_POS_LIST = [(28, 1), (29, 2)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
@@ -2878,6 +2878,7 @@ class Strategy:
 
     self.worker_build_city_tasks = set()
     self.worker_fuel_city_tasks = set()
+    workers = self.player_available_workers() # worker may do tranfer and become no avialable.
     replan_workers = self.assign_worker_target(workers, plan_idx=1)
 
     # TODO: Is it needed?
