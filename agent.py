@@ -26,7 +26,8 @@
 map: 281801529 a1
 - [√] t9, u2 not going to (9, 8)
   * This is a bug for not add nb_fuel_wt for return from get_one_step_collection_values
-- [] not blocking enemy from coming into my cluster, why?
+- [√] not blocking enemy from coming into my cluster, why?
+  * Assume enemy will goto the nearest cluster researched with its own citytile
 
 
 - [] Keep at least two near resource tile for a coal or urnaium cluster
@@ -1318,6 +1319,7 @@ class Strategy:
   @functools.lru_cache(maxsize=1023, typed=False)
   def get_min_cluster_arrival_turns_for_opponent_unit(self, cid, unit):
     min_dist = MAX_PATH_WEIGHT
+    min_pos = None
     x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
     for x, y in zip(x_pos, y_pos):
       cluster_pos = Position(x, y)
@@ -1326,11 +1328,12 @@ class Strategy:
       dist = shortest_path.shortest_dist(cluster_pos)
       if dist < min_dist:
         min_dist = dist
+        min_pos = cluster_pos
 
     if min_dist == MAX_PATH_WEIGHT:
-      return MAX_PATH_WEIGHT
+      return MAX_PATH_WEIGHT, None
     min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
-    return min_turns
+    return min_turns, min_pos
 
   @functools.lru_cache(maxsize=1023, typed=False)
   def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
@@ -1595,7 +1598,7 @@ class Strategy:
             arrival_turns <= min_turns and
             cid in get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit) and
             (self.get_min_cluster_arrival_turns_for_opponent_unit(
-                cid, nearest_oppo_unit) == min_turns)):
+                cid, nearest_oppo_unit)[0] == min_turns)):
           opponent_weight += 100
 
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
@@ -1859,12 +1862,34 @@ class Strategy:
         n_boundary = min(n_boundary, len(boundary_positions))
       return n_boundary, n_open
 
+    @functools.lru_cache(maxsize=127)
+    def is_cluster_contains_player_citytile(cid, player):
+      boundary_positions, _ = self.get_cluster_boundary_near_resource_positions(self.game.turn, cid)
+      for pos in boundary_positions:
+        cell = self.game_map.get_cell_by_pos(pos)
+        if cell.citytile and cell.citytile.team == player.team:
+          return True
+      return False
+
     @functools.lru_cache(maxsize=512)
     def get_opponent_unit_nearest_cluster_ids(unit):
+      """Returns the nearest cluster that
+      1) opponent can collect fuel
+      2) with no enemy city."""
       min_turns = MAX_PATH_WEIGHT
       cluster_ids = set()
       for cid in range(self.cluster_info.max_cluster_id):
-        turns = self.get_min_cluster_arrival_turns_for_opponent_unit(cid, unit)
+        turns, cluster_pos = self.get_min_cluster_arrival_turns_for_opponent_unit(cid, unit)
+        if cluster_pos is None:
+          continue
+
+        cluster_cell = self.game_map.get_cell_by_pos(cluster_pos)
+        if not is_resource_researched(cluster_cell.resource, self.game.opponent, move_days=turns):
+          continue
+
+        if is_cluster_contains_player_citytile(cid, self.game.opponent):
+          continue
+
         if turns < min_turns:
           cluster_ids.clear()
           cluster_ids.add(cid)
@@ -2040,12 +2065,12 @@ class Strategy:
               cell_is_nearest_in_cluster):
             opponent_weight += 10001
 
-        # if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-        # print(f"cid={cell_cluster_ids}")
-        # print(f"min_near_cluster={self.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
-        # print(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_turns={min_turns}, arrival_turns={arrival_turns}, "
-        # f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
-        # f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
+          if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+            print(f"cid={cell_cluster_ids}")
+            print(f"min_near_cluster={self.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
+            print(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_turns={min_turns}, arrival_turns={arrival_turns}, "
+                  f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
+                  f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
 
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
         print(
