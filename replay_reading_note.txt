@@ -10,11 +10,12 @@
 
 1633288264780_WOjF7FyY4jmT
 - large city crash, and not building city with fuel.
-- [] not defend at first severl steps.
+- [√] not defend at first severl steps.
 
 
 1633294295214_P5661ky7w0Bg
-- [] not go into center cluster at beginning.
+- [√] not go into center cluster at beginning.
+  * transfer agent is going by chance...
 - failed due to late research point.
 
 

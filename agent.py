@@ -30,6 +30,13 @@ map: 281801529 a1
   * Assume enemy will goto the nearest cluster researched with its own citytile
 
 
+Map Seed: 890013982, a0
+- [√] u_1 going in a circle to build first citytile.
+  * inc dd from 1.4 to 1.8, and add 1 move_days to nb fuel wt.
+
+
+
+
 - [] Keep at least two near resource tile for a coal or urnaium cluster
   > Current impl will failed due to worker build city tile on same turn.
 - [] Try not build on non near resource tile (except for connection point), limit city size
@@ -175,8 +182,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_2']
-MAP_POS_LIST = [(6, 8), (8, 7)]
+DRAW_UNIT_LIST = ['u_1']
+MAP_POS_LIST = [(6, 0), (6, 2)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
@@ -205,7 +212,7 @@ def timeit(func):
 
 
 @functools.lru_cache(maxsize=1024, typed=False)
-def dd(dist, r=1.4):
+def dd(dist, r=1.8):
   return r**dist
 
 
@@ -376,7 +383,7 @@ def get_one_step_collection_values(cell,
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
     a, f = get_cell_resource_values(nb_cell,
                                     player,
-                                    move_days=move_days,
+                                    move_days=move_days+1,
                                     surviving_turns=surviving_turns,
                                     unit=unit)
     nb_amt = max(nb_amt, a)
@@ -1601,13 +1608,13 @@ class Strategy:
                 cid, nearest_oppo_unit)[0] == min_turns)):
           opponent_weight += 100
 
+      v = (wt / dd(arrival_turns) + boost_cluster + fuel_wt +
+              opponent_weight)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
         print(
-            f"w[{worker.id}] res_wt = {resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_unit_turn={min_turns}"
+            f"w[{worker.id}] v={v}, res={resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_unit_turn={min_turns}"
             f" not_leave_city={quick_path.not_leaving_citytile}")
-
-      return (wt / dd(arrival_turns) + boost_cluster + fuel_wt +
-              opponent_weight)
+      return v
 
     @functools.lru_cache(maxsize=1024)
     def worker_city_min_arrival_turns(worker, city):
@@ -2072,16 +2079,15 @@ class Strategy:
                   f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
                   f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
 
+      v = (wt / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight + transfer_build_wt)
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
         print(
-            f'w[{worker.id}] nrt[{near_resource_tile.pos}] @last, wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt:.3f}'
+            f'w[{worker.id}] nrt[{near_resource_tile.pos}] @last, v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt:.3f}'
             f' collect_amt={amount} opponent={opponent_weight}, transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, build_city={build_city_bonus}'
             f' is_transfer_build_position={is_transfer_build_position}')
         # print(f' {self.worker_build_city_tasks}')
+      return v
 
-      # return wt / (arrival_turns + 1) + boost_cluster / (arrival_turns // 2 + 1)
-      return (wt / dd(arrival_turns) + boost_cluster + fuel_wt +
-              opponent_weight + transfer_build_wt)
       # return wt / dist_decay(dist, g.game_map) + boost_cluster
       # return wt / (dist + 0.1) + boost_cluster
     def get_boost_transfer_build_weight(worker, cell):
