@@ -1402,9 +1402,9 @@ class Strategy:
   def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
       self, cid, unit):
     min_dist = MAX_PATH_WEIGHT
-    for pos in self.get_cluster_boundary_near_resource_positions(
-        self.game.turn, cid):
-
+    _, open_positions = self.get_cluster_boundary_near_resource_positions(
+        self.game.turn, cid)
+    for pos in open_positions:
       shortest_path, _ = self.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(pos)
       if dist < min_dist:
@@ -1418,16 +1418,21 @@ class Strategy:
   # Use turn to pop out old data
   @functools.lru_cache(maxsize=512, typed=False)
   def get_cluster_boundary_near_resource_positions(self, turn, cid):
+    open_positions = set()
     boundary_positions = set()
     x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
     for x, y in zip(x_pos, y_pos):
       cluster_pos = Position(x, y)
+      cluster_cell = self.game.game_map.get_cell_by_pos(cluster_pos)
       for nb_cell in get_neighbour_positions(cluster_pos,
                                              self.game_map,
                                              return_cell=True):
-        if nb_cell.is_near_resource:
+        if (not nb_cell.has_resource()
+            or nb_cell.resource.type != cluster_cell.resource.type):
           boundary_positions.add(nb_cell.pos)
-    return boundary_positions
+        if nb_cell.citytile is None:
+          open_positions.add(nb_cell.pos)
+    return boundary_positions, open_positions
 
   def assign_worker_target(self, workers, plan_idx=0):
     g = self.game
@@ -1908,18 +1913,17 @@ class Strategy:
         return cell.resource.type
 
     def count_min_boundary_near_resource_tiles(near_resource_tile):
-      n = 999
+      n_open, n_boundary = 999, 999
       cluster_ids = get_near_resource_tile_cluster_ids(near_resource_tile)
       for cid in cluster_ids:
         cluster_type = get_cluster_type(self.game.turn, cid)
         if cluster_type == Constants.RESOURCE_TYPES.WOOD:
           continue
-        n = min(
-            n,
-            len(
-                self.get_cluster_boundary_near_resource_positions(
-                    self.game.turn, cid)))
-      return n
+        boundary_positions, open_positions = self.get_cluster_boundary_near_resource_positions(
+          self.game.turn, cid)
+        n_open = min(n_open, len(open_positions))
+        n_boundary = min(n_boundary, len(boundary_positions))
+      return n_boundary, n_open
 
     @functools.lru_cache(maxsize=512)
     def get_opponent_unit_nearest_cluster_ids(unit):
@@ -2039,9 +2043,10 @@ class Strategy:
 
       # Keep at least two near resource tile for a coal or urnaium cluster
       KEEP_RESOURCE_OPEN = 1
-      n_bounday_near_resource_tile = count_min_boundary_near_resource_tiles(
+      n_boundary, n_open = count_min_boundary_near_resource_tiles(
           near_resource_tile)
-      if n_bounday_near_resource_tile <= KEEP_RESOURCE_OPEN:
+      if (n_boundary <= 3 and n_open <= KEEP_RESOURCE_OPEN
+          or n_boundary > 3 and n_open <= 2):
         build_city_bonus = False
 
       # TODO: test this threshold.
