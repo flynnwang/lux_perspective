@@ -1,4 +1,25 @@
 
+======================================= 2021-10-05 ==============================================
+
+map: 281801529 a1
+- [√] t9, u2 not going to (9, 8)
+  * This is a bug for not add nb_fuel_wt for return from get_one_step_collection_values
+- [√] not blocking enemy from coming into my cluster, why?
+  * Assume enemy will goto the nearest cluster researched with its own citytile
+
+
+Map Seed: 890013982, a0
+- [√] u_1 going in a circle to build first citytile.
+  * inc dd from 1.4 to 1.8, and add 1 move_days to nb fuel wt.
+
+Total Matches: 1725 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | wYWhGKbi2Lhb   | 29.6605404      | μ=32.203, σ=0.847  | 635
+/home/flynnwang/dev/playground/lux_perspective/main.py | 44R2423vIaLt   | 27.9058378      | μ=30.417, σ=0.837  | 708
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | vFDIRk6HqHZ5   | 26.7098085      | μ=29.150, σ=0.814  | 621
+/home/flynnwang/dev/playground/versions/priority_search/main.py | 9WvkpHkbcmJJ   | 23.8068875      | μ=26.254, σ=0.816  | 537
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | ApbpdZTngkRF   | 20.4596386      | μ=23.032, σ=0.858  | 490
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | v9KqZVxng4Qw   | 16.1128917      | μ=19.037, σ=0.975  | 459
 
 ======================================= 2021-10-04 ==============================================
 

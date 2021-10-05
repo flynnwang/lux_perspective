@@ -1,4 +1,44 @@
 
+
+=========================== 2021-10-05 ==========================
+
+469394213, a1
+* not keepping large city alive well
+
+1633429268810_SGUOuh2J46P2, a0
+* [x] t24/u9: Failed to defend opponent unit: can not reproduce.
+
+1633377576891_xp4YU5VT8O0J
+* [] t49/u8: failed to defend: at initial turns.
+* [] Should cluster owner help with defend task?
+
+1633373411787_GVtCje0G1CnX
+* Maybe cluster owner shold help with opponent defend first?
+
+689082886, 1633401195523_fBM41Bce56oo
+* t135, idle worker is not helping? why
+
+1633408815354_47j3eS2GJucf
+* Failed when compete for the center wood resource
+
+1633375427170_lVP1uuqLejwT
+* Large city crash
+
+1633408217001_8cOtaQfup9h5
+* Resource competition failure.
+
+
+525444706, 1633395602596_2pzohdrFWoxx
+* [√] t9, not building city tile at turn 10
+
+
+
+
+988599503, by TB
+* goto far place for city building may not be necessay, faster is more important.
+ (maybe the opposite)
+
+
 =========================== 2021-10-04 ==========================
 
 64989738: https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-27577280
