@@ -50,6 +50,10 @@ Map: 580916241 a0 v.s. trans agent
   * but may die because of depend opponent weight
 
 
+833391315, a0
+* [√] should I build city with cluster owner when it's full?
+  * by removing the demote weight for target cell.
+
 
 - [] Keep at least two near resource tile for a coal or urnaium cluster
   > Current impl will failed due to worker build city tile on same turn.
@@ -1652,8 +1656,8 @@ class Strategy:
           opponent_weight += 100
 
       demote_opponent_unit = 0
-      if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
-        demote_opponent_unit = -0.1
+      # if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
+        # demote_opponent_unit = -0.1
 
       v = (wt / dd(arrival_turns) + boost_cluster + fuel_wt +
            opponent_weight + demote_opponent_unit)
@@ -2038,7 +2042,6 @@ class Strategy:
       # Do not boost cluster owner to build city on non-target cluster with player citytile
       # exceptions:
       # 1) transfer build: so owner don't need that much resource to goto next cluster
-      # 2) defend enemy
       if (worker.is_cluster_owner and not is_next_to_target_cluster and
           cell_has_player_citytile_on_target_cluster(worker,
                                                      near_resource_tile)
@@ -2117,8 +2120,8 @@ class Strategy:
 
 
       demote_opponent_unit = 0
-      if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
-        demote_opponent_unit = -0.1
+      # if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
+        # demote_opponent_unit = -0.1
 
       v = (wt / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
            + transfer_build_wt + demote_opponent_unit)
