@@ -242,8 +242,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(6, 6), (7, 5)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 1
@@ -2156,12 +2156,12 @@ class Strategy:
             if cell_is_nearest_in_cluster:
               opponent_weight += 10001
 
-          if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-            print(f"focus_cluster_ids={focus_cluster_ids}")
-            print(f"min_near_cluster={self.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
-            print(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_turns={min_turns}, arrival_turns={arrival_turns}, "
-                  f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
-                  f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
+            if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+              print(f"focus_cluster_ids={focus_cluster_ids}")
+              print(f"min_near_cluster={self.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
+              print(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_turns={min_turns}, arrival_turns={arrival_turns}, "
+                    f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
+                    f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
 
 
       demote_opponent_unit = 0
