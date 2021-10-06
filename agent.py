@@ -41,9 +41,14 @@ Map: 580916241 a0 v.s. trans agent
 - [√] can build wood citytile if there're >= two wood cell around, see a0 T30
 - t261: multiple workers go into: (23, 8)
 
+>>> running
 
-
-
+1633499009523_fESkIaFimwLk, 33974899
+- [√] t10, c_5, not building worker
+  * Fix bug for the number of open boundary (and only use researched resource)
+- [√] t122, u_76 stay at (15, 21) rather than going to (18, 27)
+  * Because when number of worker is large, only not_leaving_citytile path is used.
+- use MAX_SEARCH_DIST = 16 for opponent unit
 
 
 
@@ -490,7 +495,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  MAX_SEARCH_DIST = 40
+  MAX_SEARCH_DIST = 16
 
   def __init__(self, game, unit, ignore_unit=False):
     self.game = game
@@ -1155,7 +1160,7 @@ class Strategy:
     return self.game.circle_turn
 
   @property
-  def round_factor(self):
+  def day_factor(self):
     return 1 - self.game.days_this_round / DAY_LENGTH
 
   @property
@@ -1276,10 +1281,11 @@ class Strategy:
       quickest_path = quickest_path_wo_citytile
 
       # TODO: could use a larger threshold
-      if (unit.is_carrying_coal_or_uranium):
+      if unit.is_carrying_coal_or_uranium:
         quickest_path = quickest_path_wo_citytile
-      elif ((self.game_map.width < 32 or n_unit < 50 or
-             i < MAX_UNIT_NUM - n_unit)):
+      else:
+      # elif ((self.game_map.width < 32 or n_unit < 50 or
+             # i < MAX_UNIT_NUM - n_unit)):
         quickest_path = QuickestPath(self.game, unit)
         quickest_path.compute()
 
@@ -1414,7 +1420,7 @@ class Strategy:
 
   # Use turn to pop out old data
   @functools.lru_cache(maxsize=512, typed=False)
-  def get_cluster_boundary_near_resource_positions(self, turn, cid):
+  def get_cluster_boundary_near_resource_positions(self, turn, cid, can_build=False):
     open_positions = set()
     boundary_positions = set()
     x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
@@ -1427,8 +1433,10 @@ class Strategy:
         if (not nb_cell.has_resource()
             or nb_cell.resource.type != cluster_cell.resource.type):
           boundary_positions.add(nb_cell.pos)
-        if nb_cell.citytile is None:
-          open_positions.add(nb_cell.pos)
+          if nb_cell.citytile is None:
+            if can_build and nb_cell.resource != None:
+              continue
+            open_positions.add(nb_cell.pos)
     return boundary_positions, open_positions
 
   def assign_worker_target(self, workers, plan_idx=0):
@@ -1601,8 +1609,10 @@ class Strategy:
         print(
             f"res_wt = {resource_tile.pos} 1. fuel_wt={fuel_wt} type={fuel_wt_type}"
         )
+
+      default_res_wt = 0
       if fuel_wt:
-        wt += DEFAULT_RESOURCE_WT
+        default_res_wt = DEFAULT_RESOURCE_WT
 
       #TODO: encourage worker into near/resource tile, not necessary dying
       # Try to hide next to resource grid in the night.
@@ -1666,12 +1676,12 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
         # demote_opponent_unit = -0.1
 
-      v = (wt / dd(arrival_turns) + boost_cluster + fuel_wt +
+      v = ((wt + default_res_wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
            opponent_weight + demote_opponent_unit)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
         print(
             f"w[{worker.id}] v={v}, res={resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_unit_turn={min_turns}"
-            f" not_leave_city={quick_path.not_leaving_citytile}, demote_oppo_unit={demote_opponent_unit}")
+            f" not_leave_city={quick_path.not_leaving_citytile}, demote_oppo_unit={demote_opponent_unit}, default_res_wt={default_res_wt}")
       return v
 
     @functools.lru_cache(maxsize=1024)
@@ -1714,7 +1724,7 @@ class Strategy:
         # Hide in the city
         if city_last:
           wt += max(min(city_last_nights(city) / 10, 1),
-                    0) * 0.5 * self.round_factor
+                    0) * 0.5 * self.day_factor
         # elif cargo_total_amount(worker.cargo) == 0:
         # Escape from dying city.
         # wt = -99999
@@ -1992,8 +2002,10 @@ class Strategy:
       is_fuelable_near_resource_tile = bool(fuel_wt > 0)
 
       fuel_wt /= 3  # Use smaller weight for near resource tile
+
+      default_res_wt = 0
       if is_fuelable_near_resource_tile > 0:
-        wt += DEFAULT_RESOURCE_WT / 2
+        default_res_wt = DEFAULT_RESOURCE_WT / 2
 
 
       # Boost the target collect amount by 2 (for cooldown) to test for citytile building.
@@ -2136,13 +2148,14 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
         # demote_opponent_unit = -0.1
 
-      v = (wt / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
+      v = ((wt + default_res_wt) / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
            + transfer_build_wt + demote_opponent_unit)
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx==0:
         print(
             f'w[{worker.id}] nrt[{near_resource_tile.pos}] @last, v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt:.3f}'
             f' collect_amt={amount} opponent={opponent_weight}, transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, build_city={build_city_bonus}, off={build_city_bonus_off_reason}'
-            f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}')
+            f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
+            f' default_res_wt={default_res_wt}')
         # print(f' {self.worker_build_city_tasks}')
       return v
 
@@ -2533,15 +2546,20 @@ class Strategy:
       for cell in city.citytiles:
         cluster_ids |= self.get_neighbour_cells_cluster_ids(cell)
 
-      n_open = 0
+      cluster_ids = {cid for cid in cluster_ids
+                     if is_resource_researched(Resource(self.get_cluster_type(self.game.turn, cid), 1),
+                                                   self.game.player)}
+      positions = set()
       for cid in cluster_ids:
-        _, open_positions = self.get_cluster_boundary_near_resource_positions(self.game.turn, cid)
-        n_open += len(open_positions)
-
-      return n_open, get_city_no(city)
+        _, open_positions = self.get_cluster_boundary_near_resource_positions(self.game.turn, cid, can_build=True)
+        positions |= open_positions
+      return len(positions), get_city_no(city)
 
     cities = list(player.cities.values())
     cities = sorted(cities, key=lambda c: get_city_action_weight(c), reverse=True)
+    # for c in cities:
+      # print(f"{c.id} {get_city_action_weight(c)}")
+
     action_citytile_positions = set()
 
     def every_citytiles(cities):
@@ -2556,6 +2574,9 @@ class Strategy:
         total_unit_count += 1
         self.actions.append(citytile.build_worker())
         action_citytile_positions.add(citytile.pos)
+
+        city = get_player_city_by_citytile(citytile, self.game)
+        # print(f"citytile={citytile.pos}, from city={city.id}, build_worker()")
 
     cities = sorted(cities, key=lambda c: get_city_action_weight(c))
     for citytile in every_citytiles(cities):
@@ -2749,8 +2770,7 @@ class Strategy:
         x = annotate.x(tile_pos.x, tile_pos.y)
         line = annotate.line(worker.pos.x, worker.pos.y, tile_pos.x, tile_pos.y)
         self.actions.extend([x, line])
-
-        print(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
+        # print(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
 
   def worker_look_for_resource_transfer(self):
     circle_turn = self.circle_turn
