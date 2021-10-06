@@ -38,8 +38,11 @@
 
 1633531183146_B2h8UluTU6KF, 434234212
 - [√] t160, not many worker goes to uranium cluster on the top.
-  * Add default resource weight directly into res and near_res cell
-- [] t139, u_3@(9, 15) build city and blocked coal transfer.
+  * could be fixed by making default weight no use dist decay
+- [√] t136, u_3@(9, 15) build city and blocked coal transfer.
+  * It's blocked because due to city tile building on original resource tile.
+- [] u35 t106 not building city tile
+- [] Try weight citytile by boundary opening rate
 
 
 
@@ -196,8 +199,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_11']
-MAP_POS_LIST = [(5, 14), (2, 1)]
+DRAW_UNIT_LIST = ['u_35']
+MAP_POS_LIST = [(5, 14)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -1147,6 +1150,7 @@ class Strategy:
     self.fuel_city_by_transfer_positions = {}
     self.is_city_tile_made_from_wood = set()
     self.blacklist_city_building_positions = set()
+    self.non_wood_resource_locations = set()
 
   @property
   def circle_turn(self):
@@ -1199,6 +1203,7 @@ class Strategy:
   def update_game_map_info(self):
     # def nearest_opponent_worker_dist(cell):
 
+
     # TODO: ref citytile to city
     for y in range(self.game.map_height):
       for x in range(self.game.map_width):
@@ -1219,6 +1224,17 @@ class Strategy:
         # This is a flag for calling for idle worker to collect fuel for city.
         cell.is_first_citytile = False
 
+        if self.game.turn == 0:
+          if cell.is_coal_target or cell.is_uranium_target:
+            self.non_wood_resource_locations.add(cell.pos)
+
+        if cell.pos in MAP_POS_LIST:
+          print(f"cell.pos={cell.pos}, has_res={cell.has_resource()} res={cell.resource}, coal={cell.is_coal_target}, urnaium={cell.is_uranium_target}")
+
+    if self.game.turn == 0:
+      print(f'number of non_wood_resource_locations: {len(self.non_wood_resource_locations)}, {self.non_wood_resource_locations}')
+      pass
+
     for unit in self.game.player.units:
       cell = self.game_map.get_cell_by_pos(unit.pos)
       cell.unit = unit
@@ -1228,6 +1244,8 @@ class Strategy:
       cell = self.game_map.get_cell_by_pos(unit.pos)
       cell.unit = unit
       cell.units.append(unit)
+
+
 
   # @timeit
   def update_unit_info(self):
@@ -1352,11 +1370,11 @@ class Strategy:
                                              self.game_map,
                                              return_cell=True):
         if (nb_cell.has_resource()):
-          # Set resource type for cell based on neighbour cell
-          if is_resource_coal(nb_cell.resource):
-            cell.is_coal_target = True
-          elif is_resource_uranium(nb_cell.resource):
-            cell.is_uranium_target = True
+          # Set resource type for cell based on neighbour cell, why??????
+          # if is_resource_coal(nb_cell.resource):
+            # cell.is_coal_target = True
+          # elif is_resource_uranium(nb_cell.resource):
+            # cell.is_uranium_target = True
           return True
       return False
 
@@ -2005,7 +2023,7 @@ class Strategy:
       # it's 2, because one step move and one step for cooldown
       # Only build at fuelabe near resource tile.
       build_city_bonus = False
-      build_city_bonus_off_reason = ''
+      build_city_bonus_off_reason = '-'
       days_left = BUILD_CITYTILE_ROUND - self.circle_turn
       if (is_fuelable_near_resource_tile and
           worker_enough_cargo_to_build(worker, amount * 2) and
@@ -2068,10 +2086,12 @@ class Strategy:
       # Keep at least X near resource tile for a coal or urnaium cluster
       n_boundary, n_open = count_min_boundary_near_resource_tiles(
           near_resource_tile)
+      # print(f"cell[{near_resource_tile.pos}] {n_open}")
       if (n_open <= KEEP_RESOURCE_OPEN
-          or near_resource_tile.pos in self.blacklist_city_building_positions):
+          or near_resource_tile.pos in self.blacklist_city_building_positions
+          or near_resource_tile.pos in self.non_wood_resource_locations):
         build_city_bonus = False
-        build_city_bonus_off_reason = f'(open_cell={n_open}, blicklist={near_resource_tile.pos in self.blacklist_city_building_positions})'
+        build_city_bonus_off_reason = f'(open_cell={n_open}, blicklist={near_resource_tile.pos in self.blacklist_city_building_positions}), non_wood_res_loc={near_resource_tile.pos in self.non_wood_resource_locations}'
 
 
       # TODO: test this threshold.
@@ -2141,14 +2161,14 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
         # demote_opponent_unit = -0.1
 
-      v = ((wt ) / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
+      v  = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
            + transfer_build_wt + demote_opponent_unit + default_res_wt)
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx==0:
         print(
             f'w[{worker.id}] nrt[{near_resource_tile.pos}] @last, v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt:.3f}'
             f' collect_amt={amount} opponent={opponent_weight}, transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, build_city={build_city_bonus}, off={build_city_bonus_off_reason}'
             f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
-            f' default_res_wt={default_res_wt}, n_open={n_open}')
+            f' default_res_wt={default_res_wt}, n_open={n_open}, (near_resource_tile.pos in self.non_wood_resource_locations)')
         # print(f' {self.worker_build_city_tasks}')
       return v
 
