@@ -32,7 +32,22 @@
   * Because when number of worker is large, only not_leaving_citytile path is used.
 - use MAX_SEARCH_DIST = 16 for opponent unit
 
->> running
+Total Matches: 206 | Matches Queued: 12
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | GSAY2M0m4Mkm   | 28.3332906      | μ=31.634, σ=1.100  | 83
+/home/flynnwang/dev/playground/lux_perspective/main.py | 4doVfWgxsgdH   | 28.2137564      | μ=31.754, σ=1.180  | 77
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | WXSVrC9On4hp   | 23.0391588      | μ=26.356, σ=1.106  | 70
+/home/flynnwang/dev/playground/versions/priority_search/main.py | vcpeNKympOu6   | 22.0938106      | μ=25.379, σ=1.095  | 69
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | ZlDxUaaAPPam   | 15.2373527      | μ=19.787, σ=1.516  | 59
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | kMvMSkNZorff   | 14.5509974      | μ=18.793, σ=1.414  | 54
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	9.1	9.1	33.3	9.1	33.3
+defend_agent	90.9	0.0	55.6	70.8	81.2	100.0
+lux_perspective	90.9	44.4	0.0	84.6	77.8	100.0
+priority_search	66.7	29.2	15.4	0.0	37.5	85.7
+simple_defend	90.9	18.8	22.2	62.5	0.0	77.8
+tranfer_agent_v1	66.7	0.0	0.0	14.3	22.2	0.0
 
 
 
@@ -41,7 +56,12 @@
   * could be fixed by making default weight no use dist decay
 - [√] t136, u_3@(9, 15) build city and blocked coal transfer.
   * It's blocked because due to city tile building on original resource tile.
-- [] u35 t106 not building city tile
+- [√] u35 t106 not building city tile
+  * remove is_coal_target on neighbour cell
+
+
+1633499009523_fESkIaFimwLk, 33974899
+- [√] open bounday cell, remove opponent unit standing positon
 - [] Try weight citytile by boundary opening rate
 
 
@@ -1228,12 +1248,12 @@ class Strategy:
           if cell.is_coal_target or cell.is_uranium_target:
             self.non_wood_resource_locations.add(cell.pos)
 
-        if cell.pos in MAP_POS_LIST:
-          print(f"cell.pos={cell.pos}, has_res={cell.has_resource()} res={cell.resource}, coal={cell.is_coal_target}, urnaium={cell.is_uranium_target}")
+        # if cell.pos in MAP_POS_LIST:
+          # print(f"cell.pos={cell.pos}, has_res={cell.has_resource()} res={cell.resource}, coal={cell.is_coal_target}, urnaium={cell.is_uranium_target}")
 
-    if self.game.turn == 0:
-      print(f'number of non_wood_resource_locations: {len(self.non_wood_resource_locations)}, {self.non_wood_resource_locations}')
-      pass
+    # if self.game.turn == 0:
+      # print(f'number of non_wood_resource_locations: {len(self.non_wood_resource_locations)}, {self.non_wood_resource_locations}')
+      # pass
 
     for unit in self.game.player.units:
       cell = self.game_map.get_cell_by_pos(unit.pos)
@@ -1444,7 +1464,8 @@ class Strategy:
         if (not nb_cell.has_resource()
             or nb_cell.resource.type != cluster_cell.resource.type):
           boundary_positions.add(nb_cell.pos)
-          if nb_cell.citytile is None:
+          if (nb_cell.citytile is None and
+              (nb_cell.unit is None or nb_cell.unit.team != self.game.opponent.team)):
             if can_build and nb_cell.resource != None:
               continue
             open_positions.add(nb_cell.pos)
