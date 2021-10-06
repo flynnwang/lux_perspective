@@ -49,10 +49,52 @@ Map: 580916241 a0 v.s. trans agent
 - [√] same weight next move, adding collison weight with enemy
   * but may die because of depend opponent weight
 
+Total Matches: 597 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | WKNgqU80vwBH   | 30.8430642      | μ=33.460, σ=0.872  | 224
+/home/flynnwang/dev/playground/lux_perspective/main.py | 2H7hwAHCFhB5   | 28.4638078      | μ=31.023, σ=0.853  | 232
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | LJvAZmrvv3IZ   | 26.3099984      | μ=28.803, σ=0.831  | 195
+/home/flynnwang/dev/playground/versions/priority_search/main.py | aC4d8roPjidL   | 23.4450924      | μ=26.034, σ=0.863  | 192
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | SGVEn4Nl6tkZ   | 22.1312595      | μ=24.777, σ=0.882  | 186
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | G6fmICKbI6rZ   | 13.7869175      | μ=17.629, σ=1.281  | 165
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	5.6	0.0	3.1	4.8	15.2
+defend_agent	  94.4	0.0   58.5  	87.0	82.6	88.6
+lux_perspective	100.0	41.5	0.0   	80.5	64.7	79.5
+priority_search	96.9	13.0	19.5	0.0	35.7	71.9
+simple_defend	95.2	17.4	35.3	66.7	0.0	71.4
+tranfer_agent_v1	84.8	11.4	20.5	31.2	28.6	0.0
+
+
 
 833391315, a0
 * [√] should I build city with cluster owner when it's full?
   * by removing the demote weight for target cell.
+
+
+1633483069584_LbTsgSixGPvv, 752431777/a0 v.s. transfer
+- [√] t10: Why u_3 target (11, 8)
+  * cause: opponent weight larger than fuel wt
+- [√] t42/u17, not defend into (5, 7)
+  * Because n9 neighbour clustirng is too large, and will make us think enemy
+    already visited the cluster
+  * Reverted using n4 cluster (be more careful about change. test often.)
+  * Use threshold for `count_cluster_contains_player_citytile`
+- [√] t38, u1 move onto wood (6, 5)
+  * Fixed by using intersection of unit nearest cluster ids and cell cluster ids
+    to compute the opponent_weight
+
+
+
+
+
+
+
+
+890275270, a1
+- t29/u_6: Why not defend u3? [not reproduceable]
+- t26/u_4: should not move onto resource tile
 
 
 - [] Keep at least two near resource tile for a coal or urnaium cluster
@@ -200,13 +242,11 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_1']
+MAP_POS_LIST = [(6, 6), (7, 5)]
 
-# DRAW_UNIT_LIST = ['u_1']
-# MAP_POS_LIST = [(9, 2), (9, 4)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
-DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
@@ -397,8 +437,8 @@ def get_one_step_collection_values(cell,
                                              surviving_turns=surviving_turns,
                                              unit=unit,
                                              debug=debug)
-  if debug:
-    print(f" cell value [{cell.pos}]: amt={amount} fuel={fuel_wt}")
+  # if debug:
+    # print(f" cell value [{cell.pos}]: amt={amount} fuel={fuel_wt}")
   # Use neighbour average as resource weight
   nb_fuel_wt = 0
   nb_count = 0
@@ -417,8 +457,8 @@ def get_one_step_collection_values(cell,
   if nb_count > 0:
     fuel_wt += nb_fuel_wt / nb_count
 
-  if debug:
-    print(f" nb value [{cell.pos}]: amt={nb_amt} fuel={nb_fuel_wt}")
+  # if debug:
+    # print(f" nb value [{cell.pos}]: amt={nb_amt} fuel={nb_fuel_wt}")
   return amount + nb_amt, fuel_wt + nb_fuel_wt
 
 
@@ -1084,10 +1124,8 @@ class ClusterInfo:
       while q:
         cur = q.popleft()
         cur_cell = self.game_map.get_cell_by_pos(cur)
-        # for nb_cell in get_neighbour_positions(cur,
-        # self.game_map,
-        # return_cell=True):
-        for nb_cell in get_nb9_positions(cur, self.game_map, return_cell=True):
+        for nb_cell in get_neighbour_positions(cur, self.game_map, return_cell=True):
+        # for nb_cell in get_nb9_positions(cur, self.game_map, return_cell=True):
           newpos = nb_cell.pos
 
           # Count citytile.
@@ -1640,7 +1678,8 @@ class Strategy:
 
         # Use a small weight to bias the position towards opponent's positions.
         if nearest_oppo_unit:
-          opponent_weight = 1 / (min_turns or 1)
+          if min_turns < MAX_PATH_WEIGHT:
+            opponent_weight += 1e-3 / dd(min_turns)
 
         # Use a large weight to defend my resource
         # 0) opponent unit is near this tile
@@ -1902,13 +1941,14 @@ class Strategy:
       return n_boundary, n_open
 
     @functools.lru_cache(maxsize=127)
-    def is_cluster_contains_player_citytile(cid, player):
+    def count_cluster_contains_player_citytile(cid, player):
       boundary_positions, _ = self.get_cluster_boundary_near_resource_positions(self.game.turn, cid)
+      cnt = 0
       for pos in boundary_positions:
         cell = self.game_map.get_cell_by_pos(pos)
         if cell.citytile and cell.citytile.team == player.team:
-          return True
-      return False
+          cnt += 1
+      return cnt
 
     @functools.lru_cache(maxsize=512)
     def get_opponent_unit_nearest_cluster_ids(unit):
@@ -1926,7 +1966,9 @@ class Strategy:
         if not is_resource_researched(cluster_cell.resource, self.game.opponent, move_days=turns):
           continue
 
-        if is_cluster_contains_player_citytile(cid, self.game.opponent):
+        MIN_OPPONENT_CITYTTILE = 3
+        if (count_cluster_contains_player_citytile(cid, self.game.opponent)
+            >= MIN_OPPONENT_CITYTTILE):
           continue
 
         if turns < min_turns:
@@ -2092,7 +2134,8 @@ class Strategy:
           debug = True
         min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
-        opponent_weight = 1 / (min_turns or 1)
+        if min_turns < MAX_PATH_WEIGHT:
+          opponent_weight += 1e-3 / dd(min_turns)
 
         # Use a large weight to defend my resource
         if (nearest_oppo_unit and
@@ -2102,17 +2145,19 @@ class Strategy:
               nearest_oppo_unit)
           cell_cluster_ids = self.get_near_resource_tile_cluster_ids(
               near_resource_tile)
-          cell_is_nearest_in_cluster = any(
-              (self.
-               get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-                   cid, nearest_oppo_unit) == min_turns)
-              for cid in cell_cluster_ids)
-          if (unit_nearest_cluster_ids & cell_cluster_ids and
-              cell_is_nearest_in_cluster):
-            opponent_weight += 10001
+
+          focus_cluster_ids = unit_nearest_cluster_ids & cell_cluster_ids
+          if focus_cluster_ids:
+            cell_is_nearest_in_cluster = any(
+                (self.
+                get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
+                    cid, nearest_oppo_unit) == min_turns)
+                for cid in focus_cluster_ids)
+            if cell_is_nearest_in_cluster:
+              opponent_weight += 10001
 
           if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-            print(f"cid={cell_cluster_ids}")
+            print(f"focus_cluster_ids={focus_cluster_ids}")
             print(f"min_near_cluster={self.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
             print(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_turns={min_turns}, arrival_turns={arrival_turns}, "
                   f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
