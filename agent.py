@@ -36,6 +36,15 @@
 
 
 
+1633531183146_B2h8UluTU6KF, 434234212
+- [√] t160, not many worker goes to uranium cluster on the top.
+  * Add default resource weight directly into res and near_res cell
+- [] t139, u_3@(9, 15) build city and blocked coal transfer.
+
+
+
+
+
 
 890275270, a1
 - t29/u_6: Why not defend u3? [not reproduceable]
@@ -187,8 +196,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_11']
+MAP_POS_LIST = [(5, 14), (2, 1)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -1542,7 +1551,7 @@ class Strategy:
     CLUSTER_BOOST_WEIGHT = 200 * 40
     UNIT_SAVED_BY_RES_WEIGHT = 10
 
-    DEFAULT_RESOURCE_WT = 1
+    DEFAULT_RESOURCE_WT = 1.2
 
     def get_resource_weight(worker, resource_tile, arrival_turns, quick_path):
       # Give a small weight for any resource 0.1 TODO: any other option?
@@ -1660,8 +1669,8 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
         # demote_opponent_unit = -0.1
 
-      v = ((wt + default_res_wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
-           opponent_weight + demote_opponent_unit)
+      v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
+           opponent_weight + demote_opponent_unit + default_res_wt)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
         print(
             f"w[{worker.id}] v={v}, res={resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_unit_turn={min_turns}"
@@ -2132,14 +2141,14 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
         # demote_opponent_unit = -0.1
 
-      v = ((wt + default_res_wt) / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
-           + transfer_build_wt + demote_opponent_unit)
+      v = ((wt ) / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight
+           + transfer_build_wt + demote_opponent_unit + default_res_wt)
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx==0:
         print(
             f'w[{worker.id}] nrt[{near_resource_tile.pos}] @last, v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt:.3f}'
             f' collect_amt={amount} opponent={opponent_weight}, transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, build_city={build_city_bonus}, off={build_city_bonus_off_reason}'
             f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
-            f' default_res_wt={default_res_wt}')
+            f' default_res_wt={default_res_wt}, n_open={n_open}')
         # print(f' {self.worker_build_city_tasks}')
       return v
 

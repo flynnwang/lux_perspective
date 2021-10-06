@@ -19,6 +19,17 @@
 
 
 
+1633522531708_013PkFJvfhLr, 690032923
+* Large city failure
+
+1633526887655_828SQyC6V6nH, 156895521
+* resource competition failure
+
+1633531183146_B2h8UluTU6KF, 434234212
+* Large city failure due to resource blocking: should be fixed in latest version.
+
+
+
 =========================== 2021-10-05 ==========================
 1633475467006_wmLZNKPESW4W/833391315
 - weak at competing resource.
