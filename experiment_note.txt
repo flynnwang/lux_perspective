@@ -2,6 +2,10 @@
 
 ======================================= 2021-10-06 ==============================================
 
+Map: 580916241 a0 v.s. trans agent
+- [√] resource stavation due to city building at all boundary of uranium
+- [-] t10, u_3, make cluster owner assignment more stable
+  * should be fixed by
 
 525444706, 1633395602596_2pzohdrFWoxx
 - [√] t9, not building city tile at turn 10, bug?
@@ -66,6 +70,44 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 /home/flynnwang/dev/playground/versions/priority_search/main.py | Iai61W2rcsN5   | 22.7327545      | μ=25.292, σ=0.853  | 163
 /home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | tstbOi0pGQdc   | 19.9024660      | μ=22.572, σ=0.890  | 178
 /home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | flVB1gNzzC9b   | 12.6104037      | μ=16.087, σ=1.159  | 155
+
+(run_2021_1006_14)
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	2.7	2.6	8.3	11.5	6.9
+defend_agent	97.3	0.0	53.3	83.6	68.4	88.4
+lux_perspective	97.4	46.7	0.0	71.4	57.6	97.6
+priority_search	91.7	16.4	32.1	0.0	37.1	69.6
+simple_defend	88.5	31.6	42.4	62.9	0.0	72.1
+tranfer_agent_v1	93.1	11.6	4.9	30.4	27.9	0.0
+
+
+1633502509534_6pIepjy8rPeX, 749133666, a1
+- Resource competetion failure.
+- [√] born worker to the citytile near more citytile building position
+  * Add weight for open positions.
+- [√] t41, why u6, u8 decide to switch cluster
+  * Use small penality for cluster, worker weight assignment.
+- [√] can build wood citytile if there're >= two wood cell around, see a0 T30
+- t261: multiple workers go into: (23, 8)
+
+Total Matches: 253 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | dcuTrCSPV6yW   | 27.2490196      | μ=30.250, σ=1.000  | 103
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | TP9CnG1ztDkw   | 26.4356878      | μ=29.429, σ=0.998  | 93
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | A16bh7mYN2gW   | 23.5882806      | μ=26.416, σ=0.943  | 99
+/home/flynnwang/dev/playground/versions/priority_search/main.py | rmi2EdhI99bu   | 19.9787932      | μ=23.314, σ=1.112  | 68
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | dXIwD0aHv11J   | 18.0551506      | μ=21.377, σ=1.107  | 79
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | DGFl0mq14FM6   | 12.4694927      | μ=16.916, σ=1.482  | 64
+
+(run_2021_1006_20)
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	5.9	0.0	27.3	12.5	7.7
+defend_agent	94.1	0.0	36.7	66.7	80.0	92.9
+lux_perspective	100.0	63.3	0.0	90.0	58.6	100.0
+priority_search	72.7	33.3	10.0	0.0	22.7	76.9
+simple_defend	87.5	20.0	41.4	77.3	0.0	70.0
+tranfer_agent_v1	92.3	7.1	0.0	30.8	30.0	0.0
+
 
 
 ======================================= 2021-10-05 ==============================================

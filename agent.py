@@ -24,24 +24,6 @@
 
 
 
-Map: 580916241 a0 v.s. trans agent
-* [√] resource stavation due to city building at all boundary of uranium
-* [] t10, u_3, make cluster owner assignment more stable
-* [] implement other resource transfer and not build citytile.
-
-
-
-
-1633502509534_6pIepjy8rPeX, 749133666, a1
-- Resource competetion failure.
-- [√] born worker to the citytile near more citytile building position
-  * Add weight for open positions.
-- [√] t41, why u6, u8 decide to switch cluster
-  * Use small penality for cluster, worker weight assignment.
-- [√] can build wood citytile if there're >= two wood cell around, see a0 T30
-- t261: multiple workers go into: (23, 8)
-
->>> running
 
 1633499009523_fESkIaFimwLk, 33974899
 - [√] t10, c_5, not building worker
@@ -49,6 +31,8 @@ Map: 580916241 a0 v.s. trans agent
 - [√] t122, u_76 stay at (15, 21) rather than going to (18, 27)
   * Because when number of worker is large, only not_leaving_citytile path is used.
 - use MAX_SEARCH_DIST = 16 for opponent unit
+
+>> running
 
 
 
