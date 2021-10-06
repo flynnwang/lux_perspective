@@ -3,7 +3,19 @@
 =========================== 2021-10-06 ==========================
 1633483069584_LbTsgSixGPvv, 752431777/a0 v.s. transfer
 * Large city failure
-* [] t10: Why u_3 target (11, 8)
+* [√] t10: Why u_3 target (11, 8)
+
+
+1633502845205_9KTH94sOmplZ, 197116703
+1633499413870_cbtQ7cmbalXi, 284004566
+1633501514117_X5XJ69mdG9qA, 148347586
+* Large city failure.
+
+
+1633502509534_6pIepjy8rPeX, 749133666
+1633499009523_fESkIaFimwLk, 33974899
+1633500361031_5wFakJaaajla, 539332804
+* Resource competition failure.
 
 
 
