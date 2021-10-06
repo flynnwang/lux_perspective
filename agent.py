@@ -30,63 +30,6 @@ Map: 580916241 a0 v.s. trans agent
 * [] implement other resource transfer and not build citytile.
 
 
-525444706, 1633395602596_2pzohdrFWoxx
-- [√] t9, not building city tile at turn 10, bug?
-  * **This is a bug: not build citytile for cluster owner when getting tranfer
-
-114145806, a0
-- [x] t12, cluster owner not building citytile to defend opponent unit.
-  * add defend behaviour seems quite anooy for the result.
-- [-] t55 u19, u22, failed to defend
-  * when estimate min turns to cluster for unit, add its cooldown. (already used)
-- [√] t9, u3, u1, switch cluster, why?
-  * [-] opponent weight should use weight discount.
-  * [√] cluster assignment should ignore opponent unit for computing weight
-    > already ignore opponent unit for clustering. but not weight
-    > ** adding boundary positons for cluster when computing weight.
-- [-] t8/u1, should goto opponent cluster instead of defend
-  * minor, not fixing for now.
-- [√] same weight next move, adding collison weight with enemy
-  * but may die because of depend opponent weight
-
-Total Matches: 597 | Matches Queued: 11
-Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
-/home/flynnwang/dev/playground/versions/defend_agent/main.py | WKNgqU80vwBH   | 30.8430642      | μ=33.460, σ=0.872  | 224
-/home/flynnwang/dev/playground/lux_perspective/main.py | 2H7hwAHCFhB5   | 28.4638078      | μ=31.023, σ=0.853  | 232
-/home/flynnwang/dev/playground/versions/simple_defend/main.py | LJvAZmrvv3IZ   | 26.3099984      | μ=28.803, σ=0.831  | 195
-/home/flynnwang/dev/playground/versions/priority_search/main.py | aC4d8roPjidL   | 23.4450924      | μ=26.034, σ=0.863  | 192
-/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | SGVEn4Nl6tkZ   | 22.1312595      | μ=24.777, σ=0.882  | 186
-/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | G6fmICKbI6rZ   | 13.7869175      | μ=17.629, σ=1.281  | 165
-
-opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
-Tong_Hui_Kang_v4	0.0	5.6	0.0	3.1	4.8	15.2
-defend_agent	  94.4	0.0   58.5  	87.0	82.6	88.6
-lux_perspective	100.0	41.5	0.0   	80.5	64.7	79.5
-priority_search	96.9	13.0	19.5	0.0	35.7	71.9
-simple_defend	95.2	17.4	35.3	66.7	0.0	71.4
-tranfer_agent_v1	84.8	11.4	20.5	31.2	28.6	0.0
-
-
-
-833391315, a0
-* [√] should I build city with cluster owner when it's full?
-  * by removing the demote weight for target cell.
-
-
-1633483069584_LbTsgSixGPvv, 752431777/a0 v.s. transfer
-- [√] t10: Why u_3 target (11, 8)
-  * cause: opponent weight larger than fuel wt
-- [√] t42/u17, not defend into (5, 7)
-  * Because n9 neighbour clustirng is too large, and will make us think enemy
-    already visited the cluster
-  * Reverted using n4 cluster (be more careful about change. test often.)
-  * Use threshold for `count_cluster_contains_player_citytile`
-- [√] t38, u1 move onto wood (6, 5)
-  * Fixed by using intersection of unit nearest cluster ids and cell cluster ids
-    to compute the opponent_weight
-
-
-
 
 
 1633502509534_6pIepjy8rPeX, 749133666, a1
