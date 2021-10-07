@@ -1878,8 +1878,8 @@ class Strategy:
             citytile.pos]
 
       v = (wt / dd(arrival_turns) +
-           (city_crash_boost / dd(arrival_turns, r=1.03)) +
-           (city_survive_boost / dd(arrival_turns, r=1.03)) +
+           (city_crash_boost / dd(arrival_turns, r=1.1)) +
+           (city_survive_boost / dd(arrival_turns, r=1.1)) +
            (receive_transfer_wt / dd(arrival_turns)))
       if (city_cell.is_first_citytile and worker.id in DRAW_UNIT_LIST and
           city_cell.pos in MAP_POS_LIST):
