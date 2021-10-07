@@ -716,7 +716,7 @@ def get_surviving_turns_at_cell(worker, path, cell):
 class QuickestPath:
   """Find the path with (min_turns, max_cargo_resource)."""
 
-  MAX_FUTURE_TURNS = CIRCLE_LENGH * 2
+  MAX_FUTURE_TURNS = CIRCLE_LENGH + 20
 
   def __init__(self, game, worker, not_leaving_citytile=False, debug=False):
     self.game = game
@@ -1805,6 +1805,7 @@ class Strategy:
           # surviving_turns_ratio = city_last_turns / (MAX_DAYS - self.game.turn +
                                                      # 1)
           # city_survive_boost += (1 - surviving_turns_ratio) * n_citytile
+          # TODO: turn this number
           city_survive_boost += worker_total_fuel(worker) * n_citytile / 10
           city_survive_boost_loc = '3'
         else:
