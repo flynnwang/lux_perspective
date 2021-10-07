@@ -1,5 +1,66 @@
 
 
+
+======================================= 2021-10-07 ==============================================
+
+1633499009523_fESkIaFimwLk, 33974899
+- [√] t10, c_5, not building worker
+  * Fix bug for the number of open boundary (and only use researched resource)
+- [√] t122, u_76 stay at (15, 21) rather than going to (18, 27)
+  * Because when number of worker is large, only not_leaving_citytile path is used.
+- use MAX_SEARCH_DIST = 16 for opponent unit
+
+Total Matches: 206 | Matches Queued: 12
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | GSAY2M0m4Mkm   | 28.3332906      | μ=31.634, σ=1.100  | 83
+/home/flynnwang/dev/playground/lux_perspective/main.py | 4doVfWgxsgdH   | 28.2137564      | μ=31.754, σ=1.180  | 77
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | WXSVrC9On4hp   | 23.0391588      | μ=26.356, σ=1.106  | 70
+/home/flynnwang/dev/playground/versions/priority_search/main.py | vcpeNKympOu6   | 22.0938106      | μ=25.379, σ=1.095  | 69
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | ZlDxUaaAPPam   | 15.2373527      | μ=19.787, σ=1.516  | 59
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | kMvMSkNZorff   | 14.5509974      | μ=18.793, σ=1.414  | 54
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	9.1	9.1	33.3	9.1	33.3
+defend_agent	90.9	0.0	55.6	70.8	81.2	100.0
+lux_perspective	90.9	44.4	0.0	84.6	77.8	100.0
+priority_search	66.7	29.2	15.4	0.0	37.5	85.7
+simple_defend	90.9	18.8	22.2	62.5	0.0	77.8
+tranfer_agent_v1	66.7	0.0	0.0	14.3	22.2	0.0
+
+
+
+1633531183146_B2h8UluTU6KF, 434234212
+- [√] t160, not many worker goes to uranium cluster on the top.
+  * could be fixed by making default weight no use dist decay
+- [√] t136, u_3@(9, 15) build city and blocked coal transfer.
+  * It's blocked because due to city tile building on original resource tile.
+- [√] u35 t106 not building city tile
+  * remove is_coal_target on neighbour cell
+
+
+1633499009523_fESkIaFimwLk, 33974899
+- [√] open bounday cell, remove opponent unit standing positon
+
+Total Matches: 1366 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | yr93GaXyJUY4   | 28.8860633      | μ=31.554, σ=0.889  | 553
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | Si9yKAhqEyb6   | 27.6832170      | μ=30.219, σ=0.845  | 524
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | QDlPrsRUL6Nj   | 24.1583699      | μ=26.632, σ=0.825  | 481
+/home/flynnwang/dev/playground/versions/priority_search/main.py | 92FnERkE9fRa   | 22.8797912      | μ=25.366, σ=0.829  | 424
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | wDGgdezBVrS1   | 18.2752725      | μ=20.954, σ=0.893  | 386
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | SNpmbQhbxASn   | 14.2163446      | μ=17.276, σ=1.020  | 364
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	1.5	1.6	13.5	9.2	15.7
+defend_agent	  98.5	0.0 	37.3	76.9	72.2	96.9
+lux_perspective	98.4	62.7	0.0	  83.7	78.6	94.8
+priority_search	86.5	23.1	16.3	0.0	21.7	75.9
+simple_defend	90.8	27.8	21.4	78.3	0.0	76.7
+tranfer_agent_v1	84.3	3.1	5.2	24.1	23.3	0.0
+
+
+
+
 ======================================= 2021-10-06 ==============================================
 
 Map: 580916241 a0 v.s. trans agent

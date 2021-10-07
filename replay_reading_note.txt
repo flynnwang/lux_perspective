@@ -1,5 +1,28 @@
 
 
+=========================== 2021-10-07 ==========================
+
+replays/1633556369380_7rRrS0CEnxOP.json
+* Opening, not defend opponent unit well, lose too much wood cluster.
+
+
+1633558555962_Pf6x0bT6ZyCp, 980277360/a0/simple_defend
+* t281, u3 not trying to save the large city, why?
+
+1633550494221_cPDF0QRivQLp, 538214679/a0/simple_defend
+* Large city failure.
+
+1633555964941_qusOsxl72AqH, 573208787
+* Early city crash, took too many worker with it.
+
+1633548451536_ynOIHsxxZ1up, 654741864
+* Large city crash, resource not enough to save it.
+
+1633567992113_IRgVhaUVtfy6, 762926586
+* Failed the resource competion in the center
+
+
+
 =========================== 2021-10-06 ==========================
 1633483069584_LbTsgSixGPvv, 752431777/a0 v.s. transfer
 * Large city failure
