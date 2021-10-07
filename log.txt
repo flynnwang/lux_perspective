@@ -1,0 +1,87 @@
+
+>>T turn=178, #W=41, #C=22 R=200
+>> turn=178, #W=18, #C=18 R=200
+[WARN] (match_ctJqMp7juvGX) - turn 178; Unit u_45 collided when trying to move w to (21, 22)
+[WARN] (match_ctJqMp7juvGX) - turn 178; Unit u_76 collided when trying to move n to (22, 22)
+[WARN] (match_ctJqMp7juvGX) - turn 178; Unit u_36 collided when trying to move s to (21, 22)
+
+ccw-4: plan[0] u_9 => (5, 3)  v=0.0005071607036177201, wt=1e-05, city_boost=5.538461538461538@[3],recv=0, last_turns=56.0, arrival_turns=51
+
+w[u_9] nrt[(2, 23)] @last, v=4776.560866526905. wt=0, clustr=4746.331236897275, fuel_wt=29.630 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=0, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+
+ccw-4: plan[0] u_38 => (5, 3)  v=3.1020389736624446e-18, wt=1e-05, city_boost=0@[],recv=0, last_turns=56.0, arrival_turns=49
+
+X w[u_38] nrt[(2, 23)] @last, v=17.06090534979424. wt=0, clustr=0, fuel_wt=16.461 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=1, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+
+ccw-4: plan[0] u_46 => (5, 3)  v=0.0002445798146304588, wt=1e-05, city_boost=5.538461538461538@[3],recv=0, last_turns=56.0, arrival_turns=55
+
+w[u_46] nrt[(2, 23)] @last, v=17.06090534979424. wt=0, clustr=0, fuel_wt=16.461 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=1, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+
+fuel city=c_32 by w=u_110@(8, 5), dying_this_round=True, move_fuel=1160, before=344.0, after=-816.0
+
+ccw-4: plan[1] u_9 => (5, 3)  v=9.574194363155691e-19, wt=1e-05, city_boost=0@[3],recv=0, last_turns=56.0, arrival_turns=51
+
+ccw-4: plan[1] u_38 => (5, 3)  v=3.1020389736624446e-18, wt=1e-05, city_boost=0@[],recv=0, last_turns=56.0, arrival_turns=49
+
+ccw-4: plan[1] u_46 => (5, 3)  v=9.12036500071987e-20, wt=1e-05, city_boost=0@[3],recv=0, last_turns=56.0, arrival_turns=55
+
+>>T turn=179, #W=41, #C=22 R=200
+>> turn=179, #W=18, #C=18 R=200
+[WARN] (match_ctJqMp7juvGX) - turn 179; Unit u_45 collided when trying to move w to (21, 22)
+[WARN] (match_ctJqMp7juvGX) - turn 179; Unit u_76 collided when trying to move n to (22, 22)
+[WARN] (match_ctJqMp7juvGX) - turn 179; Unit u_36 collided when trying to move s to (21, 22)
+ccw-4: plan[0] u_9 => (5, 3)  v=0.000509962696455387, wt=1e-05, city_boost=5.569060773480663@[3],recv=0, last_turns=55.0, arrival_turns=51
+w[u_9] nrt[(2, 23)] @last, v=4823.40660191108. wt=0, clustr=4793.17697228145, fuel_wt=29.630 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=0, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+ccw-4: plan[0] u_38 => (5, 3)  v=5.5836701525924e-18, wt=1e-05, city_boost=0@[],recv=0, last_turns=55.0, arrival_turns=48
+w[u_38] nrt[(2, 23)] @last, v=3.422514634738381. wt=0, clustr=0, fuel_wt=2.823 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=4, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+ccw-4: plan[0] u_46 => (5, 3)  v=0.00024593108432454974, wt=1e-05, city_boost=5.569060773480663@[3],recv=0, last_turns=55.0, arrival_turns=55
+w[u_46] nrt[(2, 23)] @last, v=17.06090534979424. wt=0, clustr=0, fuel_wt=16.461 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=1, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+fuel city=c_32 by w=u_110@(8, 5), dying_this_round=True, move_fuel=1160, before=344.0, after=-816.0
+ccw-4: plan[1] u_9 => (5, 3)  v=9.574194363155691e-19, wt=1e-05, city_boost=0@[3],recv=0, last_turns=55.0, arrival_turns=51
+ccw-4: plan[1] u_38 => (5, 3)  v=5.5836701525924e-18, wt=1e-05, city_boost=0@[],recv=0, last_turns=55.0, arrival_turns=48
+ccw-4: plan[1] u_46 => (5, 3)  v=9.12036500071987e-20, wt=1e-05, city_boost=0@[3],recv=0, last_turns=55.0, arrival_turns=55
+
+
+
+
+
+
+
+
+
+
+
+
+
+>T turn=178, #W=41, #C=22 R=200
+>> turn=178, #W=18, #C=18 R=200
+[WARN] (match_KWr24ZpEcbGk) - turn 178; Unit u_45 collided when trying to move w to (21, 22)
+[WARN] (match_KWr24ZpEcbGk) - turn 178; Unit u_76 collided when trying to move n to (22, 22)
+[WARN] (match_KWr24ZpEcbGk) - turn 178; Unit u_36 collided when trying to move s to (21, 22)
+
+ccw-4: plan[0] u_9 => (5, 3)  v=0.0005071607036177201, wt=1e-05, city_boost=5.538461538461538@[3],recv=0, last_turns=56.0, arrival_turns=51
+
+ccw-4: plan[0] u_9 => (2, 22)  v=5.555555555555556e-06, wt=1e-05, city_boost=0@[],recv=0, last_turns=181, arrival_turns=1
+
+w[u_9] nrt[(2, 23)] @last, v=4776.560866526905. wt=0, clustr=4746.331236897275, fuel_wt=29.630 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=0, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+
+
+ccw-4: plan[0] u_38 => (5, 3)  v=3.1020389736624446e-18, wt=1e-05, city_boost=0@[],recv=0, last_turns=56.0, arrival_turns=49
+ccw-4: plan[0] u_38 => (2, 22)  v=1.7146776406035665e-06, wt=1e-05, city_boost=0@[],recv=0, last_turns=181, arrival_turns=3
+
+w[u_38] nrt[(2, 23)] @last, v=17.06090534979424. wt=0, clustr=0, fuel_wt=16.461 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=1, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+
+ccw-4: plan[0] u_46 => (5, 3)  v=0.0002445798146304588, wt=1e-05, city_boost=5.538461538461538@[3],recv=0, last_turns=56.0, arrival_turns=55
+ccw-4: plan[0] u_46 => (2, 22)  v=1.7146776406035665e-06, wt=1e-05, city_boost=0@[],recv=0, last_turns=181, arrival_turns=3
+w[u_46] nrt[(2, 23)] @last, v=17.06090534979424. wt=0, clustr=0, fuel_wt=16.461 collect_amt=2 opponent=0, transfer_build_wt=0 arr_turns=1, build_city=False, off=(open_cell=1, blicklist=False), non_wood_res_loc=True is_transfer_build_position=False, demoet_oppo_unit=0 default_res_wt=0.6, n_open=1, in_non_wood=(True)
+
+fuel city=c_32 by w=u_110@(8, 5), dying_this_round=True, move_fuel=1160, before=344.0, after=-816.0
+ccw-4: plan[1] u_9 => (5, 3)  v=9.574194363155691e-19, wt=1e-05, city_boost=0@[3],recv=0, last_turns=56.0, arrival_turns=51
+ccw-4: plan[1] u_9 => (2, 22)  v=5.555555555555556e-06, wt=1e-05, city_boost=0@[],recv=0, last_turns=181, arrival_turns=1
+ccw-4: plan[1] u_38 => (5, 3)  v=3.1020389736624446e-18, wt=1e-05, city_boost=0@[],recv=0, last_turns=56.0, arrival_turns=49
+ccw-4: plan[1] u_38 => (2, 22)  v=1.7146776406035665e-06, wt=1e-05, city_boost=0@[],recv=0, last_turns=181, arrival_turns=3
+ccw-4: plan[1] u_46 => (5, 3)  v=9.12036500071987e-20, wt=1e-05, city_boost=0@[3],recv=0, last_turns=56.0, arrival_turns=55
+ccw-4: plan[1] u_46 => (2, 22)  v=1.7146776406035665e-06, wt=1e-05, city_boost=0@[],recv=0, last_turns=181, arrival_turns=3
+>>T turn=179, #W=41, #C=22 R=200
+>> turn=179, #W=18, #C=18 R=200
+
