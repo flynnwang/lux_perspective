@@ -152,8 +152,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_9', 'u_38', 'u_46']
-MAP_POS_LIST = [(2, 22), (5, 3), (2, 23)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -171,9 +171,10 @@ MAX_UNIT_PER_CITY = 8
 
 KEEP_RESOURCE_OPEN = 1
 
+# def prt(line, file=sys.stderr):
+# print(line, file=file)
 
-def prt(line, file=sys.stderr):
-  print(line, file=file)
+prt = print
 
 
 def timeit(func):
@@ -446,7 +447,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  MAX_SEARCH_DIST = 16
+  MAX_SEARCH_DIST = 10
 
   def __init__(self, game, unit, ignore_unit=False):
     self.game = game
@@ -968,10 +969,10 @@ class QuickestPath:
         if prev is None:
           continue
 
-        if self.debug and prev.pos in [Position(5, 5)]:
-          tmp = self.state_map[prev.pos.x][prev.pos.y]
-          prt(f' >> prev {prev.pos} prev.turn={prev.turn}, st{st.pos}, st_turn={st.turn}, st_extra={st.extra_wait_days}'
-             )
+        # if self.debug and prev.pos in [Position(5, 5)]:
+        # tmp = self.state_map[prev.pos.x][prev.pos.y]
+        # prt(f' >> prev {prev.pos} prev.turn={prev.turn}, st{st.pos}, st_turn={st.turn}, st_extra={st.extra_wait_days}'
+        # )
 
         # Collect points of next step from worker position.
         if prev.pos == worker_pos:
@@ -1246,13 +1247,13 @@ class Strategy:
       quickest_path = quickest_path_wo_citytile
 
       # TODO: could use a larger threshold
-      if unit.is_carrying_coal_or_uranium:
+      if unit.is_carrying_coal_or_uranium or unit.get_cargo_space_left() == 0:
         quickest_path = quickest_path_wo_citytile
       else:
-        # elif ((self.game_map.width < 32 or n_unit < 50 or
-        # i < MAX_UNIT_NUM - n_unit)):
-        quickest_path = QuickestPath(self.game, unit)
-        quickest_path.compute()
+        if ((self.game_map.width < 32 or n_unit < 50 or
+             i < MAX_UNIT_NUM - n_unit)):
+          quickest_path = QuickestPath(self.game, unit)
+          quickest_path.compute()
 
       self.quickest_path_pairs[unit.id] = (quickest_path,
                                            quickest_path_wo_citytile)
@@ -1803,7 +1804,7 @@ class Strategy:
         # wt += worker_total_fuel(worker) * n_citytile
         if city_last:
           # surviving_turns_ratio = city_last_turns / (MAX_DAYS - self.game.turn +
-                                                     # 1)
+          # 1)
           # city_survive_boost += (1 - surviving_turns_ratio) * n_citytile
           # TODO: turn this number
           city_survive_boost += worker_total_fuel(worker) * n_citytile / 10
@@ -3102,8 +3103,8 @@ class Strategy:
         later_nights_fuel = city.later_round_nights_to_live * city.light_upkeep
       if unit_fuel - fuel_req - later_nights_fuel < 40:
         # this is move to fuel
-        prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
-           )
+        # prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
+        # )
         return -1
 
       # Use transfer to save city to the end
