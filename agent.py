@@ -714,12 +714,18 @@ def get_surviving_turns_at_cell(worker, path, cell):
   return dest_state.get_surviving_turns(get_unit_upkeep(worker))
 
 
+MAX_FUTURE_TURNS = CIRCLE_LENGH
+
+
 class QuickestPath:
   """Find the path with (min_turns, max_cargo_resource)."""
 
-  MAX_FUTURE_TURNS = CIRCLE_LENGH + 20
-
-  def __init__(self, game, worker, not_leaving_citytile=False, debug=False):
+  def __init__(self,
+               game,
+               worker,
+               not_leaving_citytile=False,
+               debug=False,
+               max_future_turns=MAX_FUTURE_TURNS):
     self.game = game
     self.turn = game.turn
     self.game_map = game.game_map
@@ -730,10 +736,11 @@ class QuickestPath:
                       for w in range(self.game_map.width)]
     self.debug = debug
     self.actions = []
+    self.max_future_turns = max_future_turns
 
   @property
   def max_turns(self):
-    return min(self.turn + self.MAX_FUTURE_TURNS, MAX_DAYS)
+    return min(self.turn + self.max_future_turns, MAX_DAYS)
 
   @property
   def worker_upkeep(self):
@@ -1109,6 +1116,7 @@ class Strategy:
     self.is_city_tile_made_from_wood = set()
     self.blacklist_city_building_positions = set()
     self.non_wood_resource_locations = set()
+    self.idle_woker_ids = set()
 
   @property
   def circle_turn(self):
@@ -1237,10 +1245,15 @@ class Strategy:
 
       debug = False
       debug = (unit.id in DRAW_UNIT_LIST and DRAW_QUICK_PATH_VALUE)
+
+      future_turns = CIRCLE_LENGH
+      if unit.id in self.idle_woker_ids:
+        future_turns = CIRCLE_LENGH + 20
       quickest_path_wo_citytile = QuickestPath(self.game,
                                                unit,
                                                not_leaving_citytile=True,
-                                               debug=debug)
+                                               debug=debug,
+                                               max_future_turns=future_turns)
       quickest_path_wo_citytile.compute()
       self.actions.extend(quickest_path_wo_citytile.actions)
 
@@ -1252,7 +1265,9 @@ class Strategy:
       else:
         if ((self.game_map.width < 32 or n_unit < 50 or
              i < MAX_UNIT_NUM - n_unit)):
-          quickest_path = QuickestPath(self.game, unit)
+          quickest_path = QuickestPath(self.game,
+                                       unit,
+                                       max_future_turns=future_turns)
           quickest_path.compute()
 
       self.quickest_path_pairs[unit.id] = (quickest_path,
@@ -3022,8 +3037,10 @@ class Strategy:
     self.worker_fuel_city_tasks = clear_idle_worker_tasks(
         self.worker_fuel_city_tasks, worker_ids)
 
+    self.idle_woker_ids = set()
     if replan_workers:
       idle_workers2 = self.assign_worker_target(replan_workers, plan_idx=2)
+      self.idle_woker_ids = {u.id for u in idle_workers2}
     # prt(f"I1={len(replan_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
 
   def check_cluster_closed_boundary(self):
