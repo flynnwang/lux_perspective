@@ -36,27 +36,7 @@ imagine every city is a hive, and there is a queue.
 # Defend cluster
 - [] If opponent unit is very close (dist <= 3 or 4), add more weight to near resource tile or resoure in danger.
 
-
-1633558555962_Pf6x0bT6ZyCp, 980277360/a0/simple_defend
-- [] t281, u3 not trying to save the large city, why?
-- [√] t28, u_12, not moving or building ciytile
-  * defending opponent, but not building citytile (as a cluster owner)
-- [√] t18, u_9, not building citytile after transfer
-  * [√] Make cluster owner build city when defending citytile
-    Defend: because goto cluster will have more uncertainty, while protect resource at
-    hand is more certain.
-- [√] t48, u5, not defend nrt (10, 1)
-  * This is because (10, 1) is not the nearest cluster to opponent unit.
-  * [√] add min threat_turns for attacking opponent unit detection.
-- [] t179, u_38, why deliver to over fueled city (3, 22), not (5, 3)
-     u9, is full, not going to city, but wait on (2, 23)
-  * [] two kind of city boost share one var, hard to turn off one of them only
-  * city boost weight is small and won't call unit into it, that explain why it carsh quick
-    > use small decay variable.
-  * before it is (city_crash_boost / (arrival_turns / 5 + 1))
-
-
-
+==========================
 
 
 IDEAS:
@@ -1894,8 +1874,8 @@ class Strategy:
             citytile.pos]
 
       v = (wt / dd(arrival_turns) +
-           (city_crash_boost / dd(arrival_turns, r=1.1)) +
-           (city_survive_boost / dd(arrival_turns, r=1.1)) +
+           (city_crash_boost / dd(arrival_turns, r=1.15)) +
+           (city_survive_boost / dd(arrival_turns, r=1.15)) +
            (receive_transfer_wt / dd(arrival_turns)))
       if (city_cell.is_first_citytile and worker.id in DRAW_UNIT_LIST and
           city_cell.pos in MAP_POS_LIST):

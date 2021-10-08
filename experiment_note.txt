@@ -1,4 +1,47 @@
 
+======================================= 2021-10-08 ==============================================
+
+1633558555962_Pf6x0bT6ZyCp, 980277360/a0/simple_defend
+- [] t281, u3 not trying to save the large city, why?
+- [√] t28, u_12, not moving or building ciytile
+  * defending opponent, but not building citytile (as a cluster owner)
+- [√] t18, u_9, not building citytile after transfer
+  * [√] Make cluster owner build city when defending citytile
+    Defend: because goto cluster will have more uncertainty, while protect resource at
+    hand is more certain.
+- [√] t48, u5, not defend nrt (10, 1)
+  * This is because (10, 1) is not the nearest cluster to opponent unit.
+  * [√] add min threat_turns for attacking opponent unit detection.
+- [√] t179, u_38, why deliver to over fueled city (3, 22), not (5, 3)
+     u9, is full, not going to city, but wait on (2, 23)
+  * [√] two kind of city boost share one var, hard to turn off one of them only
+  * city boost weight is small and won't call unit into it, that explain why it carsh quick
+    > use small decay variable.
+  * before it is (city_crash_boost / (arrival_turns / 5 + 1))
+
+
+Total Matches: 849 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/distri_agent_115/main.py | 5qXtFHmWGsGI   | 29.7990827      | μ=32.430, σ=0.877  | 247
+/home/flynnwang/dev/playground/versions/distri_agent_110/main.py | jOGWhFuslVxS   | 28.0859775      | μ=30.638, σ=0.851  | 286
+/home/flynnwang/dev/playground/versions/distri_agent_105/main.py | Wvn7ssCjWVry   | 27.7434104      | μ=30.235, σ=0.831  | 232
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | CsFMKRelZPSg   | 27.1562212      | μ=29.697, σ=0.847  | 211
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | jsQeYGaupPMi   | 22.9910060      | μ=25.638, σ=0.882  | 176
+/home/flynnwang/dev/playground/versions/priority_search/main.py | Cxo7cKOmyKLY   | 21.5242236      | μ=24.173, σ=0.883  | 183
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | j8qokGzyKTAB   | 16.7457857      | μ=19.802, σ=1.019  | 191
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | FGxp9Zedxapy   | 12.3068626      | μ=15.920, σ=1.204  | 172
+
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	distri_agent_105	distri_agent_110	distri_agent_115	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	5.3	0.0	5.6	0.0	4.8	0.0	30.0
+defend_agent	94.7	0.0	48.4	28.8	23.3	88.2	90.0	93.1
+distri_agent_105	100.0	51.6	0.0	41.1	48.8	70.4	72.7	90.6
+distri_agent_110	94.4	73.1	60.7	0.0	37.8	89.7	86.2	97.3
+distri_agent_115	100.0	76.7	51.2	62.2	0.0	79.3	88.6	100.0
+priority_search	95.2	11.8	29.6	10.3	20.7	0.0	42.9	72.7
+simple_defend	100.0	10.0	27.3	13.8	11.4	57.1	0.0	88.9
+tranfer_agent_v1	70.0	6.9	9.4	2.7	0.0	27.3	11.1	0.0
+
 
 
 ======================================= 2021-10-07 ==============================================
