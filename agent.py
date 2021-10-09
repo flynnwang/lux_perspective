@@ -1082,7 +1082,7 @@ class ClusterInfo:
     return self.get_cluster_fuel_factor(cid)
 
   def get_cluster_fuel_factor(self, cid):
-    return (self.cluster_fuel[cid] / self.max_cluster_fuel) + 1
+    return (self.cluster_fuel[cid] / self.max_cluster_fuel)
 
 
 class Strategy:
@@ -1709,8 +1709,9 @@ class Strategy:
           if (not_full_woker_goto_city or full_worker_goto_city):
             if n_citytile >= 2 or (citytile.pos
                                    not in self.is_city_tile_made_from_wood):
-              city_crash_boost += n_citytile * max(CITYTILE_LOST_WEIGHT,
-                                                   worker_total_fuel(worker))
+              city_crash_boost += worker_total_fuel(worker) * n_citytile
+              # city_crash_boost += n_citytile * max(CITYTILE_LOST_WEIGHT,
+                                                   # worker_total_fuel(worker))
               city_crash_boost_loc = '1'
             else:
               city_crash_boost += 1
@@ -1730,11 +1731,12 @@ class Strategy:
           (is_worker_full or is_idle_worker or no_resoruce_on_map) and
           (self.game.turn + city_last_turns) < MAX_DAYS):
         if city_last:
-          # surviving_turns_ratio = city_last_turns / (MAX_DAYS - self.game.turn +
-          # 1)
+          surviving_turns_ratio = city_last_turns / (MAX_DAYS - self.game.turn +
+                                                     1)
           # city_survive_boost += (1 - surviving_turns_ratio) * n_citytile
           # TODO: turn this number
-          city_survive_boost += worker_total_fuel(worker) * n_citytile / 10
+          city_survive_boost += (1 - surviving_turns_ratio) * worker_total_fuel(
+              worker) * n_citytile / 10
           city_survive_boost_loc = '3'
         else:
           if n_citytile >= 2:
