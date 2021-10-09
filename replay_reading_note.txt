@@ -1,5 +1,15 @@
 
 
+
+=========================== 2021-10-07 ==========================
+963027420 a1
+- t20/u9, moving back and forth, not building city tile.
+
+
+267211465 a1
+- first step: not moving to opponent unit direction, why?
+
+
 =========================== 2021-10-07 ==========================
 
 replays/1633556369380_7rRrS0CEnxOP.json
