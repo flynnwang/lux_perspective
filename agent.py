@@ -1078,7 +1078,6 @@ class Clusetr:
         cnt += 1
     return cnt
 
-
 class ClusterInfo:
 
   def __init__(self, game):
@@ -1098,6 +1097,10 @@ class ClusterInfo:
 
   def c(self, cid):
     return self.clusters[cid]
+
+  def get_clusters(self, cluster_ids):
+    for cid in cluster_ids:
+      yield self.c(cid)
 
   def get_cluster(self, cid):
     return self.clusters[cid]
@@ -1129,6 +1132,12 @@ class ClusterInfo:
       n_open = min(n_open, len(open_positions))
       n_boundary = min(n_boundary, len(boundary_positions))
     return n_boundary, n_open
+
+  def cell_next_to_target_cluster(self, worker, near_resource_tile):
+    if worker.target_cluster_id < 0:
+      return False
+    cluster_ids = self.get_neighbour_cells_cluster_ids(near_resource_tile)
+    return worker.target_cluster_id in cluster_ids
 
   def cluster(self):
 
@@ -1193,8 +1202,98 @@ class ClusterInfo:
     return self.get_cluster_fuel_factor(cid)
 
   def get_cluster_fuel_factor(self, cid):
-    return (self.cluster_fuel[cid] / self.max_cluster_fuel) + 1
+    if cid < 0:
+      return 0
+    c = self.clusters[cid]
+    return (c.total_fuel / self.max_cluster_fuel) + 1
 
+  def get_cluster_type(self, cid):
+    return self.c(cid).resource_type
+
+  @functools.lru_cache(maxsize=1024)
+  def cell_has_player_citytile_on_target_cluster(self, worker, near_resource_tile):
+    if worker.target_cluster_id < 0:
+      return False
+
+    for nb_cell in get_neighbour_positions(near_resource_tile.pos,
+                                           self.game_map, return_cell=True):
+      cid = self.get_cid(nb_cell.pos)
+      if cid != -1 and cid != worker.target_cluster_id:
+        n_citytile = self.c(cid).player_citytile_count
+        if n_citytile > 0:
+          return True
+    return False
+
+  @functools.lru_cache(maxsize=1023, typed=False)
+  def get_min_cluster_arrival_turns_for_opponent_unit(self, cid, unit):
+    min_pos = None
+    min_dist = MAX_PATH_WEIGHT
+
+    cluster = self.c(cid)
+    for cell in cluster.cells:
+      cluster_pos = cell.pos
+
+      shortest_path, _ = _strategy.quickest_path_pairs[unit.id]
+      dist = shortest_path.shortest_dist(cluster_pos)
+      if dist < min_dist:
+        min_dist = dist
+        min_pos = cluster_pos
+
+    if min_dist == MAX_PATH_WEIGHT:
+      return MAX_PATH_WEIGHT, None
+    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
+    return min_turns, min_pos
+
+  # TODO: is threat_dist=2 a good choice?
+  @functools.lru_cache(maxsize=512)
+  def get_opponent_unit_nearest_cluster_ids(self, unit, threat_turns=4):
+    """Returns the nearest cluster that
+    1) opponent can collect fuel (researched)
+    2) with no enemy city.
+    """
+    min_turns = MAX_PATH_WEIGHT
+    cluster_ids = set()
+    threat_cluster_ids = set()
+    if self.game.is_night:
+      threat_turns *= 2
+    for cid in range(self.max_cluster_id):
+      turns, cluster_pos = self.get_min_cluster_arrival_turns_for_opponent_unit(
+          cid, unit)
+      if cluster_pos is None:
+        continue
+
+      cluster_cell = self.game_map.get_cell_by_pos(cluster_pos)
+      if not is_resource_researched(
+          cluster_cell.resource, self.game.opponent, move_days=turns):
+        continue
+
+      if threat_turns and turns <= threat_turns:
+        threat_cluster_ids.add(cid)
+        continue
+
+      if turns < min_turns:
+        cluster_ids.clear()
+        cluster_ids.add(cid)
+        min_turns = min(min_turns, turns)
+      elif turns == min_turns:
+        cluster_ids.add(cid)
+    return cluster_ids | threat_cluster_ids
+
+  @functools.lru_cache(maxsize=1023, typed=False)
+  def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(self, cid, unit):
+    min_dist = MAX_PATH_WEIGHT
+    cluster = self.c(cid)
+    open_positions = cluster.get_open_boundary_positions()
+    for pos in open_positions:
+      shortest_path, _ = _strategy.quickest_path_pairs[unit.id]
+      dist = shortest_path.shortest_dist(pos)
+      if dist < min_dist:
+        min_dist = dist
+
+    if min_dist == MAX_PATH_WEIGHT:
+      return MAX_PATH_WEIGHT
+    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
+    return min_turns
 
 class Strategy:
 
@@ -1370,14 +1469,6 @@ class Strategy:
       shortest_path.compute()
       self.quickest_path_pairs[unit.id] = (shortest_path, None)
 
-  @functools.lru_cache(maxsize=512)
-  def get_cluster_type(self, turn, cid):
-    x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
-    for x, y in zip(x_pos, y_pos):
-      cluster_pos = Position(x, y)
-      cell = self.game.game_map.get_cell_by_pos(cluster_pos)
-      return cell.resource.type
-
   @functools.lru_cache(maxsize=1024, typed=False)
   def get_nearest_opponent_unit_to_cell(self, cell, debug=False):
     """The shortest path dist is capped at a max dist of 6."""
@@ -1423,89 +1514,6 @@ class Strategy:
 
     return (not cell.has_resource() and cell.citytile is None and
             has_resource_tile_neighbour(cell))
-
-  @functools.lru_cache(maxsize=1023, typed=False)
-  def get_min_cluster_arrival_turns_for_opponent_unit(self, cid, unit):
-    min_dist = MAX_PATH_WEIGHT
-    min_pos = None
-    x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
-    for x, y in zip(x_pos, y_pos):
-      cluster_pos = Position(x, y)
-
-      shortest_path, _ = self.quickest_path_pairs[unit.id]
-      dist = shortest_path.shortest_dist(cluster_pos)
-      if dist < min_dist:
-        min_dist = dist
-        min_pos = cluster_pos
-
-    if min_dist == MAX_PATH_WEIGHT:
-      return MAX_PATH_WEIGHT, None
-    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
-    return min_turns, min_pos
-
-  @functools.lru_cache(maxsize=1023, typed=False)
-  def get_min_cluster_arrival_turns_for_opponent(self, cid):
-    min_turns = MAX_PATH_WEIGHT
-    min_pos = None
-    for unit in self.game.opponent.units:
-      dist, pos = self.get_min_cluster_arrival_turns_for_opponent_unit(
-          cid, unit)
-      if dist < min_turns:
-        min_turns = dist
-        min_pos = pos
-    return min_turns, min_pos
-
-  @functools.lru_cache(maxsize=1023, typed=False)
-  def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-      self, cid, unit):
-    min_dist = MAX_PATH_WEIGHT
-    _, open_positions = self.get_cluster_boundary_near_resource_positions(
-        self.game.turn, cid)
-    for pos in open_positions:
-      shortest_path, _ = self.quickest_path_pairs[unit.id]
-      dist = shortest_path.shortest_dist(pos)
-      if dist < min_dist:
-        min_dist = dist
-
-    if min_dist == MAX_PATH_WEIGHT:
-      return MAX_PATH_WEIGHT
-    min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
-    return min_turns
-
-  # TODO: delete it
-  # Use turn to pop out old data
-  @functools.lru_cache(maxsize=512, typed=False)
-  def get_cluster_boundary_near_resource_positions(self,
-                                                   turn,
-                                                   cid,
-                                                   can_build=False):
-    open_positions = set()
-    boundary_positions = set()
-    x_pos, y_pos = np.where(self.cluster_info.position_to_cid == cid)
-    for x, y in zip(x_pos, y_pos):
-      cluster_pos = Position(x, y)
-      cluster_cell = self.game.game_map.get_cell_by_pos(cluster_pos)
-      for nb_cell in get_neighbour_positions(cluster_pos,
-                                             self.game_map,
-                                             return_cell=True):
-        if (not nb_cell.has_resource() or
-            nb_cell.resource.type != cluster_cell.resource.type):
-          # boundary positions:
-          # 1) no resoruce cell
-          # 2) resource cell, but not the same type as cluster type.
-          boundary_positions.add(nb_cell.pos)
-
-          # non-open positions:
-          # 1) citytile
-          # 2) opponent unit
-          # 3) (can build) not resource tile
-          if (nb_cell.citytile is None and
-              (nb_cell.unit is None or
-               nb_cell.unit.team != self.game.opponent.team)):
-            if can_build and nb_cell.resource != None:
-              continue
-            open_positions.add(nb_cell.pos)
-    return boundary_positions, open_positions
 
   @timeit
   def assign_worker_target(self, workers, plan_idx=0):
@@ -1713,9 +1721,9 @@ class Strategy:
         if (nearest_oppo_unit and
             min_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
             arrival_turns <= min_turns and
-            cid in get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit) and
-            (self.get_min_cluster_arrival_turns_for_opponent_unit(
-                cid, nearest_oppo_unit)[0] == min_turns)):
+            (cid in self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit))
+            and (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
+              cid, nearest_oppo_unit)[0] == min_turns)):
           opponent_weight += 100
 
       demote_opponent_unit = 0
@@ -1899,74 +1907,6 @@ class Strategy:
         # prt(f"city={city.id}, f={city.fuel}, keep={city.light_upkeep}, last_turns={city.last_turns}, nights={city_last_nights(city)}")
       return v
 
-    @functools.lru_cache(maxsize=127)
-    def count_cluster_contains_player_citytile(cid, player):
-      boundary_positions, _ = self.get_cluster_boundary_near_resource_positions(
-          self.game.turn, cid)
-      cnt = 0
-      for pos in boundary_positions:
-        cell = self.game_map.get_cell_by_pos(pos)
-        if cell.citytile and cell.citytile.team == player.team:
-          cnt += 1
-      return cnt
-
-    # TODO: is threat_dist=2 a good choice?
-    @functools.lru_cache(maxsize=512)
-    def get_opponent_unit_nearest_cluster_ids(unit, threat_turns=4):
-      """Returns the nearest cluster that
-      1) opponent can collect fuel (researched)
-      2) with no enemy city.
-      """
-      min_turns = MAX_PATH_WEIGHT
-      cluster_ids = set()
-      threat_cluster_ids = set()
-      if self.game.is_night:
-        threat_turns *= 2
-      for cid in range(self.cluster_info.max_cluster_id):
-        turns, cluster_pos = self.get_min_cluster_arrival_turns_for_opponent_unit(
-            cid, unit)
-        if cluster_pos is None:
-          continue
-
-        cluster_cell = self.game_map.get_cell_by_pos(cluster_pos)
-        if not is_resource_researched(
-            cluster_cell.resource, self.game.opponent, move_days=turns):
-          continue
-
-        if threat_turns and turns <= threat_turns:
-          threat_cluster_ids.add(cid)
-          continue
-
-        if turns < min_turns:
-          cluster_ids.clear()
-          cluster_ids.add(cid)
-          min_turns = min(min_turns, turns)
-        elif turns == min_turns:
-          cluster_ids.add(cid)
-      return cluster_ids | threat_cluster_ids
-
-    def cell_next_to_target_cluster(worker, near_resource_tile):
-      if worker.target_cluster_id < 0:
-        return False
-      for cid in self.ci.get_neighbour_cells_cluster_ids(near_resource_tile):
-        if cid == worker.target_cluster_id:
-          return True
-      return False
-
-    def cell_has_player_citytile_on_target_cluster(worker, near_resource_tile):
-      if worker.target_cluster_id < 0:
-        return False
-
-      for nb_cell in get_neighbour_positions(near_resource_tile.pos,
-                                             g.game_map,
-                                             return_cell=True):
-        newpos = nb_cell.pos
-        cid = self.cluster_info.get_cid(newpos)
-        if cid != -1 and cid != worker.target_cluster_id:
-          n_citytile = self.ci.c(cid).player_citytile_count
-          if n_citytile > 0:
-            return True
-      return False
 
     MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 8
 
@@ -2015,11 +1955,11 @@ class Strategy:
         build_city_bonus = 'transfer_build'
 
       boost_cluster = 0
-      is_next_to_target_cluster = cell_next_to_target_cluster(
+      is_next_to_target_cluster = self.ci.cell_next_to_target_cluster(
           worker, near_resource_tile)
       if is_next_to_target_cluster:
         cid = worker.target_cluster_id
-        cluster_fuel_factor = self.ci.get_fuel_factor(cid)
+        cluster_fuel_factor = self.ci.get_cluster_fuel_factor(cid)
         boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
       # TODO: decide upon front, which path to use: cargo > 0?
@@ -2049,7 +1989,7 @@ class Strategy:
         if (nearest_oppo_unit and
             min_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
             arrival_turns <= min_turns):
-          unit_nearest_cluster_ids = get_opponent_unit_nearest_cluster_ids(
+          unit_nearest_cluster_ids = self.ci.get_opponent_unit_nearest_cluster_ids(
               nearest_oppo_unit)
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
               near_resource_tile)
@@ -2058,7 +1998,7 @@ class Strategy:
           if focus_cluster_ids:
             cell_is_nearest_in_cluster = any(
                 (self.
-                 get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
+                 ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
                      cid, nearest_oppo_unit) == min_turns)
                 for cid in focus_cluster_ids)
             if cell_is_nearest_in_cluster:
@@ -2066,7 +2006,7 @@ class Strategy:
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
               prt(f"focus_cluster_ids={focus_cluster_ids}")
-              prt(f"min_near_cluster={self.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}"
+              prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}"
                  )
               prt(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={min_turns}, player_unit_arrival_turns={arrival_turns}, "
                   f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
@@ -2077,7 +2017,7 @@ class Strategy:
       # 1) transfer build: so owner don't need that much resource to goto next cluster
       # 2) build citytile when defending.
       if (worker.is_cluster_owner and not is_next_to_target_cluster and
-          cell_has_player_citytile_on_target_cluster(worker, near_resource_tile)
+          self.ci.cell_has_player_citytile_on_target_cluster(worker, near_resource_tile)
           and ((not is_transfer_build_position) and (opponent_weight < 10000))):
         build_city_bonus = False
         build_city_bonus_off_reason = '(cluster_owner)'
@@ -2496,13 +2436,13 @@ class Strategy:
 
       cluster_ids = {
           cid for cid in cluster_ids if is_resource_researched(
-              Resource(self.get_cluster_type(self.game.turn, cid), 1),
+              Resource(self.ci.get_cluster_type(cid), 1),
               self.game.player)
       }
       positions = set()
       for cid in cluster_ids:
-        _, open_positions = self.get_cluster_boundary_near_resource_positions(
-            self.game.turn, cid, can_build=True)
+        cluster = self.ci.c(cid)
+        open_positions = cluster.get_open_boundary_positions(can_build=True)
         positions |= open_positions
       return len(positions), get_city_no(city)
 
@@ -2672,7 +2612,6 @@ class Strategy:
     for worker_idx, cluster_idx in sorted_pairs:
       worker = workers[worker_idx]
       cluster = resource_clusters[cluster_idx]
-      cid = cluster.cid
 
       # tile_pos = worker.cid_to_tile_pos[cid]
       # prt(f'Assign Cluster {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
@@ -2684,6 +2623,7 @@ class Strategy:
       # if n_player_citytile > 0:
       # continue
 
+      cid = cluster.cid
       worker.target_cluster_id = cid
       worker.target_cluster = cluster
       worker.target_cid_turns = worker.cid_to_cluster_turns[cid]
@@ -2943,6 +2883,7 @@ class Strategy:
     # prt(f"I1={len(replan_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
 
   def check_cluster_closed_boundary(self):
+    """Check build city position will block resource going out of cluster."""
     city_building_units = self.try_build_citytile(dry_run=True)
     city_building_positions = {unit.pos for unit in city_building_units}
 
@@ -2951,14 +2892,12 @@ class Strategy:
       cids = self.ci.get_neighbour_cells_cluster_ids(unit.target)
       cluster_ids |= cids
 
-    for cid in cluster_ids:
+    for cluster in self.ci.get_clusters(cluster_ids):
       # Only check coal and uranium cluster.
-      if self.get_cluster_type(self.game.turn,
-                               cid) == Constants.RESOURCE_TYPES.WOOD:
+      if cluster.resource_type == Constants.RESOURCE_TYPES.WOOD:
         continue
 
-      _, open_positions = self.get_cluster_boundary_near_resource_positions(
-          self.game.turn, cid)
+      open_positions = cluster.get_open_boundary_positions()
       build_positions = open_positions & city_building_positions
       if len(open_positions) - len(build_positions) < KEEP_RESOURCE_OPEN:
         max_build = max(len(open_positions) - KEEP_RESOURCE_OPEN, 0)
