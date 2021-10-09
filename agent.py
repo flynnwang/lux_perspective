@@ -97,6 +97,15 @@ imagine every city is a hive, and there is a queue.
 - [√] 980277360/a0/simple_defend: t19/u3 cluster and citytile back and forth
   * Fixed by lowering the city_crash_boost with worker_total_fuel(worker)
 
+
+# Perf opt
+
+* Fast advance when both cell are plain cell and move at day.
+* [√] collect_target_cells
+* √is_resource_tile_can_save_dying_worker
+* 
+
+
 IDEAS:
 - [] Add cooldown into near_resource_tile discount?
 - support wait on days for priority search (for resource research points)? why?
@@ -128,8 +137,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_3']
-MAP_POS_LIST = [(9, 11), (7, 3)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -272,6 +281,7 @@ def resource_researched_wait_turns(resource,
   return 0
 
 
+@functools.lru_cache(maxsize=4096)
 def get_cell_resource_values(cell,
                              player,
                              unit=None,
@@ -313,6 +323,7 @@ def resource_cell_added_surviving_nights(cell, upkeep, game):
   return turns
 
 
+@functools.lru_cache(maxsize=4096)
 def get_one_step_collection_values(cell,
                                    player,
                                    game,
@@ -362,6 +373,76 @@ def collect_amount_at_cell(cell, player, game_map):
 
 def get_player_city_by_citytile(citytile, game):
   return game.player.cities[citytile.cityid]
+
+
+@functools.lru_cache(maxsize=1024)
+def cell_has_buildable_neighbour(cell, game_map):
+  for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
+    if (not nb_cell.has_resource() and nb_cell.citytile is None):
+      return True
+  return False
+
+
+@functools.lru_cache(maxsize=1024)
+def collect_target_cells(turn, game):
+  target_cells = []
+
+  game_map = game.game_map
+  for y in range(game.map_height):
+    for x in range(game.map_width):
+      cell = game_map.get_cell(x, y)
+
+      is_target_cell = False
+      if cell_has_player_citytile(cell, game):
+        cell.citytile.cell = cell
+        citytiles = [deepcopy(cell)
+                    ] + [deepcopy(cell)] * (MAX_UNIT_PER_CITY - 1)
+        citytiles[0].is_first_citytile = True  # only boost for first tile.
+        target_cells.extend(citytiles)
+      elif cell.has_resource():
+        is_target_cell = True
+      elif cell.is_near_resource:
+        is_target_cell = True
+      elif cell.n_citytile_neighbour > 0:
+        is_target_cell = True
+      elif (cell.unit and cell.unit.team == game.player.team):
+        is_target_cell = True
+
+      if is_target_cell:
+        cell.has_buildable_neighbour = cell_has_buildable_neighbour(
+            cell, game_map)
+        target_cells.append(cell)
+  return target_cells
+
+
+# After arrival, resource is enough to reach the next circle.
+@functools.lru_cache(maxsize=4096)
+def estimate_resource_night_count(worker, cell, upkeep, arrival_turns):
+  if not cell.has_resource():
+    return 0
+
+  quick_path, dest_turns = _strategy.select_quicker_path(worker, cell.pos)
+  if dest_turns >= MAX_PATH_WEIGHT:
+    return 0
+
+  surviving_turns = get_surviving_turns_at_cell(worker, quick_path, cell)
+  wait_turns = resource_researched_wait_turns(cell.resource,
+                                              _strategy.player, # dirty.
+                                              arrival_turns,
+                                              surviving_turns=surviving_turns)
+  if wait_turns < 0:
+    return 0
+  cargo = resource_to_cargo(cell.resource)
+  return cargo_night_endurance(cargo, upkeep)
+
+
+@functools.lru_cache(maxsize=4096)
+def estimate_cell_night_count(worker, cell, game_map, arrival_turns):
+  upkeep = get_unit_upkeep(worker)
+  nights = estimate_resource_night_count(worker, cell, upkeep, arrival_turns)
+  for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
+    nights += estimate_resource_night_count(worker, nb_cell, upkeep, arrival_turns)
+  return nights
 
 
 class LuxGame(Game):
@@ -684,6 +765,7 @@ def sim_on_cell(turn,
   return cargo
 
 
+@functools.lru_cache(maxsize=4096, typed=False)
 def get_surviving_turns_at_cell(worker, path, cell):
   dest_state = path.get_dest_state(cell.pos)
   assert dest_state is not None
@@ -1332,6 +1414,7 @@ class Strategy:
     unit.has_planned_action = True
     self.actions.append(action)
 
+  @functools.lru_cache(maxsize=4096, typed=False)
   def select_quicker_path(self, worker, target_pos):
     path, path_wo_cc = self.quickest_path_pairs[worker.id]
     dest_turns = path.query_dest_turns(target_pos)
@@ -1510,41 +1593,6 @@ class Strategy:
     g = self.game
     player = g.player
 
-    def cell_has_buildable_neighbour(cell):
-      for nb_cell in get_neighbour_positions(cell.pos,
-                                             self.game_map,
-                                             return_cell=True):
-        if (not nb_cell.has_resource() and nb_cell.citytile is None):
-          return True
-      return False
-
-    def collect_target_cells():
-      target_cells = []
-      for y in range(g.map_height):
-        for x in range(g.map_width):
-          cell = g.game_map.get_cell(x, y)
-
-          is_target_cell = False
-          if cell_has_player_citytile(cell, self.game):
-            cell.citytile.cell = cell
-            citytiles = [deepcopy(cell)
-                        ] + [deepcopy(cell)] * (MAX_UNIT_PER_CITY - 1)
-            citytiles[0].is_first_citytile = True  # only boost for first tile.
-            target_cells.extend(citytiles)
-          elif cell.has_resource():
-            is_target_cell = True
-          elif cell.is_near_resource:
-            is_target_cell = True
-          elif cell.n_citytile_neighbour > 0:
-            is_target_cell = True
-          elif (cell.unit and cell.unit.team == player.team):
-            is_target_cell = True
-
-          if is_target_cell:
-            cell.has_buildable_neighbour = cell_has_buildable_neighbour(cell)
-            target_cells.append(cell)
-      return target_cells
-
     def is_deficient_resource_tile(resource_tile):
       if not is_night(self.game.turn):
         return False
@@ -1564,52 +1612,15 @@ class Strategy:
         return False
 
       # Can't reach this resource/near tile.
-      quick_path, arrival_turns = self.select_quicker_path(
-          worker, resource_tile.pos)
+      _, arrival_turns = self.select_quicker_path(worker, resource_tile.pos)
       if arrival_turns >= MAX_PATH_WEIGHT:
         return False
 
-      # After arrival, resource is enough to reach the next circle.
-      def estimate_resource_night_count(cell, upkeep):
-        if not cell.has_resource():
-          return 0
-
-        quick_path, dest_turns = self.select_quicker_path(worker, cell.pos)
-        if dest_turns >= MAX_PATH_WEIGHT:
-          return 0
-
-        surviving_turns = get_surviving_turns_at_cell(worker, quick_path, cell)
-        wait_turns = resource_researched_wait_turns(
-            cell.resource,
-            player,
-            arrival_turns,
-            surviving_turns=surviving_turns)
-        if wait_turns < 0:
-          return 0
-        cargo = resource_to_cargo(cell.resource,)
-        return cargo_night_endurance(cargo, upkeep)
-
-      def estimate_cell_night_count(cell, upkeep, game_map):
-        nights = estimate_resource_night_count(cell, upkeep)
-        for nb_cell in get_neighbour_positions(cell.pos,
-                                               game_map,
-                                               return_cell=True):
-          nights += estimate_resource_night_count(nb_cell, upkeep)
-        return nights
-
       if worker.is_cargo_not_enough_for_nights:
-        cell_nights = estimate_cell_night_count(resource_tile,
-                                                get_unit_upkeep(worker),
-                                                g.game_map)
+        cell_nights = estimate_cell_night_count(worker, resource_tile,
+                                                g.game_map, arrival_turns)
         round_nights = get_night_count_this_round(self.game.turn)
         if worker.unit_night_count + cell_nights >= round_nights:
-          # if worker.id in DRAW_UNIT_LIST and resource_tile.pos in [Position(1, 10)]:
-          # cell_nights = estimate_cell_night_count(resource_tile,
-          # get_unit_upkeep(worker),
-          # g.game_map)
-          # round_nights = get_night_count_this_round(g.turn)
-          # prt(f' dying={worker.is_cargo_not_enough_for_nights}, unit_last={worker.unit_night_count}, cell_nights={cell_nights}, round_nights={round_nights}')
-          # prt(f' not_has_resource={not resource_tile.has_resource()}')
           return True
       return False
 
@@ -2106,7 +2117,7 @@ class Strategy:
     # Value matrix for ship target assginment
     # * row: workers
     # * column: point of interests
-    target_cells = collect_target_cells()
+    target_cells = collect_target_cells(self.game.turn, self.game)
     weights = np.ones((len(workers), len(target_cells))) * -9999
     for i, worker in enumerate(workers):
       for j, target in enumerate(target_cells):

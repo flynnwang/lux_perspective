@@ -37,10 +37,30 @@ Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Si
 opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
 Tong_Hui_Kang_v4	0.0	4.3	0.0	12.5	8.7	13.0
 defend_agent	95.7	0.0	29.8	73.3	75.0	93.8
-lux_perspective	100.0	70.2	0.0	90.9	92.1	96.6
+**lux_perspective	100.0	70.2	0.0	90.9	92.1	96.6
 priority_search	87.5	26.7	9.1	0.0	35.7	66.7
 simple_defend	91.3	25.0	7.9	64.3	0.0	90.5
 tranfer_agent_v1	87.0	6.2	3.4	33.3	9.5	0.0
+
+
+>> After refactor.
+
+Total Matches: 527 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | T9Y9gdSTQ1PI   | 31.5110306      | μ=34.444, σ=0.978  | 220
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | OzGAtV1rc0pB   | 27.7055327      | μ=30.368, σ=0.887  | 195
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | YbRr7K378WPY   | 25.6158657      | μ=28.206, σ=0.863  | 186
+/home/flynnwang/dev/playground/versions/priority_search/main.py | NeZGJen7tRsM   | 21.9600140      | μ=24.640, σ=0.893  | 173
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 7ZDtDOhDD0HA   | 19.1055046      | μ=21.993, σ=0.963  | 145
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | yA8vPFoVeel2   | 13.8035885      | μ=17.480, σ=1.226  | 135
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	0.0	0.0	16.7	4.3	25.0
+defend_agent	100.0	0.0	21.4	75.0	73.5	85.3
+**lux_perspective	100.0	78.6	0.0	95.7	76.4	100.0
+priority_search	83.3	25.0	4.3	0.0	22.9	75.0
+simple_defend	95.7	26.5	23.6	77.1	0.0	70.8
+tranfer_agent_v1	75.0	14.7	0.0	25.0	29.2	0.0
 
 
 ======================================= 2021-10-08 ==============================================
