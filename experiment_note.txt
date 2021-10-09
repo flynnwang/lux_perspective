@@ -25,9 +25,22 @@ tranfer_agent_v1	77.8	0.0	0.0	20.0	66.7	0.0
 
 > By lower the weight for city_crash_boost (with worker_total_fuel(worker))
 
+Total Matches: 418 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | 1sWVMfLvJ7kv   | 32.9918066      | μ=35.978, σ=0.995  | 164
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | JjF3zBDBZWLn   | 28.2017787      | μ=30.947, σ=0.915  | 163
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | IcsDCzjufkL0   | 24.5794530      | μ=27.357, σ=0.926  | 142
+/home/flynnwang/dev/playground/versions/priority_search/main.py | 8pBSX78Sg0yR   | 23.2427312      | μ=26.022, σ=0.926  | 133
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 9VkuM8FgamIa   | 19.4746031      | μ=22.643, σ=1.056  | 123
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 3J62tZPThC2U   | 13.5968098      | μ=17.263, σ=1.222  | 111
 
-
-
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	4.3	0.0	12.5	8.7	13.0
+defend_agent	95.7	0.0	29.8	73.3	75.0	93.8
+lux_perspective	100.0	70.2	0.0	90.9	92.1	96.6
+priority_search	87.5	26.7	9.1	0.0	35.7	66.7
+simple_defend	91.3	25.0	7.9	64.3	0.0	90.5
+tranfer_agent_v1	87.0	6.2	3.4	33.3	9.5	0.0
 
 
 ======================================= 2021-10-08 ==============================================

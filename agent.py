@@ -982,15 +982,15 @@ class Clusetr:
   def size(self):
     return len(self.cells)
 
-  @functools.cached_property
+  @functools.lru_cache(maxsize=1, typed=False)
   def resource_type(self):
     return self.cells[0].resource.type
 
-  @functools.cached_property
+  @functools.lru_cache(maxsize=1, typed=False)
   def total_fuel(self):
     return sum(resource_fuel(c.resource) for c in self.cells)
 
-  @functools.cached_property
+  @functools.lru_cache(maxsize=1, typed=False)
   def boundary_positions(self):
     """boundary positions:
     1) not a resoruce cell
@@ -1005,12 +1005,11 @@ class Clusetr:
           positions.add(nb_cell.pos)
     return positions
 
-  @functools.cached_property
+  @functools.lru_cache(maxsize=1, typed=False)
   def resource_positions(self):
     return {c.pos for c in self.cells}
 
-  # @functools.lru_cache
-  @functools.lru_cache(maxsize=1024, typed=False)
+  @functools.lru_cache(maxsize=2, typed=False)
   def get_open_boundary_positions(self, can_build=False):
     """open positions:
     1) not a citytile AND not opponent unit
@@ -1050,7 +1049,7 @@ class Clusetr:
         best_positions.append(pos)
     return best_arrival_turns, best_positions
 
-  @functools.cached_property
+  @functools.lru_cache(maxsize=1, typed=False)
   def player_citytile_count(self):
     cnt = 0
     for pos in self.boundary_positions:
