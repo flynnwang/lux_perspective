@@ -33,94 +33,75 @@ imagine every city is a hive, and there is a queue.
 - cart will maintain all the available resource in its cargo, and use left over resource for more city building.
 
 
-# Defend cluster
-- [√] If opponent unit is very close (dist <= 3 or 4), add more weight to near resource tile or resoure in danger.
-
-==========================
-
-# Refactor
-- [√] remove unused code
-- [] extract a cluster class for query cluster related info (e.g. boundary and type)
-- [] Add common function for accessing debug variable
-
-
-- 980277360/a0/simple_defend
-  * t19/u3 cluster and citytile back and forth
-
-
-
-IDEAS:
-- Use different weight for less than and equal for opponent_weight
-- How to balance city boost and cluster weight and build_city?
-- Do not use decay for neighbour resource tile
-- Default city tile weight might be too large, use 0?
-- Remove initial cluster assigment condition check: city > 1
-
-- Try weight citytile by boundary opening rate
-- Try split large cluster into multiple ones (limit cluster size)
-- Defend opponent unit with min threaten distance, that is if the opponent unit is
+# [Defend Cluster]
+- [√] Defend opponent unit with min threaten distance, that is if the opponent unit is
   too close to my cluster, we'll defend it to our best.
-- Decide upon front which city to save: (resource may not be able to save all cities)
+- [√] If current cluster is the nearest to enemy, defend that cell.
+- [√] Keep at least two near resource tile for a coal or urnaium cluster (open=1)
+- [] Use different weight for less than and equal for opponent_weight
 
 
+# [Cluster Assignment]
+- [√] Try weight cluster by boundary opening rate
+- [] Remove initial cluster assigment condition check: city > 1
+- [] Assign multiple worker to large cluster
+  * [] Try split large cluster into multiple ones (limit cluster size), maybe just multiple assignment?
+- explore size = 1 wood
 
-
-
-
-- [] Keep at least two near resource tile for a coal or urnaium cluster
-  > Current impl will failed due to worker build city tile on same turn.
+# Resource
+- [] do not save wood city tile if no enemy around.
 - [] Try not build on non near resource tile (except for connection point), limit city size
-- [] Try transfer coal and uranium? why we need it? (build city faster?)
-
-
+- Decide upon front which city to save: (resource may not be able to save all cities)
 - Should also estimate whether a large city is saveable given the resource on the map.
 - Visit resource far away (need to check whether it will across citytile)
-  (is it the case that user should not leave citytile when amount > 0?)
-- add randomized actions
-- Refactor cell weights into Factors
+  (is it the case that user should not leave citytile when amount > 0? or maybe a fair amount?)
+* Limit the number of citytile per cluster
+* [minor opt]: do not move to cell has limit resource due to collection: predict cell dying
 
-- [] Add cooldown into near_resource_tile discount?
+# Weight
+- [] Default city tile (0.000001) weight might be too large, use 0?
+- ?? Do not use decay for neighbour resource tile
+- How to balance city boost and cluster weight and build_city?
+
+# Build city
 - Boost cluster explore task over city build task?
-- collect edge count info for cluster assignment.
-- * support wait on days for priority search (for resource research points)?
-
-
-- Try defend enemy come into my cluster
-
-- save size one coal city: not cheap to build
-- **Ending pose: build extra city tile with transfer
-
-- Use tranfer to save worker
-
-
-- [√] boost agent into city building position at next day - 4
+- Is it possible to tranfer and build city on the first day? any use?
 - [√] Step out at at last night - 3, to build city tile on first day
 - [√] boost weight for neighbour city tile building (encourage citytile cluster)
   * remove build city turn limit, so worker will goto near resource tile natually
+- Build city tile on long sides (to connect, side >= 2?)
+* [√] Save size 1 citytile
+  * with min weight of 1 for city_survive_boost & city_crash_boost
 
--> priority
+# Build woker
+* [?] Do not spawn at night in dying city.
 
-- worker resource assignment, not very good (use global weight for boosting?), waiting but not on resouorce.
-(this maybe a result of multiple worker to coal)
+# Tranfer
+- [] Try transfer coal and uranium? why we need it? (build city faster)
+- Use tranfer to save worker
 
+# Mix
+- add randomized actions order
+- **Ending pose: build extra city tile with transfer
 
-- Build city tile on long sides (to connect)
-* Limit the number of citytile per cluster
+# Path Search
+- Add units (enemy and mine) to cell and check blocking
 
+# Refactor
+- [√] remove unused code
+- [√] extract a cluster class for query cluster related info (e.g. boundary and type)
+- [] Add common function for accessing debug variable
+- [] Refactor cell weights into Factors or Rules
+==========================
 
-->
-* Do not spawn at night in dying city.
-* explore size = 1 wood
-* Save size 1 citytile
-* Support other type of resource transfer.
+- [√] 980277360/a0/simple_defend: t19/u3 cluster and citytile back and forth
+  * Fixed by lowering the city_crash_boost with worker_total_fuel(worker)
 
-* give multiple worker to coal & uranium cell?
-* [minor opt]: do not move to cell has limit resource due to collection: predict cell dying
-
-* Add units (enemy and mine) to cell and check blocking
+IDEAS:
+- [] Add cooldown into near_resource_tile discount?
+- support wait on days for priority search (for resource research points)? why?
 
 - Learning
-
 * unit cargo won't goto 100 at night
 * in city tile, road level is 6 (which means, move to citytile at night is good)
 * A full worker will not collect resource
