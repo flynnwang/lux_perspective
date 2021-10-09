@@ -44,9 +44,14 @@ imagine every city is a hive, and there is a queue.
 - [] Add common function for accessing debug variable
 
 
+- 980277360/a0/simple_defend
+  * t19/u3 cluster and citytile back and forth
+
 
 
 IDEAS:
+- How to balance city boost and cluster weight and build_city?
+- Do not use decay for neighbour resource tile
 - Default city tile weight might be too large, use 0?
 - Remove initial cluster assigment condition check: city > 1
 
@@ -141,8 +146,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_3']
+MAP_POS_LIST = [(9, 11), (7, 3)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -1074,7 +1079,10 @@ class ClusterInfo:
     cid = self.position_to_cid[pos.x][pos.y]
     if cid < 0:
       return 0
-    return self.cluster_fuel[cid] / self.max_cluster_fuel
+    return self.get_cluster_fuel_factor(cid)
+
+  def get_cluster_fuel_factor(self, cid):
+    return (self.cluster_fuel[cid] / self.max_cluster_fuel) + 1
 
 
 class Strategy:
@@ -1304,6 +1312,7 @@ class Strategy:
     return cnt
 
   def is_near_resource_cell(self, cell):
+
     def has_resource_tile_neighbour(cell):
       for nb_cell in get_neighbour_positions(cell.pos,
                                              self.game_map,
@@ -1571,14 +1580,11 @@ class Strategy:
       if is_resource_tile_can_save_dying_worker(resource_tile, worker):
         wt += UNIT_SAVED_BY_RES_WEIGHT
 
-
       # TODO: Consider drop cluster boosting when dist <= 1
       cid = self.cluster_info.get_cid(resource_tile.pos)
       boost_cluster = 0
       if (worker.is_cluster_owner and worker.target_cluster_id == cid):
-        # worker.cid_to_cluster_turns[cid] > 1):
-        cluster_fuel_factor = self.cluster_info.query_cluster_fuel_factor(
-            resource_tile.pos)
+        cluster_fuel_factor = self.cluster_info.get_cluster_fuel_factor(cid)
         boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
       debug = False
@@ -1784,7 +1790,7 @@ class Strategy:
       if (city_cell.is_first_citytile and worker.id in DRAW_UNIT_LIST and
           city_cell.pos in MAP_POS_LIST):
         prt(f"ccw-4: plan[{plan_idx}] {worker.id} => {city_cell.pos}  v={v}, wt={wt}, city_crash={city_crash_boost}@[{city_crash_boost_loc}],"
-            f"city_survive={city_survive_boost}@[city_survive_boost_loc]"
+            f"city_survive={city_survive_boost}@[{city_survive_boost_loc}]"
             f"recv={receive_transfer_wt}, last_turns={city.last_turns}, arrival_turns={arrival_turns}"
            )
         # prt city info
@@ -1924,8 +1930,7 @@ class Strategy:
           worker, near_resource_tile)
       if is_next_to_target_cluster:
         cid = worker.target_cluster_id
-        cluster_fuel_factor = self.cluster_info.cluster_fuel[
-            cid] / self.cluster_info.max_cluster_fuel
+        cluster_fuel_factor = self.cluster_info.get_cluster_fuel_factor(cid)
         boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
       # TODO: decide upon front, which path to use: cargo > 0?

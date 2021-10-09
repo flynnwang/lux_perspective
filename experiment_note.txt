@@ -63,6 +63,16 @@ simple_defend	100.0	20.0	9.4	60.0	0.0	76.2
 tranfer_agent_v1	100.0	11.1	3.1	28.6	23.8	0.0
 
 
+Total Matches: 1397 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | OXdN5wm6x4Uk   | 30.5000018      | μ=33.177, σ=0.892  | 556
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | DJpZgEef3wPD   | 29.5399026      | μ=32.161, σ=0.874  | 529
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | ikuIruC3Join   | 24.8928530      | μ=27.412, σ=0.840  | 465
+/home/flynnwang/dev/playground/versions/priority_search/main.py | TDVAiCUlZidD   | 23.3849694      | μ=25.895, σ=0.837  | 463
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 5z47YcmVQeZb   | 20.3623350      | μ=23.002, σ=0.880  | 389
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | ff2u1m7qE0Ub   | 13.9907043      | μ=17.149, σ=1.053  | 392
+
+
 ======================================= 2021-10-07 ==============================================
 
 1633499009523_fESkIaFimwLk, 33974899
