@@ -9,7 +9,7 @@
 - not defend well, and fail to attack enemy cluster.
 
 
-1633775933684_6NyW5lZL7LqB, 216087638, a0, simple_defend
+[√] 1633775933684_6NyW5lZL7LqB, 216087638, a0, simple_defend
 - [√] 1st step is not reasonable
 - deadlock with opponent
 - this one can be used to test wood survive.
