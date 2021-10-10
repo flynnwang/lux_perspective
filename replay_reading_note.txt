@@ -9,12 +9,13 @@
 - not defend well, and fail to attack enemy cluster.
 
 
-1633775933684_6NyW5lZL7LqB, 216087638
-- [] 1st step is not reasonable
+1633775933684_6NyW5lZL7LqB, 216087638, a0, simple_defend
+- [√] 1st step is not reasonable
 - deadlock with opponent
+- this one can be used to test wood survive.
 
 
-1633766615674_IQK1MVMiwiUW
+1633766615674_IQK1MVMiwiUW, 935156477, a1, simple_defend
 - [] fail to identify small cluster: remove small cluster limit?
 
 
@@ -22,7 +23,7 @@
 - Failed to deliver enough resource to large city
 
 
-1633780525944_vVnbliZa03gd, 849304345, a1
+1633780525944_vVnbliZa03gd, 849304345, a1, simple_defend
 - [] Not delivering resource to city, but goes to next resource tile
 
 

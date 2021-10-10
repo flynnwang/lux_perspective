@@ -299,7 +299,7 @@ def get_cell_resource_values(cell,
                                               surviving_turns,
                                               debug=debug)
   if debug:
-    prt(f'get_cell_resource_values: wait_turns={wait_turns}')
+    prt(f'get_cell_resource_values: [{cell.pos}] wait_turns={wait_turns}')
   if wait_turns < 0:
     if debug:
       prt(f' return from wait_turns: {wait_turns}')
@@ -339,7 +339,8 @@ def get_one_step_collection_values(cell,
                                              unit=unit,
                                              debug=debug)
   # if debug:
-  # prt(f" cell value [{cell.pos}]: amt={amount} fuel={fuel_wt}")
+    # prt(f" main cell value [{cell.pos}]: amt={amount} fuel={fuel_wt}")
+
   # Use neighbour average as resource weight
   nb_fuel_wt = 0
   nb_count = 0
@@ -347,19 +348,19 @@ def get_one_step_collection_values(cell,
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
     a, f = get_cell_resource_values(nb_cell,
                                     player,
-                                    move_days=move_days + 1,
+                                    move_days=move_days,
                                     surviving_turns=surviving_turns,
-                                    unit=unit)
+                                    unit=unit, debug=debug)
     nb_amt = max(nb_amt, a)
     nb_fuel_wt += f
     if a > 0:
       nb_count += 1
 
-  if nb_count > 0:
-    fuel_wt += nb_fuel_wt / nb_count
+  # if nb_count > 0:
+    # fuel_wt += nb_fuel_wt / nb_count
 
   # if debug:
-  # prt(f" nb value [{cell.pos}]: amt={nb_amt} fuel={nb_fuel_wt}")
+    # prt(f" nb value [{cell.pos}]: amt={nb_amt} fuel={nb_fuel_wt}")
   return amount + nb_amt, fuel_wt + nb_fuel_wt
 
 
@@ -426,10 +427,11 @@ def estimate_resource_night_count(worker, cell, upkeep, arrival_turns):
     return 0
 
   surviving_turns = get_surviving_turns_at_cell(worker, quick_path, cell)
-  wait_turns = resource_researched_wait_turns(cell.resource,
-                                              _strategy.player, # dirty.
-                                              arrival_turns,
-                                              surviving_turns=surviving_turns)
+  wait_turns = resource_researched_wait_turns(
+      cell.resource,
+      _strategy.player,  # dirty.
+      arrival_turns,
+      surviving_turns=surviving_turns)
   if wait_turns < 0:
     return 0
   cargo = resource_to_cargo(cell.resource)
@@ -441,7 +443,8 @@ def estimate_cell_night_count(worker, cell, game_map, arrival_turns):
   upkeep = get_unit_upkeep(worker)
   nights = estimate_resource_night_count(worker, cell, upkeep, arrival_turns)
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
-    nights += estimate_resource_night_count(worker, nb_cell, upkeep, arrival_turns)
+    nights += estimate_resource_night_count(worker, nb_cell, upkeep,
+                                            arrival_turns)
   return nights
 
 
@@ -1061,6 +1064,10 @@ class Clusetr:
     # self._strategy = _strategy
 
   @property
+  def any_cell(self):
+    return self.cells[0]
+
+  @property
   def size(self):
     return len(self.cells)
 
@@ -1316,7 +1323,7 @@ class ClusterInfo:
 
   # TODO: is threat_dist=2 a good choice?
   @functools.lru_cache(maxsize=512)
-  def get_opponent_unit_nearest_cluster_ids(self, unit, threat_turns=4):
+  def get_opponent_unit_nearest_cluster_ids(self, unit, threat_turns=4, debug=False):
     """Returns the nearest cluster that
     1) opponent can collect fuel (researched)
     2) with no enemy city.
@@ -1339,7 +1346,9 @@ class ClusterInfo:
 
       if threat_turns and turns <= threat_turns:
         threat_cluster_ids.add(cid)
-        continue
+
+      # if debug:
+        # prt(f" *** >> cid={cid}, min_turns={turns}, cluster_pos={cluster_pos}")
 
       if turns < min_turns:
         cluster_ids.clear()
@@ -1347,6 +1356,11 @@ class ClusterInfo:
         min_turns = min(min_turns, turns)
       elif turns == min_turns:
         cluster_ids.add(cid)
+
+    # if debug:
+      # prt(f" > oppo_unit={unit.id}, near_cluster_ids={cluster_ids}, threat_cluster_ids={threat_cluster_ids}")
+      # for cid in cluster_ids | threat_cluster_ids:
+        # prt(f"  cid={cid}, cell={self.c(cid).any_cell.pos}")
     return cluster_ids | threat_cluster_ids
 
   @functools.lru_cache(maxsize=1023, typed=False)
@@ -1684,7 +1698,7 @@ class Strategy:
 
       default_res_wt = 0
       if fuel_wt:
-        default_res_wt = DEFAULT_RESOURCE_WT
+        default_res_wt = DEFAULT_RESOURCE_WT / 2
 
       #TODO: encourage worker into near/resource tile, not necessary dying
       # Try to hide next to resource grid in the night.
@@ -1932,11 +1946,11 @@ class Strategy:
           debug=debug)
       is_fuelable_near_resource_tile = bool(fuel_wt > 0)
 
-      fuel_wt /= 3  # Use smaller weight for near resource tile
+      # fuel_wt /= 3  # Use smaller weight for near resource tile
 
       default_res_wt = 0
       if is_fuelable_near_resource_tile > 0:
-        default_res_wt = DEFAULT_RESOURCE_WT / 2
+        default_res_wt = DEFAULT_RESOURCE_WT
 
       # Boost the target collect amount by 2 (for cooldown) to test for citytile building.
       # it's 2, because one step move and one step for cooldown
@@ -1983,6 +1997,9 @@ class Strategy:
         debug = False
         if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
           debug = True
+
+        if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+          print(f' worker in unit = {worker.id in DRAW_UNIT_LIST}@{worker.id} pos in LIST = {near_resource_tile.pos in MAP_POS_LIST},   {near_resource_tile.pos}, debug={debug}')
         min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
         if min_turns < MAX_PATH_WEIGHT:
@@ -1993,7 +2010,7 @@ class Strategy:
             min_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
             arrival_turns <= min_turns):
           unit_nearest_cluster_ids = self.ci.get_opponent_unit_nearest_cluster_ids(
-              nearest_oppo_unit)
+              nearest_oppo_unit, debug=debug)
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
               near_resource_tile)
 
@@ -2008,7 +2025,7 @@ class Strategy:
               opponent_weight += 10001
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-              prt(f"focus_cluster_ids={focus_cluster_ids}")
+              # prt(f"focus_cluster_ids={focus_cluster_ids}")
               prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}"
                  )
               prt(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={min_turns}, player_unit_arrival_turns={arrival_turns}, "
