@@ -20,8 +20,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_8']
+MAP_POS_LIST = [(2, 7), (3, 7)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -1940,6 +1940,7 @@ class Strategy:
           near_resource_tile,
           player,
           self.game,
+          # unit=worker,
           move_days=arrival_turns,
           surviving_turns=surviving_turns,
           debug=debug)
@@ -2000,10 +2001,10 @@ class Strategy:
         if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
           debug = True
 
-        if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-          print(
-              f' worker in unit = {worker.id in DRAW_UNIT_LIST}@{worker.id} pos in LIST = {near_resource_tile.pos in MAP_POS_LIST},   {near_resource_tile.pos}, debug={debug}'
-          )
+        # if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+          # print(
+              # f' worker in unit = {worker.id in DRAW_UNIT_LIST}@{worker.id} pos in LIST = {near_resource_tile.pos in MAP_POS_LIST},   {near_resource_tile.pos}, debug={debug}'
+          # )
         min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
         if min_turns < MAX_PATH_WEIGHT:
@@ -2058,9 +2059,11 @@ class Strategy:
         build_city_bonus = False
         build_city_bonus_off_reason = f'(open_cell={n_open}, blicklist={near_resource_tile.pos in self.blacklist_city_building_positions}), non_wood_res_loc={near_resource_tile.pos in self.non_wood_resource_locations}'
 
-      # TODO: test this threshold.
       # Too large the build city bonus will cause worker divergence from its coal mining position
-      if (build_city_bonus and arrival_turns <= 3):
+
+      # TODO: why need this threshold?
+      # if (build_city_bonus and arrival_turns <= 3):
+      if build_city_bonus:
         wt += 1001
 
         # Encourage worker to build connected city tiles.
@@ -2153,11 +2156,11 @@ class Strategy:
             worker, target.pos)
         if quicker_dest_turns >= MAX_PATH_WEIGHT:
           # if worker.id in DRAW_UNIT_LIST and target.pos in MAP_POS_LIST:
-          # v = -9999
-          # prt(f"w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
+            # v = -9999
+            # prt(f"CAN_NOT_ARRIVE: w[{worker.id}], cd={worker.cooldown}, t[{target.pos}], wt={v:.1f}", file=sys.stderr)
           continue
 
-        # TODO: drop
+        # TODO: drop, because they might be using different time
         # Other worker can't move onto worker cell with cd > 1
         if target.unit and target.unit.cooldown >= 1 and worker.id != target.unit.id:
           continue
@@ -2546,8 +2549,8 @@ class Strategy:
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
       And set its target pos."""
     # Computes worker property.
-    if self.game.player.city_tile_count < 2:
-      return
+    # if self.game.player.city_tile_count < 2:
+      # return
 
     if self.cluster_info.max_cluster_id == 0:
       return
@@ -2607,11 +2610,11 @@ class Strategy:
 
     def gen_resource_clusters():
       for c in self.cluster_info.clusters.values():
-        n_resource_tile = c.size
         # TODO(wangfei): remove this
-        if (n_resource_tile <= 1 and
-            c.resource_type == Constants.RESOURCE_TYPES.WOOD):
-          continue
+        # n_resource_tile = c.size
+        # if (n_resource_tile <= 1 and
+            # c.resource_type == Constants.RESOURCE_TYPES.WOOD):
+          # continue
         yield c
 
     RESOURCE_WORKER_RATIO = 3

@@ -136,9 +136,6 @@ imagine every city is a hive, and there is a queue.
 [√] Fix initial city tile as wood city.
 [√] fine ture this threshold based on different resource.
 
-[] test threshold build_city_bonus
-[] remove value decay for neighbour cell
-
 
 1633778149126_tz0O90vE2o57, 60039971, a0
 - [√] why first step not going to the enemy direction?
@@ -155,6 +152,25 @@ imagine every city is a hive, and there is a queue.
 - [√] t4/u1, goto far away cell (8, 7), not (9, 4)
   * bug: because the distance is cut by threaten dist.
   * [√] Fixed by remove continue by threaten dist during nearest cluster searching.
+
+
+
+>>>> evaluating....
+
+
+1633768368043_qeFNY225VyVF, 293079651, a0, simple_defend
+- [√] t10/u3 staying at coal cell with 100 wood, not moving.
+  * it's tracked by the resource weight
+  * [-] A) inc threshold build_city_bonus
+  * [√] B) use unit info for resource weight
+  * >> Think about weight for resource tile and near resource tile.
+- [-] u8 t49 moving away from nrt (2, 7) to (3, 7)
+  * triggered opponent weight at (3, 7)
+- [√] Test add size=1 cluster and drop min city count for cluster assignment.
+- [] Test split different weight for < and == opponent_weight
+
+
+
 
 
 # Perf opt

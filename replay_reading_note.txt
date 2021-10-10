@@ -5,7 +5,7 @@
 738718307 a1
 - not moving to larger wood cluster at first step.
 
-369182756 a0 simple_defend
+[√] 369182756 a0 simple_defend
 - not defend well, and fail to attack enemy cluster.
 
 
@@ -19,7 +19,7 @@
 - [] fail to identify small cluster: remove small cluster limit?
 
 
-1633768368043_qeFNY225VyVF, 293079651
+1633768368043_qeFNY225VyVF, 293079651, a0, simple_defend
 - Failed to deliver enough resource to large city
 
 
