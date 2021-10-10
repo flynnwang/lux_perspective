@@ -19,7 +19,7 @@
 - [] fail to identify small cluster: remove small cluster limit?
 
 
-1633768368043_qeFNY225VyVF, 293079651, a0, simple_defend
+[√] 1633768368043_qeFNY225VyVF, 293079651, a0, simple_defend
 - Failed to deliver enough resource to large city
 
 
@@ -27,7 +27,7 @@
 - [√] Not delivering resource to city, but goes to next resource tile
 
 
-1633776682734_pYgXffrP3Ogs, 416249851
+1633776682734_pYgXffrP3Ogs, 416249851, a1, simple_defend
 - Similar, not delevering resource to city, but goes to next resource
 - This one has a large cluster in the middle.
 - [] t175, resource delivered to (15, 10), which is a waste.

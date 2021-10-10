@@ -20,8 +20,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_8']
-MAP_POS_LIST = [(2, 7), (3, 7)]
+DRAW_UNIT_LIST = ['u_2']
+MAP_POS_LIST = [(0, 13), (0, 12)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -1625,8 +1625,10 @@ class Strategy:
         fuel_wt = 0
         fuel_wt_type = 'deficient'
       elif (is_resource_wood(resource_tile.resource) and
-            not resource_tile.has_buildable_neighbour):
-        # For wood cell with no buildable neightbor, demote its weight
+            (not resource_tile.has_buildable_neighbour
+             or worker.cargo.wood >= 20)):
+        # 1) For wood cell with no buildable neightbor, demote its weight
+        # 2) For worker with wood >= 40, move build need 5 turns, while wait need only 4.
 
         # Use surviving_turns at the arrival state.
         surviving_turns = get_surviving_turns_at_cell(worker, quick_path,
@@ -1640,7 +1642,8 @@ class Strategy:
             move_days=arrival_turns,
             surviving_turns=surviving_turns)
         fuel_wt /= 2
-        fuel_wt_type = 'wood_not_buildable'
+        fuel_wt_type = ('wood_not_buildable' if (not resource_tile.has_buildable_neighbour)
+                        else 'worker_wood>=20')
       else:
         debug = False
         if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
@@ -1714,7 +1717,7 @@ class Strategy:
       v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
            opponent_weight + demote_opponent_unit + default_res_wt)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
-        prt(f"w[{worker.id}] v={v}, res={resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_unit_turn={min_turns}"
+        prt(f"w[{worker.id}] v={v}, res={resource_tile.pos} 4. wt={wt}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_arrival_turns={oppo_arrival_turns}"
             f" not_leave_city={quick_path.not_leaving_citytile}, demote_oppo_unit={demote_opponent_unit}, default_res_wt={default_res_wt}"
            )
       return v
@@ -1774,11 +1777,12 @@ class Strategy:
       city_crash_boost = 0
       city_survive_boost = 0
 
+      # TODO: tmp disalbe it.
       # If the worker is a wood full worker, goto nearest city tiles when possible.
-      if (city_wont_last and arrival_turns <= city_last_turns and
-          worker.cargo.wood == WORKER_RESOURCE_CAPACITY and
-          not worker.is_cluster_owner):
-        wt += 1
+      # if (city_wont_last and arrival_turns <= city_last_turns and
+          # worker.cargo.wood == WORKER_RESOURCE_CAPACITY and
+          # not worker.is_cluster_owner):
+        # wt += 1
 
       # If a worker can arrive at this city with some min fuel (or full cargo)
       unit_fuel = cargo_total_fuel(worker.cargo)
@@ -1798,14 +1802,16 @@ class Strategy:
           full_worker_goto_city = (worker.get_cargo_space_left() == 0 and
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
-            if n_citytile >= 2 or (citytile.pos not in self.is_wood_city_tile):
+            is_wood_city = city_cell.pos in self.is_wood_city_tile
+            if n_citytile <= 1 or is_wood_city:
+              city_crash_boost += 1
+              # city_crash_boost = 1 - int(is_wood_city)
+              city_crash_boost_loc = 'wood_city_crash'
+            else:
               city_crash_boost += worker_total_fuel(worker) * n_citytile
               # city_crash_boost += n_citytile * max(CITYTILE_LOST_WEIGHT,
               # worker_total_fuel(worker))
-              city_crash_boost_loc = '1'
-            else:
-              city_crash_boost += 1
-              city_crash_boost_loc = '2'
+              city_crash_boost_loc = 'other_city_crash'
 
       # Also limit resource to next day.
       if (plan_idx > 0 and
@@ -1868,6 +1874,7 @@ class Strategy:
         fuel = worker_total_fuel(worker)
         if n_citytile <= 1 or is_wood_city:
           fuel = 1
+          # fuel = (1 - int(is_wood_city))
 
         city_survive_boost += (1 - surviving_rate) * n_citytile * fuel / decay
 
@@ -2619,15 +2626,22 @@ class Strategy:
           # continue
         yield c
 
-    RESOURCE_WORKER_RATIO = 3
+    # RESOURCE_WORKER_RATIO = 3
+    SPLIT_BOUNDARY_CNT = 15
 
     def gen_multi_worker_resource_clusters():
       for c in self.cluster_info.clusters.values():
-        n_resource_tile = c.size
-        n_workers = int(math.ceil(n_resource_tile / RESOURCE_WORKER_RATIO))
-        if n_workers > 0:
-          for _ in range(n_workers):
-            yield c
+        yield c
+
+        n_open_boundary_size = len(c.get_open_boundary_positions())
+        # Add extra worker
+        if n_open_boundary_size > SPLIT_BOUNDARY_CNT:
+          yield c
+        # n_resource_tile = c.size
+        # n_workers = int(math.ceil(n_resource_tile / RESOURCE_WORKER_RATIO))
+        # if n_workers > 0:
+          # for _ in range(n_workers):
+            # yield c
 
     workers = self.player_available_workers()
     if multi_worker:
