@@ -21,7 +21,7 @@ DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
 DRAW_UNIT_LIST = ['u_2']
-MAP_POS_LIST = [(0, 13), (0, 12)]
+MAP_POS_LIST = [(9, 11), (9, 8)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -38,6 +38,8 @@ MAX_UNIT_NUM = 71
 MAX_UNIT_PER_CITY = 8
 
 KEEP_RESOURCE_OPEN = 1
+
+MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 8
 
 # def prt(line, file=sys.stderr):
 # print(line, file=file)
@@ -423,7 +425,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  MAX_SEARCH_DIST = 12
+  MAX_SEARCH_DIST = 16
 
   def __init__(self, game, unit, ignore_unit=False):
     self.game = game
@@ -1251,7 +1253,7 @@ class ClusterInfo:
   @functools.lru_cache(maxsize=512)
   def get_opponent_unit_nearest_cluster_ids(self,
                                             unit,
-                                            threat_turns=4,
+                                            threat_turns=MIN_DEFEND_ENEMY_ARRIVAL_TRUNS,
                                             debug=False):
     """Returns the nearest cluster that
     1) opponent can collect fuel (researched)
@@ -1290,7 +1292,7 @@ class ClusterInfo:
     # prt(f" > oppo_unit={unit.id}, near_cluster_ids={cluster_ids}, threat_cluster_ids={threat_cluster_ids}")
     # for cid in cluster_ids | threat_cluster_ids:
     # prt(f"  cid={cid}, cell={self.c(cid).any_cell.pos}")
-    return cluster_ids | threat_cluster_ids
+    return cluster_ids, threat_cluster_ids
 
   @functools.lru_cache(maxsize=1023, typed=False)
   def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
@@ -1700,15 +1702,24 @@ class Strategy:
         # 1) worker can arrive at this cell quicker than opponent
         # 2) cluster id of tile is opponent unit 's nearest cluster
         # 3) this cell is the nearest one in cluster to the opponent unit.
+        threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
+        if self.game.is_night:
+          threat_turns *= 2
         if (nearest_oppo_unit and
-            oppo_arrival_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
-            arrival_turns <= oppo_arrival_turns and
-            (cid in self.ci.get_opponent_unit_nearest_cluster_ids(
-                nearest_oppo_unit)) and
-            (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
-                cid, nearest_oppo_unit)[0] == oppo_arrival_turns)):
-          boost = (101 if arrival_turns < oppo_arrival_turns else 11)
-          opponent_weight += boost
+            oppo_arrival_turns <= threat_turns and
+            arrival_turns <= oppo_arrival_turns):
+          oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
+          is_nearest_cid = (cid in oppo_nearest_cids)
+          is_nearest_cell_to_oppo_unit = (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
+            cid, nearest_oppo_unit)[0] == oppo_arrival_turns)
+          if is_nearest_cid:
+            if is_nearest_cell_to_oppo_unit:
+              boost = (101 if arrival_turns < oppo_arrival_turns else 21)
+              opponent_weight += boost
+
+          is_threatened_cid = (cid in oppo_threat_cids)
+          if is_threatened_cid and arrival_turns < oppo_arrival_turns:
+            opponent_weight += 21
 
       demote_opponent_unit = 0
       # if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
@@ -1932,7 +1943,6 @@ class Strategy:
         # prt(f"city={city.id}, f={city.fuel}, keep={city.light_upkeep}, last_turns={city.last_turns}, nights={city_last_nights(city)}")
       return v
 
-    MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 8
 
     # TODO(wangfei): merge near resource tile and resource tile weight functon
     def get_near_resource_tile_weight(worker, near_resource_tile, arrival_turns,
@@ -2018,33 +2028,44 @@ class Strategy:
         if oppo_arrival_turns < MAX_PATH_WEIGHT:
           opponent_weight += 1e-3 / dd(oppo_arrival_turns)
 
+        threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
+        if self.game.is_night:
+          threat_turns *= 2
+
         # Use a large weight to defend my resource
         if (nearest_oppo_unit and
-            oppo_arrival_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
+            oppo_arrival_turns <= threat_turns and
             arrival_turns <= oppo_arrival_turns):
-          unit_nearest_cluster_ids = self.ci.get_opponent_unit_nearest_cluster_ids(
+
+          oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(
               nearest_oppo_unit, debug=debug)
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
               near_resource_tile)
-
-          focus_cluster_ids = unit_nearest_cluster_ids & cell_cluster_ids
-          if focus_cluster_ids:
+          attack_boundary_cids = oppo_nearest_cids & cell_cluster_ids
+          if attack_boundary_cids:
             cell_is_nearest_in_cluster = any(
                 (self.ci.
                  get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
                      cid, nearest_oppo_unit) == oppo_arrival_turns)
-                for cid in focus_cluster_ids)
+                for cid in attack_boundary_cids)
             if cell_is_nearest_in_cluster:
               boost = (10001 if arrival_turns < oppo_arrival_turns else 1001)
               opponent_weight += boost
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-              # prt(f"focus_cluster_ids={focus_cluster_ids}")
-              prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}"
-                 )
-              prt(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={min_turns}, player_unit_arrival_turns={arrival_turns}, "
-                  f"is_nearset_cluster_to_unit={bool(unit_nearest_cluster_ids & cell_cluster_ids)} "
+              # prt(f"attack_boundary_cids={attack_boundary_cids}")
+              prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
+              prt(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns}, player_unit_arrival_turns={arrival_turns}, "
+                  f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
                   f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
+
+          threat_boundary_cids = oppo_threat_cids & cell_cluster_ids
+          if threat_boundary_cids and arrival_turns < oppo_arrival_turns:
+            opponent_weight += 501
+            if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+              prt(f" threat_cell_boost: oppo={nearest_oppo_unit.id}@{nearest_oppo_unit.pos} oppo_arrival_turns={oppo_arrival_turns}, player_arrival_turns={arrival_turns}")
+
+
 
       # Do not boost cluster owner to build city on non-target cluster with player citytile
       # exceptions:

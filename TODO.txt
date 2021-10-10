@@ -173,13 +173,18 @@ imagine every city is a hive, and there is a queue.
 
 
 1633776682734_pYgXffrP3Ogs, 416249851, a1, simple_defend
-- [] Play with do not collect resource to wood city.
-  * t60, u2, resource tile (0, 13), city (0, 12)
-  * because of wt+1 for wood full worker goto city rule
-  * could work!
 - [√] t11, u_1 with 40, should not goto resource tile but wait.
   * u_1 wood=40, move to resource and back to build need 5 turns, while wait need only 4
   * for wood >= 2, both move and wait need 5 turns, choose to wait.
+- [√] t11, u_2, move to nrt (9, 11), but prefer (9, 8)
+  * try to split threaten defend weight and nearest point defend weight
+  * [√] Add 501/21 separate for nrt and rt threaten boost.
+  * [√] Double threaten dist at night!
+
+- [] Play with the idea do not collect resource to wood city.
+  * t60, u2, resource tile (0, 13), city (0, 12)
+  * because of wt+1 for wood full worker goto city rule
+  * could work!
 - [] not enough worker into the largest resource cluster
   * try multi worker to cluster
 
