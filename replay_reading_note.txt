@@ -10,7 +10,7 @@
 
 
 1633775933684_6NyW5lZL7LqB, 216087638
-- [] 1st step is not reasonable
+- [√] 1st step is not reasonable
 - deadlock with opponent
 
 
@@ -23,7 +23,7 @@
 
 
 1633780525944_vVnbliZa03gd, 849304345, a1
-- [] Not delivering resource to city, but goes to next resource tile
+- [√] Not delivering resource to city, but goes to next resource tile
 
 
 1633776682734_pYgXffrP3Ogs, 416249851
@@ -36,7 +36,7 @@
 
 
 1633778149126_tz0O90vE2o57, 60039971, a0
-- [] why first step not going to the enemy direction?
+- [√] why first step not going to the enemy direction?
 
 
 1633778378918_tLMDLeXesVG6, a0, 410026423
