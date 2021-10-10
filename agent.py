@@ -1682,15 +1682,15 @@ class Strategy:
 
       opponent_weight = 0
       # Test can collect weight first (ignore can not mine cell)
-      min_turns = MAX_PATH_WEIGHT
+      oppo_arrival_turns = MAX_PATH_WEIGHT
       if fuel_wt > 0:
-        min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
+        oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             resource_tile)
 
         # Use a small weight to bias the position towards opponent's positions.
         if nearest_oppo_unit:
-          if min_turns < MAX_PATH_WEIGHT:
-            opponent_weight += 1e-3 / dd(min_turns)
+          if oppo_arrival_turns < MAX_PATH_WEIGHT:
+            opponent_weight += 1e-3 / dd(oppo_arrival_turns)
 
         # Use a large weight to defend my resource
         # 0) opponent unit is near this tile
@@ -1698,13 +1698,14 @@ class Strategy:
         # 2) cluster id of tile is opponent unit 's nearest cluster
         # 3) this cell is the nearest one in cluster to the opponent unit.
         if (nearest_oppo_unit and
-            min_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
-            arrival_turns <= min_turns and
+            oppo_arrival_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
+            arrival_turns <= oppo_arrival_turns and
             (cid in self.ci.get_opponent_unit_nearest_cluster_ids(
                 nearest_oppo_unit)) and
             (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
-                cid, nearest_oppo_unit)[0] == min_turns)):
-          opponent_weight += 100
+                cid, nearest_oppo_unit)[0] == oppo_arrival_turns)):
+          boost = (101 if arrival_turns < oppo_arrival_turns else 11)
+          opponent_weight += boost
 
       demote_opponent_unit = 0
       # if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
@@ -2005,15 +2006,15 @@ class Strategy:
           # print(
               # f' worker in unit = {worker.id in DRAW_UNIT_LIST}@{worker.id} pos in LIST = {near_resource_tile.pos in MAP_POS_LIST},   {near_resource_tile.pos}, debug={debug}'
           # )
-        min_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
+        oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
-        if min_turns < MAX_PATH_WEIGHT:
-          opponent_weight += 1e-3 / dd(min_turns)
+        if oppo_arrival_turns < MAX_PATH_WEIGHT:
+          opponent_weight += 1e-3 / dd(oppo_arrival_turns)
 
         # Use a large weight to defend my resource
         if (nearest_oppo_unit and
-            min_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
-            arrival_turns <= min_turns):
+            oppo_arrival_turns <= MIN_DEFEND_ENEMY_ARRIVAL_TRUNS and
+            arrival_turns <= oppo_arrival_turns):
           unit_nearest_cluster_ids = self.ci.get_opponent_unit_nearest_cluster_ids(
               nearest_oppo_unit, debug=debug)
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
@@ -2024,10 +2025,11 @@ class Strategy:
             cell_is_nearest_in_cluster = any(
                 (self.ci.
                  get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-                     cid, nearest_oppo_unit) == min_turns)
+                     cid, nearest_oppo_unit) == oppo_arrival_turns)
                 for cid in focus_cluster_ids)
             if cell_is_nearest_in_cluster:
-              opponent_weight += 10001
+              boost = (10001 if arrival_turns < oppo_arrival_turns else 1001)
+              opponent_weight += boost
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
               # prt(f"focus_cluster_ids={focus_cluster_ids}")
@@ -2044,7 +2046,7 @@ class Strategy:
       if (worker.is_cluster_owner and not is_next_to_target_cluster and
           self.ci.cell_has_player_citytile_on_target_cluster(
               worker, near_resource_tile) and
-          ((not is_transfer_build_position) and (opponent_weight < 10000))):
+          ((not is_transfer_build_position) and (opponent_weight < 1))):
         build_city_bonus = False
         build_city_bonus_off_reason = '(cluster_owner)'
 

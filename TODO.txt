@@ -167,7 +167,8 @@ imagine every city is a hive, and there is a queue.
 - [-] u8 t49 moving away from nrt (2, 7) to (3, 7)
   * triggered opponent weight at (3, 7)
 - [√] Test add size=1 cluster and drop min city count for cluster assignment.
-- [] Test split different weight for < and == opponent_weight
+- [√] Test split different weight for < and == opponent_weight
+  * This will help with collision break: to move to other near resource tile that can help.
 
 
 
