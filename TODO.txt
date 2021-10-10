@@ -1,6 +1,3 @@
-
-
-"""
 - Transfer resource to other unit to save it.
   [√] add a tranfer resource to citytile procedure when condition matched
      * agent who do transfer:
@@ -175,4 +172,3 @@ IDEAS:
 * unit cargo won't goto 100 at night
 * in city tile, road level is 6 (which means, move to citytile at night is good)
 * A full worker will not collect resource
-"""
