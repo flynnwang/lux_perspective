@@ -21,9 +21,8 @@
 1633768368043_qeFNY225VyVF, 293079651
 - Failed to deliver enough resource to large city
 
-
 1633780525944_vVnbliZa03gd, 849304345, a1
-- [] Not delivering resource to city, but goes to next resource tile
+- [√] Not delivering resource to city, but goes to next resource tile
 
 
 1633776682734_pYgXffrP3Ogs, 416249851

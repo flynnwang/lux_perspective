@@ -1,0 +1,165 @@
+
+"""
+- Transfer resource to other unit to save it.
+  [√] add a tranfer resource to citytile procedure when condition matched
+     * agent who do transfer:
+       1. coal > 0 or uranium > 0
+       2. citytile has any unit
+       3. fuel > city_fuel_ask + 50
+       4. only to the first citytile (ignore other duplicated citytile)
+     * only transfer required amout for city to last to game end
+  [√] Add Replan city rescue tasks based on city fuel request.
+     * cap the amount of resource required by a city and ignore too much resource.
+     * Ignore (unit, city) duing replan to select other targets.
+  [√] Wait for idle worker to arrive and tranfer
+  [√] raise the targeted city tile weight for on citytile idle worker during the
+     second round of target assignment
+  [-] What if two worker want tranfer? no possible, one would be enough.
+  [√] How to send (or stick) non-idle worker into resource receive position.
+  [] How to limit the size of city.
+    * [√] add score to save small city: save small city at all cost (made of coal or uranium)
+    * [] Do not build on non-near resource tile.
+- [] citytile around high level resource, will block fuel into large city outside.
+  * A: Support transfer for other resource, but not use the resource to build citytile.
+  * [√] B: keep one boundary open for coal and uranium cluster
+
+
+# resource assignment. (resource delivery)
+- If multiple worker goto citytile, e.g. 5, but 3 is enough, how to deal with that?
+  - another case is, if both of the worker went to city, but city will still die, what should they do?
+
+imagine every city is a hive, and there is a queue.
+- cart will deliver the resource to the queen on city (transfer)
+- worker focus on resource mining and only transfer the resource to cart
+- cart will maintain all the available resource in its cargo, and use left over resource for more city building.
+
+
+# [Defend Cluster]
+- [√] Defend opponent unit with min threaten distance, that is if the opponent unit is
+  too close to my cluster, we'll defend it to our best.
+- [√] If current cluster is the nearest to enemy, defend that cell.
+- [√] Keep at least two near resource tile for a coal or urnaium cluster (open=1)
+- [] Use different weight for less than and equal for opponent_weight
+
+
+# [Cluster Assignment]
+- [√] Try weight cluster by boundary opening rate
+- [] Remove initial cluster assigment condition check: city > 1
+- [] Assign multiple worker to large cluster
+  * [] Try split large cluster into multiple ones (limit cluster size), maybe just multiple assignment?
+- explore size = 1 wood
+
+# Resource
+- [] do not save wood city tile if no enemy around.
+- [] Try not build on non near resource tile (except for connection point), limit city size
+- Decide upon front which city to save: (resource may not be able to save all cities)
+- Should also estimate whether a large city is saveable given the resource on the map.
+- Visit resource far away (need to check whether it will across citytile)
+  (is it the case that user should not leave citytile when amount > 0? or maybe a fair amount?)
+* Limit the number of citytile per cluster
+* [minor opt]: do not move to cell has limit resource due to collection: predict cell dying
+
+# Weight
+- [] Default city tile (0.000001) weight might be too large, use 0?
+- ?? Do not use decay for neighbour resource tile
+- How to balance city boost and cluster weight and build_city?
+
+# Build city
+- Boost cluster explore task over city build task?
+- Is it possible to tranfer and build city on the first day? any use?
+- [√] Step out at at last night - 3, to build city tile on first day
+- [√] boost weight for neighbour city tile building (encourage citytile cluster)
+  * remove build city turn limit, so worker will goto near resource tile natually
+- Build city tile on long sides (to connect, side >= 2?)
+* [√] Save size 1 citytile
+  * with min weight of 1 for city_survive_boost & city_crash_boost
+
+# Build woker
+* [?] Do not spawn at night in dying city.
+
+# Tranfer
+- [] Try transfer coal and uranium? why we need it? (build city faster)
+- Use tranfer to save worker
+
+# Mix
+- add randomized actions order
+- **Ending pose: build extra city tile with transfer
+
+# Path Search
+- Add units (enemy and mine) to cell and check blocking
+
+# Refactor
+- [√] remove unused code
+- [√] extract a cluster class for query cluster related info (e.g. boundary and type)
+- [] Add common function for accessing debug variable
+- [] Refactor cell weights into Factors or Rules
+==========================
+
+- [√] 980277360/a0/simple_defend: t19/u3 cluster and citytile back and forth
+  * Fixed by lowering the city_crash_boost with worker_total_fuel(worker)
+
+
+1633780525944_vVnbliZa03gd, 849304345, a1
+- [√] Not delivering resource to city, but goes to next resource tile
+     t111/u17, goto (1, 8), not (7, 1)
+  * This is because `city_crash_boost` & `city_survive_boost` both not kick in
+  * Moving on map waste much resource.
+  * [√] change condition of no_resoruce_on_map => no_colletable_resource_on_map + no_resource_to_explore()
+  * [x] not target res or nrt cell during plan=0: not_resource_target_worker
+  * [√] limit max long wait time: 40
+- [-] t27/u_9, goes into my unit to build city.
+  u_6, target (0, 0) for one turn, make room for u_9 to kick in.
+- [√] t280/u13 goto nrt (10, 8), not (9, 2)
+- [√] t69/u6, die at near coal cell
+  * This is bug for using wrong surviving_turns for estimate_cell_night_count
+- [√] t268, everyone moving toward city c_14, but t268, when c14 survive this night, everyone move away.
+  * worker target a crashing city c_21 (small one) and become a non resource target woker
+  * after becoming non-resource target worker, city_survive_boost will kick in and target c14 (a large city)
+    * because it's second round, the limit rule are by-passed.
+  * once the city can last this round, the weight get lowered, and unit go to other targets.
+  > Fix city weight
+- [√] t230 u_17, blocked by cluster owner
+  * Test remove cluster boosting when woker already arrived (only boost for non-arrival cluster)
+- [√] t22/u2 why go to city tile (9, 1) not (10, 1)
+  * A BUG: the first city is not added as wood city.
+  * Woker goto fuel city because of city_survive_boost
+
+
+
+# goto city items
+
+- Fix idle worker
+[√] use 0 weight for city tile
+[√] set idle worker outside of assign_worker_target
+[√] use smaller fuel threshold for worker_ready_to_return
+[√] use no_resource_to_explore for city survive boost
+    * use arrival fuel value
+[√] inc weight for last city delivery: /10 => /2.5
+[√] Fix initial city tile as wood city.
+[√] fine ture this threshold based on different resource.
+
+[] test threshold build_city_bonus
+[] remove value decay for neighbour cell
+
+
+1633778149126_tz0O90vE2o57, 60039971, a0
+- [] why first step not going to the enemy direction?
+
+
+
+# Perf opt
+
+* Fast advance when both cell are plain cell and move at day.
+* [√] collect_target_cells
+* is_resource_tile_can_save_dying_worker
+
+
+IDEAS:
+- [] Add cooldown into near_resource_tile discount?
+- support wait on days for priority search (for resource research points)? why?
+
+- Learning
+* unit cargo won't goto 100 at night
+* in city tile, road level is 6 (which means, move to citytile at night is good)
+* A full worker will not collect resource
+"""

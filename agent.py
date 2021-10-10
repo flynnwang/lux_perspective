@@ -1,140 +1,3 @@
-"""
-- Transfer resource to other unit to save it.
-  [√] add a tranfer resource to citytile procedure when condition matched
-     * agent who do transfer:
-       1. coal > 0 or uranium > 0
-       2. citytile has any unit
-       3. fuel > city_fuel_ask + 50
-       4. only to the first citytile (ignore other duplicated citytile)
-     * only transfer required amout for city to last to game end
-  [√] Add Replan city rescue tasks based on city fuel request.
-     * cap the amount of resource required by a city and ignore too much resource.
-     * Ignore (unit, city) duing replan to select other targets.
-  [√] Wait for idle worker to arrive and tranfer
-  [√] raise the targeted city tile weight for on citytile idle worker during the
-     second round of target assignment
-  [-] What if two worker want tranfer? no possible, one would be enough.
-  [√] How to send (or stick) non-idle worker into resource receive position.
-  [] How to limit the size of city.
-    * [√] add score to save small city: save small city at all cost (made of coal or uranium)
-    * [] Do not build on non-near resource tile.
-- [] citytile around high level resource, will block fuel into large city outside.
-  * A: Support transfer for other resource, but not use the resource to build citytile.
-  * [√] B: keep one boundary open for coal and uranium cluster
-
-
-# resource assignment. (resource delivery)
-- If multiple worker goto citytile, e.g. 5, but 3 is enough, how to deal with that?
-  - another case is, if both of the worker went to city, but city will still die, what should they do?
-
-imagine every city is a hive, and there is a queue.
-- cart will deliver the resource to the queen on city (transfer)
-- worker focus on resource mining and only transfer the resource to cart
-- cart will maintain all the available resource in its cargo, and use left over resource for more city building.
-
-
-# [Defend Cluster]
-- [√] Defend opponent unit with min threaten distance, that is if the opponent unit is
-  too close to my cluster, we'll defend it to our best.
-- [√] If current cluster is the nearest to enemy, defend that cell.
-- [√] Keep at least two near resource tile for a coal or urnaium cluster (open=1)
-- [] Use different weight for less than and equal for opponent_weight
-
-
-# [Cluster Assignment]
-- [√] Try weight cluster by boundary opening rate
-- [] Remove initial cluster assigment condition check: city > 1
-- [] Assign multiple worker to large cluster
-  * [] Try split large cluster into multiple ones (limit cluster size), maybe just multiple assignment?
-- explore size = 1 wood
-
-# Resource
-- [] do not save wood city tile if no enemy around.
-- [] Try not build on non near resource tile (except for connection point), limit city size
-- Decide upon front which city to save: (resource may not be able to save all cities)
-- Should also estimate whether a large city is saveable given the resource on the map.
-- Visit resource far away (need to check whether it will across citytile)
-  (is it the case that user should not leave citytile when amount > 0? or maybe a fair amount?)
-* Limit the number of citytile per cluster
-* [minor opt]: do not move to cell has limit resource due to collection: predict cell dying
-
-# Weight
-- [] Default city tile (0.000001) weight might be too large, use 0?
-- ?? Do not use decay for neighbour resource tile
-- How to balance city boost and cluster weight and build_city?
-
-# Build city
-- Boost cluster explore task over city build task?
-- Is it possible to tranfer and build city on the first day? any use?
-- [√] Step out at at last night - 3, to build city tile on first day
-- [√] boost weight for neighbour city tile building (encourage citytile cluster)
-  * remove build city turn limit, so worker will goto near resource tile natually
-- Build city tile on long sides (to connect, side >= 2?)
-* [√] Save size 1 citytile
-  * with min weight of 1 for city_survive_boost & city_crash_boost
-
-# Build woker
-* [?] Do not spawn at night in dying city.
-
-# Tranfer
-- [] Try transfer coal and uranium? why we need it? (build city faster)
-- Use tranfer to save worker
-
-# Mix
-- add randomized actions order
-- **Ending pose: build extra city tile with transfer
-
-# Path Search
-- Add units (enemy and mine) to cell and check blocking
-
-# Refactor
-- [√] remove unused code
-- [√] extract a cluster class for query cluster related info (e.g. boundary and type)
-- [] Add common function for accessing debug variable
-- [] Refactor cell weights into Factors or Rules
-==========================
-
-- [√] 980277360/a0/simple_defend: t19/u3 cluster and citytile back and forth
-  * Fixed by lowering the city_crash_boost with worker_total_fuel(worker)
-
-
-1633780525944_vVnbliZa03gd, 849304345, a1
-- [√] Not delivering resource to city, but goes to next resource tile
-     t111/u17, goto (1, 8), not (7, 1)
-  * This is because `city_crash_boost` & `city_survive_boost` both not kick in
-  * Moving on map waste much resource.
-  * [x] change condition of no_resoruce_on_map => no_colletable_resource_on_map
-  * [√] not target res or nrt cell during plan=0: not_resource_target_worker
-  * [√] limit max long wait time: 40
-  * use 0 wait for city tile
-- [-] t27/u_9, goes into my unit to build city.
-  u_6, target (0, 0) for one turn, make room for u_9 to kick in.
-- [√] t280/u13 goto nrt (10, 8), not (9, 2)
-- [√] t69/u6, die at near coal cell
-  * This is bug for using wrong surviving_turns for estimate_cell_night_count
-- # TODO: fine ture this threshold based on different resource.
-
-
-
-
-
-
-# Perf opt
-
-* Fast advance when both cell are plain cell and move at day.
-* [√] collect_target_cells
-* is_resource_tile_can_save_dying_worker
-
-
-IDEAS:
-- [] Add cooldown into near_resource_tile discount?
-- support wait on days for priority search (for resource research points)? why?
-
-- Learning
-* unit cargo won't goto 100 at night
-* in city tile, road level is 6 (which means, move to citytile at night is good)
-* A full worker will not collect resource
-"""
 import functools
 import heapq
 import math, sys
@@ -157,13 +20,13 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_6']
-MAP_POS_LIST = [(10, 3), (8, 2)]
+DRAW_UNIT_LIST = ['u_2']
+MAP_POS_LIST = [(9, 1), (10, 1)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
-DRAW_QUICK_PATH_VALUE = 1
+DRAW_QUICK_PATH_VALUE = 0
 
 # TODO: add more
 BUILD_CITYTILE_ROUND = CIRCLE_LENGH
@@ -1134,6 +997,9 @@ class Clusetr:
   def resource_positions(self):
     return {c.pos for c in self.cells}
 
+  def is_arrived(self, pos):
+    return pos in self.boundary_positions or pos in self.resource_positions
+
   @functools.lru_cache(maxsize=2, typed=False)
   def get_open_boundary_positions(self, can_build=False):
     """open positions:
@@ -1413,7 +1279,7 @@ class Strategy:
     self.game = LuxGame()
     self.accepted_transfer_offers = {}
     self.fuel_city_by_transfer_positions = {}
-    self.is_city_tile_made_from_wood = set()
+    self.is_wood_city_tile = set()
     self.blacklist_city_building_positions = set()
     self.non_wood_resource_locations = set()
     self.idle_woker_ids = set()
@@ -1586,6 +1452,13 @@ class Strategy:
       shortest_path.compute()
       self.quickest_path_pairs[unit.id] = (shortest_path, None)
 
+    # Add first city as wood city
+    if self.game.turn == 0:
+      assert len(self.game.player.units) == 1
+      unit = self.game.player.units[0]
+      assert cell_has_player_citytile(unit.cell, self.game)
+      self.is_wood_city_tile.add(unit.pos)
+
   @functools.lru_cache(maxsize=1024, typed=False)
   def get_nearest_opponent_unit_to_cell(self, cell, debug=False):
     """The shortest path dist is capped at a max dist of 6."""
@@ -1746,8 +1619,9 @@ class Strategy:
       cid = self.cluster_info.get_cid(resource_tile.pos)
       boost_cluster = 0
       if (worker.is_cluster_owner and worker.target_cluster_id == cid):
-        cluster_fuel_factor = self.cluster_info.get_cluster_fuel_factor(cid)
-        boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
+        if not self.ci.c(cid).is_arrived(worker.pos):
+          cluster_fuel_factor = self.cluster_info.get_cluster_fuel_factor(cid)
+          boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
       debug = False
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
@@ -1811,7 +1685,7 @@ class Strategy:
       citytile = city_cell.citytile
       city = g.player.cities[citytile.cityid]
 
-      wt = 0.00001
+      wt = 0
 
       # [1] Stay at city will gain this amout of fuel
       # amount, fuel = get_one_step_collection_values(citytile.cell, player,
@@ -1871,7 +1745,7 @@ class Strategy:
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
             if n_citytile >= 2 or (citytile.pos
-                                   not in self.is_city_tile_made_from_wood):
+                                   not in self.is_wood_city_tile):
               city_crash_boost += worker_total_fuel(worker) * n_citytile
               # city_crash_boost += n_citytile * max(CITYTILE_LOST_WEIGHT,
               # worker_total_fuel(worker))
@@ -1886,37 +1760,63 @@ class Strategy:
           city.city_next_day_fuel_req < 0):
         city_crash_boost = 0
 
+      def is_worker_ready_for_delivery(worker, city_cell):
+        """
+        > coal: 300 = 10 (fuel_rate) * 5 (collect_rate) * 6 days
+        > uranium: 480 = 40 (fuel_rate) * 2 (collect_rate) * 6 days
+        """
+        _, quick_path = self.quickest_path_pairs[worker.id]
+        dest_state = quick_path.state_map[city_cell.pos.x][city_cell.pos.y]
+        if dest_state is None:
+          return False
+
+        c = worker.cargo
+        if cargo_total_amount(c) > 85 and dest_state.arrival_fuel > 85:
+          return True
+
+        fuel = cargo_total_fuel(c)
+        if c.uranium > 0 and fuel >= 480 and dest_state.arrival_fuel >= 480:
+          return True
+        return fuel >= 300 and dest_state.arrival_fuel >= 300
+
+      def no_resource_to_explore(min_wait_turns=10):
+        if self.has_collectable_resource_on_map:
+          return False
+
+        player = self.game.player
+        if not player.researched_coal():
+          coal = Resource(Constants.RESOURCE_TYPES.COAL, 1)
+          return not is_resource_researched(coal, player, move_days=min_wait_turns)
+        if not player.researched_uranium():
+          uranium = Resource(Constants.RESOURCE_TYPES.URANIUM, 1)
+          return not is_resource_researched(uranium, player, move_days=min_wait_turns)
+        return True
+
+
       city_survive_boost_loc = ''
-      # TODO: fine ture this threshold based on different resource.
-      is_worker_full = worker_total_cargo(worker) >= 85
+
+      is_worker_with_enough_resource = is_worker_ready_for_delivery(worker, city_cell)
       is_idle_worker = (plan_idx > 1 and worker.is_idle_worker)
-
-      def cell_is_resource_target(cell):
-        return cell.has_resource() or cell.is_near_resource
-
-      not_resource_target_worker = (plan_idx == 1
-                                    and not cell_is_resource_target(worker.target))
-
       is_nearest_city_tile = arrival_turns_wo_city == min_city_arrival_turns
       not_city_survive_till_end = (self.game.turn + city_last_turns) < MAX_DAYS
+
+      is_wood_city = city_cell.pos in self.is_wood_city_tile
       if (unit_fuel > 0 and is_nearest_city_tile and
-          (is_worker_full or is_idle_worker or not_resource_target_worker)
+          (is_worker_with_enough_resource
+           or is_idle_worker
+           or no_resource_to_explore())
           and not_city_survive_till_end):
-        if city_last:
-          surviving_turns_ratio = city_last_turns / (MAX_DAYS - self.game.turn +
-                                                     1)
-          # city_survive_boost += (1 - surviving_turns_ratio) * n_citytile
-          # TODO: turn this number
-          city_survive_boost += (1 - surviving_turns_ratio
-                                ) * worker_total_fuel(worker) * n_citytile / 10
-          city_survive_boost_loc = '3'
-        else:
-          if n_citytile >= 2:
-            city_survive_boost += worker_total_fuel(worker) * n_citytile
-            city_survive_boost_loc = '4.1'
-          else:
-            city_survive_boost += 1
-            city_survive_boost_loc = '4.2'
+
+        surviving_rate = city_last_turns / (MAX_DAYS - self.game.turn + 1)
+        if city_wont_last:
+          surviving_rate = 0
+
+        decay = 1 if city_wont_last else 2.5
+        fuel = worker_total_fuel(worker)
+        if n_citytile <= 1 or is_wood_city:
+          fuel = 1
+
+        city_survive_boost += (1 - surviving_rate) * n_citytile * fuel / decay
 
       # Ignore |city_survive_boost| after plan=0 if city already receive enough fuel
       # from the plan=0.
@@ -1965,8 +1865,8 @@ class Strategy:
           city_cell.pos in MAP_POS_LIST):
         prt(f"ccw-4: plan[{plan_idx}] {worker.id} tar={worker.target.pos} => city={city_cell.pos}  v={v}, wt={wt}, city_crash={city_crash_boost}@[{city_crash_boost_loc}],"
             f"city_survive={city_survive_boost}@[{city_survive_boost_loc}]"
-            f"recv={receive_transfer_wt}, last_turns={city.last_turns}, arrival_turns={arrival_turns}"
-            f" not_resource_target_worker={not_resource_target_worker}"
+            f"recv={receive_transfer_wt}, city_last_turns={city.last_turns}, arrival_turns={arrival_turns}"
+            f" no_resource_to_explore={no_resource_to_explore()}, wood_city={is_wood_city}"
            )
         # prt city info
         # prt(f"city={city.id}, f={city.fuel}, keep={city.light_upkeep}, last_turns={city.last_turns}, nights={city_last_nights(city)}")
@@ -2025,8 +1925,9 @@ class Strategy:
           worker, near_resource_tile)
       if is_next_to_target_cluster:
         cid = worker.target_cluster_id
-        cluster_fuel_factor = self.ci.get_cluster_fuel_factor(cid)
-        boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
+        if not self.ci.c(cid).is_arrived(worker.pos):
+          cluster_fuel_factor = self.ci.get_cluster_fuel_factor(cid)
+          boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
       # TODO: decide upon front, which path to use: cargo > 0?
       # Why it is needed? because unit need to be there with full cargo.
@@ -2231,8 +2132,7 @@ class Strategy:
       worker = workers[worker_idx]
       wt = weights[worker_idx, target_idx]
 
-      if wt <= 1e-6 and worker.target_pos == worker.pos:
-        worker.is_idle_worker = True
+      if wt < 1e-5 and worker.target_pos == worker.pos:
         idle_workers.append(worker)
         continue
 
@@ -2242,7 +2142,7 @@ class Strategy:
       worker.target = target
       worker.target_pos = target.pos
 
-      if DRAW_UNIT_ACTION and plan_idx == 0:
+      if DRAW_UNIT_ACTION and plan_idx == 1:
         x = annotate.x(worker.pos.x, worker.pos.y)
         c = annotate.circle(target.pos.x, target.pos.y)
         line = annotate.line(worker.pos.x, worker.pos.y, target.pos.x,
@@ -2463,11 +2363,6 @@ class Strategy:
       if not unit.is_worker():
         continue
 
-      # if unit.id in DRAW_UNIT_LIST:
-      # prt(
-      # f"t={self.game.turn} u={unit.id}, target_pos={unit.target_pos}, is_build_city_task={self.is_worker_building_citytile(unit, unit.target_pos)}, tranfer_offer={self.accepted_transfer_offers.get(unit.id)}"
-      # )
-
       # Sitting on th cell of target position for city building.
       # Sit and build.
       if (self.circle_turn < BUILD_CITYTILE_ROUND and unit.can_act() and
@@ -2487,10 +2382,14 @@ class Strategy:
         if dry_run:
           continue
 
+
         self.add_unit_action(unit, unit.build_city())
         unit.is_building_city = True
         if unit.cargo.wood == CITY_BUILD_COST:
-          self.is_city_tile_made_from_wood.add(unit.pos)
+          self.is_wood_city_tile.add(unit.pos)
+
+        if unit.id in DRAW_UNIT_LIST:
+          prt(f"BUILD_CITY: t={self.game.turn} u={unit.id}<{unit.cargo}>, target_pos={unit.target_pos}, is_build_city_task={self.is_worker_building_citytile(unit, unit.target_pos)}, tranfer_offer={self.accepted_transfer_offers.get(unit.id)}")
     return city_building_units
 
   def compute_citytile_actions(self):
@@ -2640,6 +2539,9 @@ class Strategy:
       open_positions = cluster.get_open_boundary_positions()
       open_ratio = len(open_positions) / len(boundary_positions)
 
+      # dying_boost = 0
+      # if worker.is_cargo_not_enough_for_nights:
+        # dying_boost = 2
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.1)
       # prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}")
       return wt
@@ -2937,7 +2839,12 @@ class Strategy:
     self.worker_fuel_city_tasks = set()
     workers = self.player_available_workers(
     )  # worker may do tranfer and become no avialable.
+
+    self.idle_woker_ids = set()
     replan_workers = self.assign_worker_target(workers, plan_idx=1)
+    for u in replan_workers:
+      u.is_idle_worker = True
+      self.idle_woker_ids.add(u.id)
 
     # TODO: Is it needed?
     worker_ids = {w.id for w in replan_workers}
@@ -2946,11 +2853,10 @@ class Strategy:
     self.worker_fuel_city_tasks = clear_idle_worker_tasks(
         self.worker_fuel_city_tasks, worker_ids)
 
-    self.idle_woker_ids = set()
+    idle_workers2 = set()
     if replan_workers:
       idle_workers2 = self.assign_worker_target(replan_workers, plan_idx=2)
-      self.idle_woker_ids = {u.id for u in idle_workers2}
-    # prt(f"I1={len(replan_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
+    prt(f"I1={len(replan_workers)}, I2={len(idle_workers2)}", file=sys.stderr)
 
   def check_cluster_closed_boundary(self):
     """Check build city position will block resource going out of cluster."""
@@ -3028,8 +2934,8 @@ class Strategy:
         later_nights_fuel = city.later_round_nights_to_live * city.light_upkeep
       if unit_fuel - fuel_req - later_nights_fuel < 40:
         # this is move to fuel
-        # prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
-        # )
+        prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
+        )
         return -1
 
       # Use transfer to save city to the end
@@ -3044,10 +2950,10 @@ class Strategy:
       unit_fuel = cargo_total_fuel(unit.cargo)
       self.fuel_city_by_transfer_positions[unit.target.pos] = unit_fuel
 
-      # after_fuel = fuel_req - transfer_amt * fuel_rate
-      # prt(
-      # f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_on_rond={city.is_dying_this_round}, transfer_fuel={unit_fuel}, before={fuel_req}, after_tranfer={after_fuel}"
-      # )
+      after_fuel = fuel_req - transfer_amt * fuel_rate
+      prt(
+      f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_on_rond={city.is_dying_this_round}, transfer_fuel={unit_fuel}, before={fuel_req}, after_tranfer={after_fuel}"
+      )
 
       if not unit.can_act():
         return
