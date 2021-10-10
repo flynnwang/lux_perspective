@@ -507,7 +507,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  MAX_SEARCH_DIST = 10
+  MAX_SEARCH_DIST = 12
 
   def __init__(self, game, unit, ignore_unit=False):
     self.game = game
@@ -1564,6 +1564,12 @@ class Strategy:
     for unit in self.game.opponent.units:
       shortest_path, _ = self.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(cell.pos)
+
+      # Use `distance_to` as a proxy
+      if dist >= MAX_PATH_WEIGHT:
+        dist2 = unit.pos.distance_to(cell.pos)
+        if dist2 >= ShortestPath.MAX_SEARCH_DIST:
+          dist = dist2
 
       # if debug and min_unit:
       # prt(f' > c={cell.pos}, oppo={unit.id}@{unit.pos} dist={dist}')

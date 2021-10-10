@@ -160,7 +160,6 @@ imagine every city is a hive, and there is a queue.
   * [√] Fixed by remove continue by threaten dist during nearest cluster searching.
 
 
-
 # Perf opt
 
 * Fast advance when both cell are plain cell and move at day.
