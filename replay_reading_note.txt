@@ -36,7 +36,7 @@
 
 
 1633778149126_tz0O90vE2o57, 60039971, a0
-- [] why first step not going to the enemy direction?
+- [√] why first step not going to the enemy direction?
 
 
 1633778378918_tLMDLeXesVG6, a0, 410026423

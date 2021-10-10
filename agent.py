@@ -426,10 +426,11 @@ def estimate_resource_night_count(worker, cell, upkeep, arrival_turns):
     return 0
 
   surviving_turns = get_surviving_turns_at_cell(worker, quick_path, cell)
-  wait_turns = resource_researched_wait_turns(cell.resource,
-                                              _strategy.player, # dirty.
-                                              arrival_turns,
-                                              surviving_turns=surviving_turns)
+  wait_turns = resource_researched_wait_turns(
+      cell.resource,
+      _strategy.player,  # dirty.
+      arrival_turns,
+      surviving_turns=surviving_turns)
   if wait_turns < 0:
     return 0
   cargo = resource_to_cargo(cell.resource)
@@ -441,7 +442,8 @@ def estimate_cell_night_count(worker, cell, game_map, arrival_turns):
   upkeep = get_unit_upkeep(worker)
   nights = estimate_resource_night_count(worker, cell, upkeep, arrival_turns)
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
-    nights += estimate_resource_night_count(worker, nb_cell, upkeep, arrival_turns)
+    nights += estimate_resource_night_count(worker, nb_cell, upkeep,
+                                            arrival_turns)
   return nights
 
 
@@ -504,7 +506,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
-  MAX_SEARCH_DIST = 10
+  MAX_SEARCH_DIST = 12
 
   def __init__(self, game, unit, ignore_unit=False):
     self.game = game
@@ -1550,6 +1552,12 @@ class Strategy:
     for unit in self.game.opponent.units:
       shortest_path, _ = self.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(cell.pos)
+
+      # Use `distance_to` as a proxy
+      if dist >= MAX_PATH_WEIGHT:
+        dist2 = unit.pos.distance_to(cell.pos)
+        if dist2 >= ShortestPath.MAX_SEARCH_DIST:
+          dist = dist2
 
       # if debug and min_unit:
       # prt(f' > c={cell.pos}, oppo={unit.id}@{unit.pos} dist={dist}')
