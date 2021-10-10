@@ -1,4 +1,88 @@
 
+======================================= 2021-10-10 ==============================================
+
+
+- [√] 980277360/a0/simple_defend: t19/u3 cluster and citytile back and forth
+  * Fixed by lowering the city_crash_boost with worker_total_fuel(worker)
+
+
+1633780525944_vVnbliZa03gd, 849304345, a1
+- [√] Not delivering resource to city, but goes to next resource tile
+     t111/u17, goto (1, 8), not (7, 1)
+  * This is because `city_crash_boost` & `city_survive_boost` both not kick in
+  * Moving on map waste much resource.
+  * [√] change condition of no_resoruce_on_map => no_colletable_resource_on_map + no_resource_to_explore()
+  * [x] not target res or nrt cell during plan=0: not_resource_target_worker
+  * [√] limit max long wait time: 40
+- [-] t27/u_9, goes into my unit to build city.
+  u_6, target (0, 0) for one turn, make room for u_9 to kick in.
+- [√] t280/u13 goto nrt (10, 8), not (9, 2)
+- [√] t69/u6, die at near coal cell
+  * This is bug for using wrong surviving_turns for estimate_cell_night_count
+- [√] t268, everyone moving toward city c_14, but t268, when c14 survive this night, everyone move away.
+  * worker target a crashing city c_21 (small one) and become a non resource target woker
+  * after becoming non-resource target worker, city_survive_boost will kick in and target c14 (a large city)
+    * because it's second round, the limit rule are by-passed.
+  * once the city can last this round, the weight get lowered, and unit go to other targets.
+  > Fix city weight
+- [√] t230 u_17, blocked by cluster owner
+  * Test remove cluster boosting when woker already arrived (only boost for non-arrival cluster)
+- [√] t22/u2 why go to city tile (9, 1) not (10, 1)
+  * A BUG: the first city is not added as wood city.
+  * Woker goto fuel city because of city_survive_boost
+
+
+
+# goto city items
+
+- Fix idle worker
+[√] use 0 weight for city tile
+[√] set idle worker outside of assign_worker_target
+[√] use smaller fuel threshold for worker_ready_to_return
+[√] use no_resource_to_explore for city survive boost
+    * use arrival fuel value
+[√] inc weight for last city delivery: /10 => /2.5
+[√] Fix initial city tile as wood city.
+[√] fine ture this threshold based on different resource.
+
+
+1633778149126_tz0O90vE2o57, 60039971, a0
+- [√] why first step not going to the enemy direction?
+  * t0 u1 goto (9, 1) not (10, 2)
+  * because of limit enemy search distance.
+  [] Later, if perf if OK, use larger distance.
+
+
+1633775933684_6NyW5lZL7LqB, 216087638
+- [√] 1st step is not reasonable
+  * Reason: below is resource tile while above is near resource tile
+  * [√] reverted the neighbour cell move_day+1 demote in get_cell_resource_values
+  * [√] Use larger default weight for near resource cell (before resource tile is larger)
+- [√] t4/u1, goto far away cell (8, 7), not (9, 4)
+  * bug: because the distance is cut by threaten dist.
+  * [√] Fixed by remove continue by threaten dist during nearest cluster searching.
+
+
+>>> exp = run_2021_1010_17
+
+Total Matches: 621 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | 49h7UvxinhxW   | 30.5232140      | μ=33.387, σ=0.955  | 238
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | Uzk6JoDUxqwD   | 27.3845978      | μ=29.985, σ=0.867  | 243
+/home/flynnwang/dev/playground/versions/priority_search/main.py | kQFfzmOSVpfC   | 24.2551136      | μ=26.827, σ=0.857  | 188
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | Lns3dQta69Ew   | 23.8822528      | μ=26.429, σ=0.849  | 218
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | hn7yhci4J67X   | 19.3626852      | μ=22.161, σ=0.933  | 189
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | C3Y3MK0yzuva   | 10.4532758      | μ=14.344, σ=1.297  | 166
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	0.0	0.0	8.7	3.6	12.1
+defend_agent	    100.0	0.0	    31.0	71.4	68.0	89.8
+lux_perspective	    100.0	70.7	0.0	    83.0	91.2	100.0
+priority_search	    91.3	28.6	17.0	0.0	44.4	71.0
+simple_defend	    96.4	32.0	8.8	57.8	0.0	67.6
+tranfer_agent_v1	87.9	10.2	0.0	29.0	32.4	0.0
+
+
 ======================================= 2021-10-09 ==============================================
 
 > By +1 to cluster fuel factor
