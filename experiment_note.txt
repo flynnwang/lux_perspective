@@ -1,4 +1,103 @@
 
+
+
+
+
+
+
+
+======================================= 2021-10-11 ==============================================
+
+1633768368043_qeFNY225VyVF, 293079651, a0, simple_defend
+- [√] t10/u3 staying at coal cell with 100 wood, not moving.
+  * it's tracked by the resource weight
+  * [-] A) inc threshold build_city_bonus
+  * [√] B) use unit info for resource weight
+  * >> Think about weight for resource tile and near resource tile.
+- [-] u8 t49 moving away from nrt (2, 7) to (3, 7)
+  * triggered opponent weight at (3, 7)
+- [√] Test add size=1 cluster and drop min city count for cluster assignment.
+- [√] Test split different weight for < and == opponent_weight
+  * This will help with collision break: to move to other near resource tile that can help.
+
+
+
+1633776682734_pYgXffrP3Ogs, 416249851, a1, simple_defend
+- [√] t11, u_1 with 40, should not goto resource tile but wait.
+  * u_1 wood=40, move to resource and back to build need 5 turns, while wait need only 4
+  * for wood >= 2, both move and wait need 5 turns, choose to wait.
+- [√] t11, u_2, move to nrt (9, 11), but prefer (9, 8)
+  * try to split threaten defend weight and nearest point defend weight
+  * [√] Add 501/21 separate for nrt and rt threaten boost.
+  * [√] Double threaten dist at night!
+
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	1.3	6.1	7.1	10.0	22.9
+defend_agent	98.7	0.0	51.5	84.0	70.7	87.8
+lux_perspective	93.9	50.0	0.0	81.8	69.6	90.3
+priority_search	92.9	16.0	18.2	0.0	42.9	68.8
+simple_defend	90.0	29.3	30.4	60.7	0.0	91.2
+tranfer_agent_v1	77.1	12.2	9.7	31.2	10.5	0.0
+
+Total Matches: 912 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | hYoxE34HXqWM   | 30.5388760      | μ=33.122, σ=0.861  | 350
+/home/flynnwang/dev/playground/lux_perspective/main.py | vAB8YTYDyBXy   | 28.6247210      | μ=31.152, σ=0.842  | 342
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | E0hz6q0afeQf   | 26.7983082      | μ=29.258, σ=0.820  | 325
+/home/flynnwang/dev/playground/versions/priority_search/main.py | RsjhiEoWCyKS   | 24.3931984      | μ=26.889, σ=0.832  | 287
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | qyD1loqPcDRK   | 21.5729811      | μ=24.166, σ=0.864  | 251
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 4rVKGxPD2P41   | 17.5555168      | μ=20.582, σ=1.009  | 269
+
+
+(why regression?)
+
+
+1633907441404_ll5yuRv0Zstu, 115367527, a1, simple
+- [√] Test revert threaten boost.
+- t4, u2, move back to (7, 8), not (5, 7)
+
+
+1633905665683_LcRNpDTPNRdt, 66476846, a1, simple
+- t5, u2, back and forth (5, 11), (6, 11)
+  * conflict between cluster weight and opponent boosting rule.
+  * [√] keep open ratio = 1 when unit arrived at cluster
+  * [√] lower opponent weight to be smaller than cluster boosting.
+  * [√] check cluster has player citytile <= 1 to boost
+  * [-]! instead of elemeninating the cluster, how about make it avialbe for all the unit?
+    > not OK, then the cluster assignment is not really working
+- [√] t100, not saving large city
+  * bug? only use small city crash boost and survive boost for sz=1 wood city tile.
+
+
+1633892893627_2sURrL14kBSC
+- t14, u_2, cluster assingment issue
+  [√] Bug: should use open_rate of 1 for both boundary and resource positions.
+
+Total Matches: 429 | Matches Queued: 11
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | InbY1heOoZtd   | 29.3118006      | μ=32.234, σ=0.974  | 178
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | 3mJBQhUHNuuv   | 26.8116693      | μ=29.565, σ=0.918  | 170
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | vQGBlwshsqYU   | 24.3399166      | μ=27.087, σ=0.916  | 137
+/home/flynnwang/dev/playground/versions/priority_search/main.py | RMgnlFRbXDkf   | 20.5853126      | μ=23.398, σ=0.938  | 128
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 8FQOLZPp7orD   | 17.5554161      | μ=20.743, σ=1.063  | 123
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | g4vNFeftrm9g   | 12.2007661      | μ=16.047, σ=1.282  | 122
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	10.7	0.0	25.0	0.0	0.0
+defend_agent	89.3	0.0	20.4	83.9	79.4	96.7
+lux_perspective	100.0	79.6	0.0	87.9	72.7	97.1
+priority_search	75.0	16.1	12.1	0.0	34.6	61.1
+simple_defend	100.0	20.6	27.3	65.4	0.0	95.5
+tranfer_agent_v1	100.0	3.3	2.9	38.9	4.5	0.0
+
+(still observe some regression with simple_defend)
+
+
+
+
+
+
 ======================================= 2021-10-10 ==============================================
 
 # Perf opt

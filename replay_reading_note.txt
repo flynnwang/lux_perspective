@@ -1,5 +1,19 @@
 
-=========================== 2021-10-08 ==========================
+=========================== 2021-10-11 PM ==========================
+
+1633925295586_Wc4zsNQQPA8L, 535162648
+* acceptable failure, on obvious failure reason, and the number of citytile does not differ much.
+* coal was a bit lower than opponent
+
+
+1633928670554_SEwtb1OmZHtE, 306961988
+* reason: lost too much uranium.
+* also, lost too much city tiles at first night
+* also, woker goes to size=1 wood cluster, seems not necessary
+
+
+
+=========================== 2021-10-11 ==========================
 
 
 [√] 1633905665683_LcRNpDTPNRdt, 66476846, a1, simple

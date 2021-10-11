@@ -2646,11 +2646,10 @@ class Strategy:
 
     def gen_resource_clusters():
       for c in self.cluster_info.clusters.values():
-        # TODO(wangfei): remove this
-        # n_resource_tile = c.size
-        # if (n_resource_tile <= 1 and
-            # c.resource_type == Constants.RESOURCE_TYPES.WOOD):
-          # continue
+        n_resource_tile = c.size
+        if (n_resource_tile <= 1 and
+            c.resource_type == Constants.RESOURCE_TYPES.WOOD):
+          continue
         yield c
 
     # RESOURCE_WORKER_RATIO = 3
