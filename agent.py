@@ -1057,7 +1057,6 @@ class Clusetr:
     best_positions = []
     best_arrival_turns = MAX_PATH_WEIGHT
 
-    # TODO: use boundary + resource_positions
     open_positions = (self.get_open_boundary_positions() |
                       self.resource_positions)
     for pos in open_positions:
@@ -2102,6 +2101,7 @@ class Strategy:
         # Encourage worker to build connected city tiles.
         if near_resource_tile.n_citytile_neighbour > 0:
           wt += near_resource_tile.n_citytile_neighbour / 10
+          # wt += near_resource_tile.n_citytile_neighbour * 25
 
         # mark build city cell
         self.worker_build_city_tasks.add((worker.id, near_resource_tile.pos))
@@ -2631,7 +2631,7 @@ class Strategy:
         return MIN_CLUSTER_WT
 
       boundary_positions = cluster.boundary_positions
-      open_positions = cluster.get_open_boundary_positions()
+      open_positions = cluster.get_open_boundary_positions(can_build=True)
       open_ratio = len(open_positions) / len(boundary_positions)
       if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
@@ -2641,7 +2641,9 @@ class Strategy:
       # if worker.is_cargo_not_enough_for_nights:
       # dying_boost = 2
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.1)
-      # prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}")
+
+      if worker.id in DRAW_UNIT_LIST:
+        prt(f"cluster weight: t={self.game.turn}, edge {worker.id}, c@{tile_pos} wt={wt} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, open_ratio={open_ratio}")
       return wt
 
     def gen_resource_clusters():
@@ -2650,6 +2652,11 @@ class Strategy:
         if (n_resource_tile <= 1 and
             c.resource_type == Constants.RESOURCE_TYPES.WOOD):
           continue
+
+        open_positions = c.get_open_boundary_positions(can_build=True)
+        if len(open_positions) == 0:
+          continue
+
         yield c
 
     # RESOURCE_WORKER_RATIO = 3
@@ -3038,8 +3045,8 @@ class Strategy:
         later_nights_fuel = city.later_round_nights_to_live * city.light_upkeep
       if unit_fuel - fuel_req - later_nights_fuel < 40:
         # this is move to fuel
-        prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
-           )
+        # prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_this_round={city.is_dying_this_round}, move_fuel={unit_fuel}, before={fuel_req}, after={after_fuel_req}"
+           # )
         return -1
 
       # Use transfer to save city to the end
@@ -3055,8 +3062,8 @@ class Strategy:
       self.fuel_city_by_transfer_positions[unit.target.pos] = unit_fuel
 
       after_fuel = fuel_req - transfer_amt * fuel_rate
-      prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_on_rond={city.is_dying_this_round}, transfer_fuel={unit_fuel}, before={fuel_req}, after_tranfer={after_fuel}"
-         )
+      # prt(f"fuel city={city.id} by w={unit.id}@{unit.pos}, dying_on_rond={city.is_dying_this_round}, transfer_fuel={unit_fuel}, before={fuel_req}, after_tranfer={after_fuel}"
+         # )
 
       if not unit.can_act():
         return
@@ -3109,7 +3116,7 @@ class Strategy:
 
     # MAIN_PRINT
     prt((
-        f'>>T turn={g.turn}, #W={len(player.units)}, #C={player.city_tile_count} '
+        f'>>T<< turn={g.turn}, #W={len(player.units)}, #C={player.city_tile_count} '
         f'R={player.research_points}'),
         file=sys.stderr)
 
