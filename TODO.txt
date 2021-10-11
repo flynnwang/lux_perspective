@@ -97,7 +97,8 @@ imagine every city is a hive, and there is a queue.
 
 
 1633958661937_J6Dk3WdSMCMk, a0, defend_agent, 846813857
-- [] t54, cluster onwer drag back to fuel city! (a second case)
+- [√] t54, cluster onwer drag back to fuel city! (a second case)
+  * t54, u_4, cluster nrt (4, 7), city tile (12, 4) size = 10
 
 
 

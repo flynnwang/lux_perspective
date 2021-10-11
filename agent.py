@@ -1109,9 +1109,9 @@ class ClusterInfo:
     return self.clusters[cid]
 
   @functools.lru_cache(maxsize=512)
-  def get_neighbour_cells_cluster_ids(self, near_resource_tile):
+  def get_neighbour_cells_cluster_ids(self, cell):
     cluster_ids = set()
-    for nb_cell in get_neighbour_positions(near_resource_tile.pos,
+    for nb_cell in get_neighbour_positions(cell.pos,
                                            self.game_map,
                                            return_cell=True):
       newpos = nb_cell.pos
@@ -1196,7 +1196,7 @@ class ClusterInfo:
       self.clusters[cid] = cluster
 
       self.max_cluster_fuel = max(self.max_cluster_fuel, cluster.total_fuel)
-    prt(f't={self.game.turn}, total_cluster={max_cluster_id}', file=sys.stderr)
+    # prt(f't={self.game.turn}, total_cluster={max_cluster_id}', file=sys.stderr)
 
   def query_cluster_fuel_factor(self, pos):
     cid = self.position_to_cid[pos.x][pos.y]
@@ -1897,6 +1897,13 @@ class Strategy:
           (worker.id, city.id) not in self.keep_city_alive_till_game_end and
           city.city_game_end_fuel_req < 0):
         city_survive_boost = 0
+
+      # Cluster owner should not try to save non-target city, but goto the cluster.
+      if worker.is_cluster_owner:
+        cids = self.ci.get_neighbour_cells_cluster_ids(city_cell)
+        if worker.target_cluster_id not in cids:
+          city_survive_boost = 0
+          city_crash_boost = 0
 
       if city_crash_boost > 0 or city_survive_boost > 0:
         self.worker_fuel_city_tasks.add((worker.id, city_cell.pos))
