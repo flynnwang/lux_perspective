@@ -1,4 +1,5 @@
 
+
 =========================== 2021-10-11 PM ==========================
 
 1633925295586_Wc4zsNQQPA8L, 535162648
@@ -10,6 +11,85 @@
 * reason: lost too much uranium.
 * also, lost too much city tiles at first night
 * also, woker goes to size=1 wood cluster, seems not necessary
+
+
+https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-28019105
+- after 200, worker is no longer important, could use them more aggresivly.
+
+
+1633960555054_SlMSwUh6ZJzm, a0, Tong_Hui_Kang_v4
+- Failed to arrive at the large wood cluster.
+
+
+1633949302201_CqaefBvbLM1q, a0, Tong_Hui_Kang_v4
+- Build too many city and die
+
+
+1633952774529_ttwPENkRjheK, a1, defend_agent
+- Weak at wood competition + late for coal
+
+1633949241513_iAwEPHjlILdv, a0, defend_agent
+- Use last city tile is not gurrante to be good. Maybe try compute dist to near resource tile.
+- [] t53, all worker going back for one step, why? one step late lead to coal competition failure.
+
+1633944754472_ISKS7BMAOJ9k, a1, defend_agent
+- late for uranium
+
+1633958181286_BL0v7owKQ3Bc, a1, defend_agent
+- lose all coal
+
+
+1633958440652_5TP5jk9Y5INd, a1, defend_agent
+- invaded by opponent, lose much coal.
+
+
+1633944709994_9SIatEPPgyen, 16, a0, defend_agent
+- [] t15, why u_1, backward to c_3 at (9, 5)
+- invaded, hurt wood city count, lose much coal.
+- [] Should we also save size 1 city?
+
+
+1633958661937_J6Dk3WdSMCMk, a0, defend_agent, 846813857
+- [] t54, cluster onwer drag back to fuel city! (a second case)
+- cluster owner locked with opponent unit
+  * [] should try detect lock, and try deal with those condition (do not use it for cluster)
+- lose center wood cluster, lose much uranium
+
+1633943687015_UJ97oTDygEjt a1, defend_agent
+- LCF = large city failure.
+
+1633960566517_sVOBT9jpCU5V, 16, a0, defend_agent
+- too much city died at first night.
+- locked with opponent unit when compete center resource.
+- WCF = wood competition failure.
+- [] does open boundary, count non-researched resource? not to?
+
+1633947410714_9owGJ6iEwlLg, 16, a0, defend_agent
+- LATE_URANIUM: late for uranium
+
+1633957318190_WY7F2mZbtXLa, 24, a0, defend_agent
+- LCF.
+
+1633950784563_aOuTpfaRJhj4, 24, a1, defend_agent
+- LATE_COAL, build city slower than opponent
+
+
+1633949763857_e0DUXPzSNXoe, 32, a1, defend_agent
+- A bad case for reaching out to large cluster with the first worker.
+
+
+1633958329854_fRGOMEUZByNb, 32, a1, defend_agent
+- [] lost the middle wood cluster, should not always use resource to wait cluster
+- [] There is a lot of resource on units, wasted. should build more city tiles!
+
+
+1633949062551_mqLsQWM3fCHz, 32, a1, defend_agent
+- t34, u_2 dragged backed to near resource tile, why?
+- LARGE_CITY_FAILURE
+
+1633941204047_iVo2EOR9eWnN, 32, a0, defend_agent
+- city crash a lot at beginning stage.
+- [] t29, u11, not saving city, why?
 
 
 

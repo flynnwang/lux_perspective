@@ -94,7 +94,28 @@ tranfer_agent_v1	100.0	3.3	2.9	38.9	4.5	0.0
 (still observe some regression with simple_defend)
 
 
+- Keep skip size=1 wood cluster
 
+Total Matches: 617 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | cHuwp7ETvPIQ   | 30.1983221      | μ=33.042, σ=0.948  | 241
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | ter9H2R1wpvi   | 27.6691828      | μ=30.288, σ=0.873  | 242
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | pohtecxLIjeJ   | 24.3992050      | μ=27.025, σ=0.875  | 220
+/home/flynnwang/dev/playground/versions/priority_search/main.py | 95RampagLhmD   | 21.5378384      | μ=24.217, σ=0.893  | 181
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | B70Fd2ASPNJP   | 17.8686247      | μ=20.780, σ=0.970  | 179
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | PBqnv2VM1kAW   | 12.5747446      | μ=16.291, σ=1.239  | 171
+
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	2.3	7.4	6.7	0.0	16.1
+defend_agent	97.7	0.0	30.9	71.4	75.4	92.3
+lux_perspective	92.6	70.9	0.0	93.5	91.7	98.0
+priority_search	93.3	28.6	6.5	0.0	28.1	64.5
+simple_defend	100.0	24.6	8.3	75.0	0.0	88.9
+tranfer_agent_v1	83.9	7.7	2.0	35.5	14.8	0.0
+
+
+(no more regression with simple_agent.)
 
 
 
