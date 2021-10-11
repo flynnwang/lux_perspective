@@ -1,4 +1,37 @@
 
+=========================== 2021-10-08 ==========================
+
+
+[√] 1633905665683_LcRNpDTPNRdt, 66476846, a1, simple
+[√] 1633907441404_ll5yuRv0Zstu, 115367527, a1, simple
+* Bad case of threaten defend: waste move on initial turns.
+
+
+1633894412793_CQ0RQlzMfzJU
+* Large citytile crash: consume too much resource for city building in the center cluster.
+
+
+[√] 1633882871858_3pgXBmVEQcJo, 994987868, a1
+* defend bad case: moving far away and locked with enemy.
+
+[√] 1633893669131_d0mt0A4ESwOS
+- lose large wood city
+  * should a bug due to not protecting large wood city.
+
+[√] 1633900225567_Mm4bVRVvxZMo, 148772501, a0
+- similiar case, lose wood city.
+- [] t16, u_3, not across citytile, because of wood full
+  * [] compute quick path with city leaving flag for wood full worker.
+
+
+[√ (at latest)] 1633887207514_hM4xwJDXC3BR
+- build a citytile with uranium, cause large city crash.
+  * [] do not use uranium for city building, unless every city can survive
+
+
+[√] 1633892893627_2sURrL14kBSC, 392475347
+- resource competition failure (at latest run)
+
 
 =========================== 2021-10-08 ==========================
 

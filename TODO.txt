@@ -118,21 +118,61 @@ imagine every city is a hive, and there is a queue.
   * [√] Add 501/21 separate for nrt and rt threaten boost.
   * [√] Double threaten dist at night!
 
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	1.3	6.1	7.1	10.0	22.9
+defend_agent	98.7	0.0	51.5	84.0	70.7	87.8
+lux_perspective	93.9	50.0	0.0	81.8	69.6	90.3
+priority_search	92.9	16.0	18.2	0.0	42.9	68.8
+simple_defend	90.0	29.3	30.4	60.7	0.0	91.2
+tranfer_agent_v1	77.1	12.2	9.7	31.2	10.5	0.0
+
+Total Matches: 912 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | hYoxE34HXqWM   | 30.5388760      | μ=33.122, σ=0.861  | 350
+/home/flynnwang/dev/playground/lux_perspective/main.py | vAB8YTYDyBXy   | 28.6247210      | μ=31.152, σ=0.842  | 342
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | E0hz6q0afeQf   | 26.7983082      | μ=29.258, σ=0.820  | 325
+/home/flynnwang/dev/playground/versions/priority_search/main.py | RsjhiEoWCyKS   | 24.3931984      | μ=26.889, σ=0.832  | 287
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | qyD1loqPcDRK   | 21.5729811      | μ=24.166, σ=0.864  | 251
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 4rVKGxPD2P41   | 17.5555168      | μ=20.582, σ=1.009  | 269
+
+
+(why regression?)
+
+
+1633907441404_ll5yuRv0Zstu, 115367527, a1, simple
+- [√] Test revert threaten boost.
+- t4, u2, move back to (7, 8), not (5, 7)
+
+
+1633905665683_LcRNpDTPNRdt, 66476846, a1, simple
+- t5, u2, back and forth (5, 11), (6, 11)
+  * conflict between cluster weight and opponent boosting rule.
+  * [√] keep open ratio = 1 when unit arrived at cluster
+  * [√] lower opponent weight to be smaller than cluster boosting.
+  * [√] check cluster has player citytile <= 1 to boost
+  * [-]! instead of elemeninating the cluster, how about make it avialbe for all the unit?
+    > not OK, then the cluster assignment is not really working
+- [√] t100, not saving large city
+  * bug? only use small city crash boost and survive boost for sz=1 wood city tile.
+
+
+1633892893627_2sURrL14kBSC
+- t14, u_2, cluster assingment issue
+  [√] Bug: should use open_rate of 1 for both boundary and resource positions.
+
+
+>>>>>>>> evaluating...
+
+
+[] Add cell level threat weight.
+
 - [] Play with the idea do not collect resource to wood city.
   * t60, u2, resource tile (0, 13), city (0, 12)
   * because of wt+1 for wood full worker goto city rule
-  * could work!
+  * could work: by use 0 weight for wood city tiles (leave a bug for current version)
 - [] not enough worker into the largest resource cluster
   * try multi worker to cluster
-
-
-
-
-# Perf opt
-
-* Fast advance when both cell are plain cell and move at day.
-* [√] collect_target_cells
-* is_resource_tile_can_save_dying_worker
 
 
 IDEAS:

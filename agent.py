@@ -20,8 +20,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_2']
-MAP_POS_LIST = [(9, 11), (9, 8)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -1253,7 +1253,7 @@ class ClusterInfo:
   @functools.lru_cache(maxsize=512)
   def get_opponent_unit_nearest_cluster_ids(self,
                                             unit,
-                                            threat_turns=MIN_DEFEND_ENEMY_ARRIVAL_TRUNS,
+                                            threat_turns=4,
                                             debug=False):
     """Returns the nearest cluster that
     1) opponent can collect fuel (researched)
@@ -1292,7 +1292,7 @@ class ClusterInfo:
     # prt(f" > oppo_unit={unit.id}, near_cluster_ids={cluster_ids}, threat_cluster_ids={threat_cluster_ids}")
     # for cid in cluster_ids | threat_cluster_ids:
     # prt(f"  cid={cid}, cell={self.c(cid).any_cell.pos}")
-    return cluster_ids, threat_cluster_ids
+    return cluster_ids | threat_cluster_ids
 
   @functools.lru_cache(maxsize=1023, typed=False)
   def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
@@ -1677,7 +1677,8 @@ class Strategy:
       cid = self.cluster_info.get_cid(resource_tile.pos)
       boost_cluster = 0
       if (worker.is_cluster_owner and worker.target_cluster_id == cid):
-        if not self.ci.c(cid).is_arrived(worker.pos):
+        c = self.ci.c(cid)
+        if not c.is_arrived(worker.pos) or c.player_citytile_count <= 1:
           cluster_fuel_factor = self.cluster_info.get_cluster_fuel_factor(cid)
           boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
@@ -1708,7 +1709,8 @@ class Strategy:
         if (nearest_oppo_unit and
             oppo_arrival_turns <= threat_turns and
             arrival_turns <= oppo_arrival_turns):
-          oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
+          # oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
+          oppo_nearest_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
           is_nearest_cid = (cid in oppo_nearest_cids)
           is_nearest_cell_to_oppo_unit = (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
             cid, nearest_oppo_unit)[0] == oppo_arrival_turns)
@@ -1717,9 +1719,9 @@ class Strategy:
               boost = (101 if arrival_turns < oppo_arrival_turns else 21)
               opponent_weight += boost
 
-          is_threatened_cid = (cid in oppo_threat_cids)
-          if is_threatened_cid and arrival_turns < oppo_arrival_turns:
-            opponent_weight += 21
+          # is_threatened_cid = (cid in oppo_threat_cids)
+          # if is_threatened_cid and arrival_turns < oppo_arrival_turns:
+            # opponent_weight += 21
 
       demote_opponent_unit = 0
       # if self.has_can_act_opponent_unit_as_neighbour(resource_tile):
@@ -1814,7 +1816,7 @@ class Strategy:
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
             is_wood_city = city_cell.pos in self.is_wood_city_tile
-            if n_citytile <= 1 or is_wood_city:
+            if n_citytile <= 1 and is_wood_city:
               city_crash_boost += 1
               # city_crash_boost = 1 - int(is_wood_city)
               city_crash_boost_loc = 'wood_city_crash'
@@ -1883,7 +1885,7 @@ class Strategy:
 
         decay = 1 if city_wont_last else 2.5
         fuel = worker_total_fuel(worker)
-        if n_citytile <= 1 or is_wood_city:
+        if n_citytile <= 1 and is_wood_city:
           fuel = 1
           # fuel = (1 - int(is_wood_city))
 
@@ -1996,7 +1998,8 @@ class Strategy:
           worker, near_resource_tile)
       if is_next_to_target_cluster:
         cid = worker.target_cluster_id
-        if not self.ci.c(cid).is_arrived(worker.pos):
+        c = self.ci.c(cid)
+        if not c.is_arrived(worker.pos) or c.player_citytile_count <= 1:
           cluster_fuel_factor = self.ci.get_cluster_fuel_factor(cid)
           boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
@@ -2037,7 +2040,7 @@ class Strategy:
             oppo_arrival_turns <= threat_turns and
             arrival_turns <= oppo_arrival_turns):
 
-          oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(
+          oppo_nearest_cids= self.ci.get_opponent_unit_nearest_cluster_ids(
               nearest_oppo_unit, debug=debug)
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
               near_resource_tile)
@@ -2049,7 +2052,7 @@ class Strategy:
                      cid, nearest_oppo_unit) == oppo_arrival_turns)
                 for cid in attack_boundary_cids)
             if cell_is_nearest_in_cluster:
-              boost = (10001 if arrival_turns < oppo_arrival_turns else 1001)
+              boost = (5000 if arrival_turns < oppo_arrival_turns else 500)
               opponent_weight += boost
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
@@ -2059,11 +2062,11 @@ class Strategy:
                   f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
                   f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
 
-          threat_boundary_cids = oppo_threat_cids & cell_cluster_ids
-          if threat_boundary_cids and arrival_turns < oppo_arrival_turns:
-            opponent_weight += 501
-            if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-              prt(f" threat_cell_boost: oppo={nearest_oppo_unit.id}@{nearest_oppo_unit.pos} oppo_arrival_turns={oppo_arrival_turns}, player_arrival_turns={arrival_turns}")
+          # threat_boundary_cids = oppo_threat_cids & cell_cluster_ids
+          # if threat_boundary_cids and arrival_turns < oppo_arrival_turns:
+            # opponent_weight += 500
+            # if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+              # prt(f" threat_cell_boost: oppo={nearest_oppo_unit.id}@{nearest_oppo_unit.pos} oppo_arrival_turns={oppo_arrival_turns}, player_arrival_turns={arrival_turns}")
 
 
 
@@ -2630,6 +2633,9 @@ class Strategy:
       boundary_positions = cluster.boundary_positions
       open_positions = cluster.get_open_boundary_positions()
       open_ratio = len(open_positions) / len(boundary_positions)
+      if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
+        open_ratio = 1
+
 
       # dying_boost = 0
       # if worker.is_cargo_not_enough_for_nights:
@@ -2670,7 +2676,7 @@ class Strategy:
 
     resource_clusters = (list(gen_resource_clusters()) if not multi_worker else
                          list(gen_multi_worker_resource_clusters()))
-    print(f'Number of cluster: {len(resource_clusters)}')
+    # print(f'Number of cluster: {len(resource_clusters)}')
 
     weights = np.ones((len(workers), len(resource_clusters))) * MIN_CLUSTER_WT
     for j, cluster in enumerate(resource_clusters):

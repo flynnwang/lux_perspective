@@ -1,6 +1,12 @@
 
 ======================================= 2021-10-10 ==============================================
 
+# Perf opt
+
+* Fast advance when both cell are plain cell and move at day.
+* [√] collect_target_cells
+* is_resource_tile_can_save_dying_worker
+
 
 - [√] 980277360/a0/simple_defend: t19/u3 cluster and citytile back and forth
   * Fixed by lowering the city_crash_boost with worker_total_fuel(worker)
