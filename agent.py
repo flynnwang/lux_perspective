@@ -20,8 +20,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = ['u_22']
-MAP_POS_LIST = [(7, 31), (10, 31)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -919,11 +919,11 @@ class QuickestPath:
             a = annotate.text(x, y, f'{st.turn-self.turn}', fontsize=32)
             self.actions.append(a)
 
-            a = annotate.text(st.pos.x,
-                              st.pos.y,
-                              f'{len(st.prev_positions)}',
-                              fontsize=32)
-            self.actions.extend([a])
+            # a = annotate.text(st.pos.x,
+                              # st.pos.y,
+                              # f'{len(st.prev_positions)}',
+                              # fontsize=32)
+            # self.actions.extend([a])
 
             # prev = st.prev
             # if prev:
@@ -2248,9 +2248,10 @@ class Strategy:
       target = target_cells[target_idx]
       worker.target = target
       worker.target_pos = target.pos
+      if worker.id in DRAW_UNIT_LIST:
+        print(f' t={self.game.turn} {worker.id}@{worker.pos} => {target.pos}')
 
       if DRAW_UNIT_ACTION and plan_idx == 1:
-        # print(f' t={self.game.turn} {worker.id}@{worker.pos} => {target.pos}')
         # x = annotate.x(worker.pos.x, worker.pos.y)
         c = annotate.circle(target.pos.x, target.pos.y)
         line = annotate.line(worker.pos.x, worker.pos.y, target.pos.x,
@@ -2310,41 +2311,53 @@ class Strategy:
         return -MAX_MOVE_WEIGHT
 
 
-      v = 0
-
       # Use target score if forced into other positions
-      v += worker.target_scores[next_position] * 1e-8
+      bg_score = worker.target_scores[next_position] * 1e-8
 
       # Stay at current position.
+      stay_score = 0
       if next_position == worker.pos:
-        v += 1
+        stay_score = 1
 
+      target_score = 0
+      priority_dying_woker_action_score = 0
+      resource_tile_score = 0
+      encourage_resource_score = 0
+      target_resource_tile_score = 0
+      transfer_build_score = 0
+      demote_collision_with_opponent = 0
       if (next_position == worker.target_pos or
           next_position in next_step_positions):
         # Use max to clip negative value.
-        v += (max(worker.target_score, 0) + 10)
+        target_score = (max(worker.target_score, 0) + 10)
         # v += 50
 
         # Priority all positions of th dying worker, let others make room for him.
-        if worker.is_cargo_not_enough_for_nights:
-          v += 1000
+        # if worker.is_cargo_not_enough_for_nights:
+          # priority_dying_woker_action_score = 1000
 
+        # TODO remove
         target_cell = self.game_map.get_cell_by_pos(worker.target_pos)
         if target_cell.has_resource():
-          v += 1
+          target_resource_tile_score = 1
 
         # Try step on resource: the worker version is better, maybe because
         # other worker can use that.
         amount, fuel = get_cell_resource_values(next_cell, g.player)
         if fuel > 0:
-          v += 1
+          encourage_resource_score = 1
 
         if next_position in worker.transfer_build_locations:
-          v += 1000
+          transfer_build_score = 1000
 
         # Prevent collison with enemy when possible.
         if self.has_can_act_opponent_unit_as_neighbour(next_cell):
-          v -= 0.1
+          demote_collision_with_opponent = -0.1
+
+
+      v = (bg_score + stay_score + target_score + priority_dying_woker_action_score
+           + target_resource_tile_score + encourage_resource_score + transfer_build_score
+           + demote_collision_with_opponent)
 
       if worker.id in DRAW_UNIT_LIST and DRAW_UNIT_MOVE_VALUE:
         a = annotate.text(next_position.x,
@@ -2353,8 +2366,11 @@ class Strategy:
                           fontsize=32)
         self.actions.append(a)
 
-      # if worker.id in DRAW_UNIT_LIST:
-      # prt(f"w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, target={worker.target_pos}, next_points={path_positions}", file=sys.stderr)
+      if worker.id in DRAW_UNIT_LIST:
+        prt((f"t={self.game.turn} w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, bg={bg_score}"
+             f", stay_score={stay_score} target_score={target_score}, dying={priority_dying_woker_action_score}"
+             f", target_res={target_resource_tile_score}, next_res={encourage_resource_score}",
+             f", tranfer_build={transfer_build_score}, demote_collision={demote_collision_with_opponent}"), file=sys.stderr)
       return v
 
     def gen_next_positions(worker):
@@ -2660,7 +2676,8 @@ class Strategy:
       # if worker.is_cargo_not_enough_for_nights:
       # dying_boost = 2
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.1)
-      # prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}")
+      if worker.id in DRAW_UNIT_LIST:
+        prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}", file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
@@ -2973,6 +2990,7 @@ class Strategy:
     for u in replan_workers:
       u.is_idle_worker = True
       self.idle_woker_ids.add(u.id)
+      print(f' idle-worker: {u.id}@{u.pos}')
 
     # TODO: Is it needed?
     worker_ids = {w.id for w in replan_workers}
