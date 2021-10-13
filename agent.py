@@ -20,8 +20,8 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_2']
+MAP_POS_LIST = [(6, 6), (5, 6)]
 
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 DRAW_UNIT_TARGET_VALUE = 0
@@ -2036,6 +2036,7 @@ class Strategy:
           # )
         oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
+        oppo_weight_type = ''
         if oppo_arrival_turns < MAX_PATH_WEIGHT:
           opponent_weight += 1e-3 / dd(oppo_arrival_turns)
 
@@ -2043,7 +2044,7 @@ class Strategy:
         if self.game.is_night:
           threat_turns *= 2
 
-        # Use a large weight to defend my resource
+        # Use a large weight to defend oppo unit come into near resource tile
         if (nearest_oppo_unit and
             oppo_arrival_turns <= threat_turns and
             arrival_turns <= oppo_arrival_turns):
@@ -2060,12 +2061,17 @@ class Strategy:
                      cid, nearest_oppo_unit) == oppo_arrival_turns)
                 for cid in attack_boundary_cids)
             if cell_is_nearest_in_cluster:
+              # This is the most dangerous cell
               boost = (5000 if arrival_turns < oppo_arrival_turns else 500)
               opponent_weight += boost
+              oppo_weight_type = 'nearest_cluster_cell'
+            elif arrival_turns < oppo_arrival_turns:
+              opponent_weight += 3000
+              oppo_weight_type = 'faster_cell'
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
               # prt(f"attack_boundary_cids={attack_boundary_cids}")
-              prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
+              # prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
               prt(f"nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns}, player_unit_arrival_turns={arrival_turns}, "
                   f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
                   f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
@@ -2136,7 +2142,7 @@ class Strategy:
            default_res_wt)
       if debug:
         prt(f'w[{worker.id}] nrt[{near_resource_tile.pos}] @last, v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt}'
-            f' collect_amt={amount} opponent={opponent_weight}, transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, build_city={build_city_bonus}, off={build_city_bonus_off_reason}'
+            f' collect_amt={amount} opponent={opponent_weight}({oppo_weight_type}), transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, build_city={build_city_bonus}, off={build_city_bonus_off_reason}'
             f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
             f' default_res_wt={default_res_wt}, n_open={n_open}, in_non_wood=({near_resource_tile.pos in self.non_wood_resource_locations})'
            )
@@ -2366,7 +2372,7 @@ class Strategy:
                           fontsize=32)
         self.actions.append(a)
 
-      if worker.id in DRAW_UNIT_LIST:
+      if worker.id in DRAW_UNIT_LIST and DRAW_UNIT_MOVE_VALUE:
         prt((f"t={self.game.turn} w[{worker.id}]@{worker.pos}, next[{next_position}], v={v}, bg={bg_score}"
              f", stay_score={stay_score} target_score={target_score}, dying={priority_dying_woker_action_score}"
              f", target_res={target_resource_tile_score}, next_res={encourage_resource_score}",
@@ -2676,8 +2682,8 @@ class Strategy:
       # if worker.is_cargo_not_enough_for_nights:
       # dying_boost = 2
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.1)
-      if worker.id in DRAW_UNIT_LIST:
-        prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}", file=sys.stderr)
+      # if worker.id in DRAW_UNIT_LIST:
+        # prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}", file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
