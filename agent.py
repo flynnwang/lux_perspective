@@ -1063,6 +1063,15 @@ class Cluster:
   def is_arrived(self, pos):
     return pos in self.boundary_positions or pos in self.resource_positions
 
+
+  @functools.lru_cache(maxsize=1, typed=False)
+  def has_opponent_citytile_on_boundary(self):
+    for pos in self.boundary_positions:
+      cell = self.game_map.get_cell_by_pos(pos)
+      if cell_has_target_player_citytile(cell, self.game.opponent):
+        return True
+    return False
+
   @functools.lru_cache(maxsize=4, typed=False)
   def get_open_boundary_positions(self, can_build=False, keep_oppo_unit=False):
     """open positions:
@@ -1136,7 +1145,13 @@ class ClusterInfo:
   def get_cid(self, pos):
     return self.position_to_cid[pos.x][pos.y]
 
+  def get_cluster_by_pos(self, pos):
+    cid = self.get_cid(pos)
+    return self.c(cid)
+
   def c(self, cid):
+    if cid < 0:
+      return None
     return self.clusters[cid]
 
   def get_clusters(self, cluster_ids):
@@ -1147,20 +1162,25 @@ class ClusterInfo:
     return self.clusters[cid]
 
   @functools.lru_cache(maxsize=512)
-  def get_neighbour_cells_cluster_ids(self, near_resource_tile):
+  def get_neighbour_cells_cluster_ids(self, pos, include_pos=False):
     cluster_ids = set()
-    for nb_cell in get_neighbour_positions(near_resource_tile.pos,
-                                           self.game_map,
-                                           return_cell=True):
-      newpos = nb_cell.pos
-      cid = self.get_cid(newpos)
+
+    def add_by_position(position):
+      cid = self.get_cid(position)
       if cid >= 0:
         cluster_ids.add(cid)
+
+    if include_pos:
+      add_by_position(pos)
+    for nb_cell in get_neighbour_positions(pos,
+                                           self.game_map,
+                                           return_cell=True):
+      add_by_position(nb_cell.pos)
     return cluster_ids
 
   def count_min_boundary_near_resource_tiles(self, near_resource_tile):
     n_open, n_boundary = 999, 999
-    cluster_ids = self.get_neighbour_cells_cluster_ids(near_resource_tile)
+    cluster_ids = self.get_neighbour_cells_cluster_ids(near_resource_tile.pos)
     for cid in cluster_ids:
       cluster = self.clusters[cid]
       cluster_type = cluster.resource_type
@@ -1177,7 +1197,7 @@ class ClusterInfo:
   def cell_next_to_target_cluster(self, worker, near_resource_tile):
     if worker.target_cluster_id < 0:
       return False
-    cluster_ids = self.get_neighbour_cells_cluster_ids(near_resource_tile)
+    cluster_ids = self.get_neighbour_cells_cluster_ids(near_resource_tile.pos)
     return worker.target_cluster_id in cluster_ids
 
   def cluster(self):
@@ -1948,10 +1968,9 @@ class Strategy:
         city_survive_boost = 0
 
       is_wood_city = city_cell.pos in self.is_wood_city_tile
-      if is_wood_city and is_wood_resource_worker(worker):
+      if (not self.turn_on_exhaust(worker, city_cell.pos)
+          and is_wood_city and is_wood_resource_worker(worker)):
         city_crash_boost = 0
-        if self.turn_on_exhaust() and worker.get_cargo_space_left() == 0:
-          city_crash_boost = worker_total_fuel(worker)
         city_survive_boost = 0
         city_crash_boost_loc = 'wood_woker'
         city_survive_boost_loc = 'wood_worker'
@@ -2122,7 +2141,7 @@ class Strategy:
         # Use a large weight to defend oppo unit come into near resource tile
         if nearest_oppo_unit and oppo_arrival_turns <= threat_turns:
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
-            near_resource_tile)
+            near_resource_tile.pos)
           # Use min, in case there is more than one resource types.
           one_step_fuel = min(self.ci.c(cid).one_step_fuel for cid in cell_cluster_ids)
 
@@ -2276,10 +2295,9 @@ class Strategy:
         wt = boost
 
         # TODO: only build on connection position
-
+        #   and can test if build citytile is needed
         # Also build city tile on city tile neighbour
-        if self.turn_on_exhaust():
-          self.worker_build_city_tasks.add((worker.id, cell.pos))
+        self.worker_build_city_tasks.add((worker.id, cell.pos))
       return wt
 
     def get_worker_tile_weight(worker, target):
@@ -2632,7 +2650,7 @@ class Strategy:
     def get_city_action_weight(city):
       cluster_ids = set()
       for cell in city.citytiles:
-        cluster_ids |= self.ci.get_neighbour_cells_cluster_ids(cell)
+        cluster_ids |= self.ci.get_neighbour_cells_cluster_ids(cell.pos)
 
       cluster_ids = {
           cid for cid in cluster_ids if is_resource_researched(
@@ -2965,10 +2983,9 @@ class Strategy:
 
             worker.transfer_build_locations.add(target_cell.pos)
 
-            # TODO: maybe add worker action directly here?
-
             # Test: tranfer but not build citytile
-            if self.turn_on_exhaust():
+            # cluster might be empty if nb collected all the resource
+            if self.turn_on_exhaust(worker, nb_unit.pos):
               self.accepted_transfer_offers[worker.id] = (self.game.turn,
                                                           target_cell.pos)
 
@@ -3114,7 +3131,7 @@ class Strategy:
 
     cluster_ids = set()
     for unit in city_building_units:
-      cids = self.ci.get_neighbour_cells_cluster_ids(unit.target)
+      cids = self.ci.get_neighbour_cells_cluster_ids(unit.target_pos)
       cluster_ids |= cids
 
     for cluster in self.ci.get_clusters(cluster_ids):
@@ -3274,8 +3291,18 @@ class Strategy:
 
     self.compute_worker_moves()
 
-  def turn_on_exhaust(self):
-    return (self.game.turn >= 320)
+  def turn_on_exhaust(self, worker, cluster_query_pos):
+    if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
+      return True
+
+    # return False
+
+    # If cluster is invaded and all the open positions are used.
+    cids = self.ci.get_neighbour_cells_cluster_ids(cluster_query_pos,
+                                                   include_pos=True)
+    return any((c.has_opponent_citytile_on_boundary()
+                and len(c.get_open_boundary_positions(can_build=True)) == 0)
+               for c in self.ci.get_clusters(cids))
 
 
 _strategy = Strategy()
