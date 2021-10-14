@@ -25,8 +25,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_4']
-MAP_POS_LIST = [(3, 1), (1, 5), (2, 3)]
+DRAW_UNIT_LIST = ['u_6']
+MAP_POS_LIST = [(0, 8), (0, 7)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1002,7 +1002,7 @@ class QuickestPath:
     return next_step_path_points
 
 
-class Clusetr:
+class Cluster:
 
   def __init__(self, cid, cells, game):
     self.cid = cid
@@ -1018,6 +1018,13 @@ class Clusetr:
   @property
   def size(self):
     return len(self.cells)
+
+  @property
+  def one_step_fuel(self):
+    res = self.any_cell.resource
+    collect_rate = get_worker_collection_rate(res)
+    fuel_rate = get_resource_to_fuel_rate(res)
+    return collect_rate * fuel_rate
 
   @property
   @functools.lru_cache(maxsize=1, typed=False)
@@ -1049,6 +1056,9 @@ class Clusetr:
   @functools.lru_cache(maxsize=1, typed=False)
   def resource_positions(self):
     return {c.pos for c in self.cells}
+
+  def on_cluster(self, pos):
+    return pos in self.boundary_positions or pos in self.resource_positions
 
   def is_arrived(self, pos):
     return pos in self.boundary_positions or pos in self.resource_positions
@@ -1220,7 +1230,7 @@ class ClusterInfo:
           self.game_map.get_cell_by_pos(Position(x, y))
           for x, y in zip(x_pos, y_pos)
       ]
-      cluster = Clusetr(cid, cluster_cells, self.game)
+      cluster = Cluster(cid, cluster_cells, self.game)
       self.clusters[cid] = cluster
 
       self.max_cluster_fuel = max(self.max_cluster_fuel, cluster.total_fuel)
@@ -1728,6 +1738,7 @@ class Strategy:
         debug = True
 
       opponent_weight = 0
+      oppo_weight_type = ''
       # Test can collect weight first (ignore can not mine cell)
       oppo_arrival_turns = MAX_PATH_WEIGHT
       if fuel_wt > 0:
@@ -1747,18 +1758,24 @@ class Strategy:
         threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
         if self.game.is_night:
           threat_turns *= 2
-        if (nearest_oppo_unit and
-            oppo_arrival_turns <= threat_turns and
-            arrival_turns <= oppo_arrival_turns):
-          # oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
-          oppo_nearest_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
-          is_nearest_cid = (cid in oppo_nearest_cids)
-          is_nearest_cell_to_oppo_unit = (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
-            cid, nearest_oppo_unit)[0] == oppo_arrival_turns)
-          if is_nearest_cid:
-            if is_nearest_cell_to_oppo_unit:
-              boost = (101 if arrival_turns < oppo_arrival_turns else 21)
-              opponent_weight += boost
+
+        if nearest_oppo_unit and oppo_arrival_turns <= threat_turns:
+          # c = self.ci.c(cid)
+          # one_step_fuel = c.one_step_fuel
+
+          # TODO: boost when cluster is closed.
+          opponent_weight += 1 / dd(oppo_arrival_turns, 1.1)
+          oppo_weight_type = 'weak_boost'
+
+          if arrival_turns < oppo_arrival_turns:
+            # oppo_nearest_cids, oppo_threat_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
+            oppo_nearest_cids = self.ci.get_opponent_unit_nearest_cluster_ids(nearest_oppo_unit)
+            is_nearest_cid = (cid in oppo_nearest_cids)
+            is_nearest_cell_to_oppo_unit = (self.ci.get_min_cluster_arrival_turns_for_opponent_unit(
+              cid, nearest_oppo_unit)[0] == oppo_arrival_turns)
+            if is_nearest_cid:
+              if is_nearest_cell_to_oppo_unit:
+                opponent_weight += 100
 
           # is_threatened_cid = (cid in oppo_threat_cids)
           # if is_threatened_cid and arrival_turns < oppo_arrival_turns:
@@ -2096,41 +2113,53 @@ class Strategy:
         oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
         if oppo_arrival_turns < MAX_PATH_WEIGHT:
-          opponent_weight += 1e-3 / dd(oppo_arrival_turns)
+          opponent_weight += 1e-3 / dd(oppo_arrival_turns, 1.1)
 
         threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
         if self.game.is_night:
           threat_turns *= 2
 
         # Use a large weight to defend oppo unit come into near resource tile
-        if (nearest_oppo_unit and
-            oppo_arrival_turns <= threat_turns and
-            arrival_turns <= oppo_arrival_turns):
-
-          oppo_nearest_cids= self.ci.get_opponent_unit_nearest_cluster_ids(
-              nearest_oppo_unit, debug=debug)
+        if nearest_oppo_unit and oppo_arrival_turns <= threat_turns:
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
-              near_resource_tile)
-          attack_boundary_cids = oppo_nearest_cids & cell_cluster_ids
-          if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-            prt(f"nearest_oppo_unit@{nearest_oppo_unit.pos}, attack_boundary_cids={attack_boundary_cids}, oppo_nearest_cids={oppo_nearest_cids}"
-                f", cell_cluster_ids={cell_cluster_ids}")
-          if attack_boundary_cids:
-            is_nearest_nrt_in_cluster = any(
-                (self.ci.
-                 get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-                     cid, nearest_oppo_unit) == oppo_arrival_turns)
-                for cid in attack_boundary_cids)
-            if is_nearest_nrt_in_cluster:
-              # This is the most dangerous cell
-              boost = (5000 if arrival_turns < oppo_arrival_turns else 500)
-              opponent_weight += boost
-              oppo_weight_type = 'nearest_cluster_cell'
-            else:
-              wait_turns = oppo_arrival_turns - arrival_turns
-              if arrival_turns < oppo_arrival_turns and wait_turns <= 2:
-                opponent_weight += 500
-                oppo_weight_type = 'faster_cell'
+            near_resource_tile)
+          # Use min, in case there is more than one resource types.
+          one_step_fuel = min(self.ci.c(cid).one_step_fuel for cid in cell_cluster_ids)
+
+          # Add a constant weight, so we'll try to move to tihs cell, but
+          # still build tile bonus will drag it away.
+          opponent_weight += one_step_fuel / dd(oppo_arrival_turns, 1.1)
+          oppo_weight_type = 'weak_boost'
+
+          # early_arrival_turns = oppo_arrival_turns - arrival_turns
+          # Move at all cost to the attacking point.
+          if arrival_turns < oppo_arrival_turns:
+            oppo_nearest_cids = self.ci.get_opponent_unit_nearest_cluster_ids(
+                nearest_oppo_unit, debug=debug)
+            attack_boundary_cids = oppo_nearest_cids & cell_cluster_ids
+            # if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+              # prt(f"nearest_oppo_unit@{nearest_oppo_unit.pos}, attack_boundary_cids={attack_boundary_cids}, oppo_nearest_cids={oppo_nearest_cids}"
+                  # f", cell_cluster_ids={cell_cluster_ids}")
+            is_nearest_nrt_in_cluster = False
+            if attack_boundary_cids:
+              is_nearest_nrt_in_cluster = any(
+                  (self.ci.
+                  get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
+                      cid, nearest_oppo_unit) == oppo_arrival_turns)
+                  for cid in attack_boundary_cids)
+
+              # Worker must on the attack cluster
+              is_worker_on_attack_cluster = any(self.ci.c(cid).on_cluster(worker.pos)
+                                                for cid in attack_boundary_cids)
+              if is_nearest_nrt_in_cluster and is_worker_on_attack_cluster:
+                # This is the most dangerous cell, that enemy approach from outside
+                opponent_weight += 5000
+                oppo_weight_type = 'atk_cluster'
+            # else:
+              # wait_turns = oppo_arrival_turns - arrival_turns
+              # if arrival_turns < oppo_arrival_turns and wait_turns <= 2:
+                # opponent_weight += 500
+                # oppo_weight_type = 'faster_cell'
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
               prt(f"attack_boundary_cids={attack_boundary_cids}")
@@ -2749,7 +2778,7 @@ class Strategy:
       # dying_boost = 0
       # if worker.is_cargo_not_enough_for_nights:
       # dying_boost = 2
-      wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.1)
+      wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.5)
       if worker.id in DRAW_UNIT_LIST:
         prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}", file=sys.stderr)
       return wt
