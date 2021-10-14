@@ -23,10 +23,10 @@ DRAW_UNIT_CLUSTER_PAIR = 1
 
 DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
-DRAW_QUICK_PATH_VALUE = 1
+DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_4']
+MAP_POS_LIST = [(3, 1), (1, 5), (2, 3)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1053,20 +1053,25 @@ class Clusetr:
   def is_arrived(self, pos):
     return pos in self.boundary_positions or pos in self.resource_positions
 
-  @functools.lru_cache(maxsize=2, typed=False)
-  def get_open_boundary_positions(self, can_build=False):
+  @functools.lru_cache(maxsize=4, typed=False)
+  def get_open_boundary_positions(self, can_build=False, keep_oppo_unit=False):
     """open positions:
     1) not a citytile AND not opponent unit
     2) (can build) not resource tile."""
     open_positions = set()
     for pos in self.boundary_positions:
       boundary_cell = self.game_map.get_cell_by_pos(pos)
-      if (boundary_cell.citytile is None and
-          (boundary_cell.unit is None or
-           boundary_cell.unit.team != self.game.opponent.team)):
-        if can_build and boundary_cell.resource != None:
-          continue
-        open_positions.add(boundary_cell.pos)
+      if boundary_cell.citytile is not None:
+        continue
+
+      if (not keep_oppo_unit and boundary_cell.unit and
+          boundary_cell.unit.team == self.game.opponent.team):
+        continue
+
+      if can_build and boundary_cell.has_resource():
+        continue
+
+      open_positions.add(boundary_cell.pos)
     return open_positions
 
   def worker_cluster_turns_info(self, worker, debug=False):
@@ -1327,7 +1332,7 @@ class ClusterInfo:
       self, cid, unit):
     min_dist = MAX_PATH_WEIGHT
     cluster = self.c(cid)
-    open_positions = cluster.get_open_boundary_positions()
+    open_positions = cluster.get_open_boundary_positions(keep_oppo_unit=True)
     for pos in open_positions:
       shortest_path, _ = _strategy.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(pos)
@@ -2110,14 +2115,13 @@ class Strategy:
           if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
             prt(f"nearest_oppo_unit@{nearest_oppo_unit.pos}, attack_boundary_cids={attack_boundary_cids}, oppo_nearest_cids={oppo_nearest_cids}"
                 f", cell_cluster_ids={cell_cluster_ids}")
-          # cell_is_nearest_in_cluster = False
           if attack_boundary_cids:
-            cell_is_nearest_in_cluster = any(
+            is_nearest_nrt_in_cluster = any(
                 (self.ci.
                  get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
                      cid, nearest_oppo_unit) == oppo_arrival_turns)
                 for cid in attack_boundary_cids)
-            if cell_is_nearest_in_cluster:
+            if is_nearest_nrt_in_cluster:
               # This is the most dangerous cell
               boost = (5000 if arrival_turns < oppo_arrival_turns else 500)
               opponent_weight += boost
@@ -2133,7 +2137,7 @@ class Strategy:
               prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
               prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns}, player_unit_arrival_turns={arrival_turns}, "
                   f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
-                  f"cell_is_nearest_in_cluster={cell_is_nearest_in_cluster}")
+                  f"is_nearest_nrt_in_cluster={is_nearest_nrt_in_cluster}")
 
           # threat_boundary_cids = oppo_threat_cids & cell_cluster_ids
           # if threat_boundary_cids and arrival_turns < oppo_arrival_turns:
@@ -2746,8 +2750,8 @@ class Strategy:
       # if worker.is_cargo_not_enough_for_nights:
       # dying_boost = 2
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.1)
-      # if worker.id in DRAW_UNIT_LIST:
-        # prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}", file=sys.stderr)
+      if worker.id in DRAW_UNIT_LIST:
+        prt(f"t={self.game.turn}, edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}", file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
