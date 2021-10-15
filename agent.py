@@ -3313,7 +3313,7 @@ class Strategy:
     if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
       return True
 
-    # return False
+    return False
 
     # TODO: should exhaust if invaded and worker is not near boundary.
     # If cluster is invaded and all the open positions are used.
