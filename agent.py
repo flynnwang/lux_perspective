@@ -25,8 +25,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_6']
-MAP_POS_LIST = [(0, 8), (0, 7)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -328,14 +328,14 @@ def estimate_resource_night_count(worker,
   if not cell.has_resource():
     return 0
 
-  # quick_path, dest_turns = _strategy.select_quicker_path(worker, cell.pos)
+  # quick_path, dest_turns = strategy.select_quicker_path(worker, cell.pos)
   # if dest_turns >= MAX_PATH_WEIGHT:
   # return 0
   # surviving_turns = get_surviving_turns_at_cell(worker, quick_path, cell, debug=debug)
 
   wait_turns = resource_researched_wait_turns(
       cell.resource,
-      _strategy.player,  # dirty.
+      strategy.player,  # dirty.
       arrival_turns,
       surviving_turns=surviving_turns)
   # if debug:
@@ -1009,7 +1009,6 @@ class Cluster:
     self.cells = cells
     self.game = game
     self.game_map = self.game.game_map
-    # self._strategy = _strategy
 
   @property
   def any_cell(self):
@@ -1108,7 +1107,7 @@ class Cluster:
     open_positions = (self.get_open_boundary_positions() |
                       self.resource_positions)
     for pos in open_positions:
-      quick_path, arrival_turns = _strategy.select_quicker_path(worker, pos)
+      quick_path, arrival_turns = strategy.select_quicker_path(worker, pos)
 
       if arrival_turns < best_arrival_turns:
         best_positions = [pos]
@@ -1299,7 +1298,7 @@ class ClusterInfo:
     for cell in cluster.cells:
       cluster_pos = cell.pos
 
-      shortest_path, _ = _strategy.quickest_path_pairs[unit.id]
+      shortest_path, _ = strategy.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(cluster_pos)
       if dist < min_dist:
         min_dist = dist
@@ -1364,7 +1363,7 @@ class ClusterInfo:
     cluster = self.c(cid)
     open_positions = cluster.get_open_boundary_positions(keep_oppo_unit=True)
     for pos in open_positions:
-      shortest_path, _ = _strategy.quickest_path_pairs[unit.id]
+      shortest_path, _ = strategy.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(pos)
       if dist < min_dist:
         min_dist = dist
@@ -2108,8 +2107,8 @@ class Strategy:
       # TODO: decide upon front, which path to use: cargo > 0?
       # Why it is needed? because unit need to be there with full cargo.
       # Overwrite arrival_turns or not boost city building.
-      if (self.is_worker_building_citytile(worker, near_resource_tile.pos) and
-          not is_transfer_build_position):
+      # print(f' {near_resource_tile.pos}, build={build_city_bonus}')
+      if (build_city_bonus and not is_transfer_build_position):
         _, quick_path = self.quickest_path_pairs[worker.id]
         tmp_arrival_turns = quick_path.query_dest_turns(near_resource_tile.pos)
         if tmp_arrival_turns >= MAX_PATH_WEIGHT:
@@ -2142,13 +2141,17 @@ class Strategy:
         if nearest_oppo_unit and oppo_arrival_turns <= threat_turns:
           cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
             near_resource_tile.pos)
-          # Use min, in case there is more than one resource types.
-          one_step_fuel = min(self.ci.c(cid).one_step_fuel for cid in cell_cluster_ids)
 
-          # Add a constant weight, so we'll try to move to tihs cell, but
-          # still build tile bonus will drag it away.
-          opponent_weight += one_step_fuel / dd(oppo_arrival_turns, 1.1)
-          oppo_weight_type = 'weak_boost'
+          # This is important becasuse if opponent arrival first, then we won't
+          # be able to do anything
+          if arrival_turns <= oppo_arrival_turns:
+            # Use min, in case there is more than one resource types.
+            one_step_fuel = min(self.ci.c(cid).one_step_fuel for cid in cell_cluster_ids)
+
+            # Add a constant weight, so we'll try to move to tihs cell, but
+            # still build tile bonus will drag it away.
+            opponent_weight += one_step_fuel / dd(oppo_arrival_turns, 1.1)
+            oppo_weight_type = 'weak_boost'
 
           # early_arrival_turns = oppo_arrival_turns - arrival_turns
           # Move at all cost to the attacking point.
@@ -2174,16 +2177,18 @@ class Strategy:
                 # This is the most dangerous cell, that enemy approach from outside
                 opponent_weight += 5000
                 oppo_weight_type = 'atk_cluster'
-            # else:
-              # wait_turns = oppo_arrival_turns - arrival_turns
-              # if arrival_turns < oppo_arrival_turns and wait_turns <= 2:
-                # opponent_weight += 500
-                # oppo_weight_type = 'faster_cell'
+            else:
+              wait_turns = oppo_arrival_turns - arrival_turns
+              if arrival_turns < oppo_arrival_turns and wait_turns <= 2:
+                opponent_weight += 500
+                oppo_weight_type = 'faster_cell'
 
             if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-              prt(f"attack_boundary_cids={attack_boundary_cids}")
-              prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
-              prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, {near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns}, player_unit_arrival_turns={arrival_turns}, "
+              # prt(f"attack_boundary_cids={attack_boundary_cids}")
+              # prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
+              prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, "
+                  f"{near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns},"
+                  f" player_unit_arrival_turns={arrival_turns}, "
                   f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
                   f"is_nearest_nrt_in_cluster={is_nearest_nrt_in_cluster}")
 
@@ -2235,7 +2240,7 @@ class Strategy:
       # prt(f'c[{near_resource_tile.pos}] @1, wt={wt}, arrival_turns={arrival_turns}')
 
       debug = False
-      if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 0:
+      if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
         debug = True
 
       # Try to hide next to resource grid.
@@ -2252,7 +2257,7 @@ class Strategy:
            opponent_weight + transfer_build_wt + demote_opponent_unit +
            default_res_wt)
       if debug:
-        prt(f'w[{worker.id}] nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
+        prt(f'[NRT] t={self.game.turn} w[{worker.id}] nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
             f'v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt}'
             f' collect_amt={amount} opponent={opponent_weight}({oppo_weight_type}), '
             f'transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, '
@@ -2263,7 +2268,7 @@ class Strategy:
         # prt(f' {self.worker_build_city_tasks}')
       return v
 
-    def get_boost_transfer_build_weight(worker, cell):
+    def get_boost_transfer_build_weight(worker, cell, debug=False):
       # If only do one transfer, then need to sort the positions
       wt = 0
       if cell.pos in worker.transfer_build_locations:
@@ -2284,13 +2289,17 @@ class Strategy:
             worker.pos == cell.pos):
           wt = MAX_WEIGHT_VALUE
 
-      # if worker.id in DRAW_UNIT_LIST and cell.pos in MAP_POS_LIST and plan_idx == 0:
-      # prt(f" {worker.id} t={self.game.turn}, transfer offer={offer}")
+      if debug:
+        prt(f"[trans_boost] {worker.id} t={self.game.turn}, pos={cell.pos} wt={wt} transfer offer={offer}")
       return wt
 
     def get_city_tile_neighbour_weight(worker, cell):
+      debug = False
+      if worker.id in DRAW_UNIT_LIST and cell.pos in MAP_POS_LIST and plan_idx == 1:
+        debug = True
+
       wt = -99999
-      boost = get_boost_transfer_build_weight(worker, cell)
+      boost = get_boost_transfer_build_weight(worker, cell, debug)
       if boost > 0:
         wt = boost
 
@@ -2611,6 +2620,10 @@ class Strategy:
       if not unit.is_worker():
         continue
 
+      if unit.id in DRAW_UNIT_LIST:
+        prt(f"[BUILD_CITY]: t={self.game.turn} u={unit.id}<{unit.cargo}>, target_pos={unit.target_pos}, is_build_city_task={self.is_worker_building_citytile(unit, unit.target_pos)}, tranfer_offer={self.accepted_transfer_offers.get(unit.id)}"
+            )
+
       # Sitting on th cell of target position for city building.
       # Sit and build.
       if (self.circle_turn < BUILD_CITYTILE_ROUND and unit.can_act() and
@@ -2635,9 +2648,6 @@ class Strategy:
         if unit.cargo.wood == CITY_BUILD_COST:
           self.is_wood_city_tile.add(unit.pos)
 
-        if unit.id in DRAW_UNIT_LIST:
-          prt(f"BUILD_CITY: t={self.game.turn} u={unit.id}<{unit.cargo}>, target_pos={unit.target_pos}, is_build_city_task={self.is_worker_building_citytile(unit, unit.target_pos)}, tranfer_offer={self.accepted_transfer_offers.get(unit.id)}"
-             )
     return city_building_units
 
   def compute_citytile_actions(self):
@@ -2924,6 +2934,11 @@ class Strategy:
           wt += 1 / (min_turns or 1)
       return wt
 
+    # This is the history offer, new offer should not conflict with this one.
+    # (turn, pos)
+    valid_offer_positions = {o[1] for o in self.accepted_transfer_offers.values()
+                             if o[0] - self.game.turn <= 2}
+
     def neighbour_worker_with_enough_resource(worker):
       """Assign transfer action here, but leave movement to the existing process."""
       worker_amt = worker_total_cargo(worker)
@@ -2940,6 +2955,9 @@ class Strategy:
         # prt(f" c={target_cell.pos}, wt={get_neighbour_cell_weight(target_cell)}")
         # Target cell must can build citytile
         if not cell_can_build_citytile(target_cell):
+          continue
+
+        if target_cell.pos in valid_offer_positions:
           continue
 
         # TODO: try make one step collections value more accurate
@@ -3297,6 +3315,7 @@ class Strategy:
 
     # return False
 
+    # TODO: should exhaust if invaded and worker is not near boundary.
     # If cluster is invaded and all the open positions are used.
     cids = self.ci.get_neighbour_cells_cluster_ids(cluster_query_pos,
                                                    include_pos=True)
@@ -3305,11 +3324,11 @@ class Strategy:
                for c in self.ci.get_clusters(cids))
 
 
-_strategy = Strategy()
+strategy = Strategy()
 
 
 def agent(observation, configuration):
-  _strategy.update(observation, configuration)
-  _strategy.execute()
-  return _strategy.actions
+  strategy.update(observation, configuration)
+  strategy.execute()
+  return strategy.actions
 
