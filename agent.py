@@ -25,8 +25,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_10']
-MAP_POS_LIST = [(11, 8), (9, 8)]
+DRAW_UNIT_LIST = ['u_16']
+MAP_POS_LIST = [(11, 8), (9, 9)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1954,7 +1954,7 @@ class Strategy:
           not_full_woker_goto_city = (
               city_last_turns - arrival_turns_wo_city <=
               6  # do not goto city too earlier.
-              and dest_state.arrival_fuel > 60 and unit_fuel > 60)
+              and dest_state.arrival_fuel >= 80 and unit_fuel >= 80)
           full_worker_goto_city = (worker.get_cargo_space_left() == 0 and
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
@@ -2077,12 +2077,12 @@ class Strategy:
             citytile.pos]
 
       v = (wt / dd(arrival_turns) +
-           (city_crash_boost / dd(arrival_turns, r=1.10)) +
-           (city_survive_boost / dd(arrival_turns, r=1.10)) +
+           (city_crash_boost / dd(arrival_turns, r=1.20)) +
+           (city_survive_boost / dd(arrival_turns, r=1.20)) +
            (receive_transfer_wt / dd(arrival_turns)))
       if (city_cell.is_first_citytile and worker.id in DRAW_UNIT_LIST and
-          city_cell.pos in MAP_POS_LIST):
-        prt(f"ccw-4: plan[{plan_idx}] {worker.id} tar={worker.target.pos} => city={city_cell.pos}  v={v}, wt={wt}, city_crash={city_crash_boost}@[{city_crash_boost_loc}],"
+          city_cell.pos in MAP_POS_LIST and plan_idx == 1):
+        prt(f"[CITY_TILE]: plan[{plan_idx}] {worker.id} tar={worker.target.pos} => city={city_cell.pos}  v={v}, wt={wt}, city_crash={city_crash_boost}@[{city_crash_boost_loc}],"
             f"city_survive={city_survive_boost}@[{city_survive_boost_loc}]"
             f"recv={receive_transfer_wt}, city_last_turns={city.last_turns}, arrival_turns={arrival_turns}"
             f" no_resource_to_explore={no_resource_to_explore()}, wood_city={is_wood_city}"
