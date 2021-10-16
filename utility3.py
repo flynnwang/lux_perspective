@@ -373,7 +373,7 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
 def city_last_nights(city, add_fuel=0):
   fuel = city.fuel + add_fuel
   light_upkeep = city.light_upkeep
-  return fuel // light_upkeep
+  return fuel // light_upkeep + 1
 
 
 def nights_to_last_turns(turn, last_nights):

@@ -12,6 +12,11 @@ class Resource:
         self.type = r_type
         self.amount = amount
 
+    def __str__(self) -> str:
+        return f"R({self.type}, {self.amount})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 class Cell:
     def __init__(self, x, y):
