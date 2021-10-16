@@ -25,8 +25,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_10']
+MAP_POS_LIST = [(9, 10), (1, 11)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1790,7 +1790,8 @@ class Strategy:
       boost_cluster = 0
       if (worker.is_cluster_owner and worker.target_cluster_id == cid):
         c = self.ci.c(cid)
-        if not c.is_arrived(worker.pos) or c.player_citytile_count <= 1:
+        if (not c.is_arrived(worker.pos)
+            or (c.size >= 2 and c.player_citytile_count <= 1)):
           cluster_fuel_factor = self.cluster_info.get_cluster_fuel_factor(cid)
           boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
@@ -2167,7 +2168,8 @@ class Strategy:
       if is_next_to_target_cluster:
         cid = worker.target_cluster_id
         c = self.ci.c(cid)
-        if not c.is_arrived(worker.pos) or c.player_citytile_count <= 1:
+        if (not c.is_arrived(worker.pos)
+            or (c.size >= 2 and c.player_citytile_count <= 1)):
           cluster_fuel_factor = self.ci.get_cluster_fuel_factor(cid)
           boost_cluster += CLUSTER_BOOST_WEIGHT * cluster_fuel_factor
 
