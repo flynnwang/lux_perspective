@@ -25,8 +25,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_16']
-MAP_POS_LIST = [(11, 8), (9, 9)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1300,6 +1300,7 @@ class ClusterInfo:
   @functools.lru_cache(maxsize=1024)
   def cell_has_player_citytile_on_target_cluster(self, worker,
                                                  near_resource_tile):
+    """Does the user have city tile on target cluster?"""
     if worker.target_cluster_id < 0:
       return False
 
@@ -2077,8 +2078,8 @@ class Strategy:
             citytile.pos]
 
       v = (wt / dd(arrival_turns) +
-           (city_crash_boost / dd(arrival_turns, r=1.20)) +
-           (city_survive_boost / dd(arrival_turns, r=1.20)) +
+           (city_crash_boost / dd(arrival_turns, r=1.15)) +
+           (city_survive_boost / dd(arrival_turns, r=1.15)) +
            (receive_transfer_wt / dd(arrival_turns)))
       if (city_cell.is_first_citytile and worker.id in DRAW_UNIT_LIST and
           city_cell.pos in MAP_POS_LIST and plan_idx == 1):
@@ -2145,10 +2146,11 @@ class Strategy:
       # Boost the target collect amount by 2 (for cooldown) to test for citytile building.
       # it's 2, because one step move and one step for cooldown
       # Only build at fuelabe near resource tile.
+      # inc to 3, becuase with 40 wood, it's faster to stay build than moving onto resource tile.
       build_city_bonus = False
       build_city_bonus_off_reason = '-'
       if (is_fuelable_near_resource_tile and
-          worker_enough_cargo_to_build(worker, amount * 2)):
+          worker_enough_cargo_to_build(worker, amount * 3)):
         build_city_bonus = f'build_near_resource_tile'
 
       # To build on transfer build location.
@@ -2269,6 +2271,8 @@ class Strategy:
         oppo_weight_type = 'reset_by_oppo_citytile'
 
 
+
+
       # Do not boost cluster owner to build city on non-target cluster with player citytile
       # exceptions:
       # 1) transfer build: so owner don't need that much resource to goto next cluster
@@ -2298,9 +2302,9 @@ class Strategy:
       if build_city_bonus:
         wt += (400 if is_opponent_citytile else 1001)
 
-        # Encourage worker to build connected city tiles.
+        # Demote worker to build city tile on neighbour NRT, encourage woker moving.
         if near_resource_tile.n_citytile_neighbour > 0:
-          wt += near_resource_tile.n_citytile_neighbour / 10
+          wt *= 0.6
 
         # mark build city cell
         self.worker_build_city_tasks.add((worker.id, near_resource_tile.pos))
