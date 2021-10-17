@@ -1168,7 +1168,7 @@ class Cluster:
       return 0
     for pos in self.resource_positions:
       cell = self.game_map.get_cell_by_pos(pos)
-      if cell.resource.amount >= 500:
+      if cell.resource.amount >= MAX_WOOD_AMOUNT:
         cnt += 1
     return cnt
 
@@ -1893,14 +1893,19 @@ class Strategy:
           # if is_threatened_cid and arrival_turns < oppo_arrival_turns:
             # opponent_weight += 21
 
+      wood_full_boost = 0
+      if (is_resource_wood(resource_tile.resource)
+          and resource_tile.resource.amount >= MAX_WOOD_AMOUNT):
+        wood_full_boost = 5
+
       default_res_wt /= dd(arrival_turns, r=1.5)
       v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
-           opponent_weight + default_res_wt)
+           opponent_weight + default_res_wt + wood_full_boost)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
         # prt(f"t={self.game.turn} w[{worker.id}] v={v}, res={resource_tile.pos}")
         prt(f"[RES] t={self.game.turn} w[{worker.id}] v={v}, res={resource_tile.pos} r={resource_tile.resource} "
             f"arr_turns={arrival_turns} wt={wt} {fuel_wt_type}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_arrival_turns={oppo_arrival_turns}"
-            f" not_leave_city={quick_path.not_leaving_citytile}, default_res_wt={default_res_wt} has_oppo={cell_has_opponent_unit(resource_tile, self.game)}"
+            f" not_leave_city={quick_path.not_leaving_citytile}, default_res_wt={default_res_wt} has_oppo={cell_has_opponent_unit(resource_tile, self.game)}, wood_full_boost={wood_full_boost}"
            )
       return v
 
@@ -1926,7 +1931,7 @@ class Strategy:
 
       wt = 0
 
-      # [1] Stay at city will gain this amout of fuel
+      # [1] Stay at city will gain this amount of fuel
       # amount, fuel = get_one_step_collection_values(citytile.cell, player,
       # self.game)
       # if self.game.is_night:
