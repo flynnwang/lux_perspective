@@ -27,7 +27,7 @@ DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
 DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(11, 4)]
+MAP_POS_LIST = [(10, 3), (3, 1)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -2373,9 +2373,11 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
       # demote_opponent_unit = -0.1
 
-      # if worker_cargo_amt(worker) > 0:
-        # default_nrt_wt += 500 / dd(1.8)
+      # Add defualt weight for build_city_wt if it's active
       build_city_wt /= dd(arrival_turns, r=1.5)
+      if build_city_wt > 0:
+        build_city_wt += 10
+
       default_nrt_wt /= dd(arrival_turns, r=1.5)
       v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
            opponent_weight + transfer_build_wt + demote_opponent_unit +
