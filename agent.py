@@ -1161,6 +1161,16 @@ class Cluster:
         cnt += 1
     return cnt
 
+  @functools.lru_cache(maxsize=1, typed=False)
+  def count_full_wood_cells(self):
+    cnt = 0
+    if not is_resource_wood(self.any_cell.resource):
+      return 0
+    for pos in self.resource_positions:
+      cell = self.game_map.get_cell_by_pos(pos)
+      if cell.resource.amount >= 500:
+        cnt += 1
+    return cnt
 
 class ClusterInfo:
 
@@ -3447,16 +3457,20 @@ class Strategy:
     if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
       return True
 
-    # return False
+    # TODO: fine tune the ratio
+    def is_wood_cluster_full(c):
+      n_res = len(c.resource_positions)
+      n_full = c.count_full_wood_cells()
+      return n_full / n_res > 0.5
 
     # TODO: should exhaust if invaded and worker is not near boundary.
-    # If cluster is invaded and all the open positions are used.
+    # If cluster is invaded or wood is full
     cids = self.ci.get_neighbour_cells_cluster_ids(cluster_query_pos,
                                                    include_pos=True)
-    return any((c.has_opponent_citytile_on_boundary())
-               and is_resource_researched(Resource(c.resource_type, 1),
+    return any((is_resource_researched(Resource(c.resource_type, 1),
                                           self.game.player)
-                # and len(c.get_open_boundary_positions(can_build=True)) == 0)
+                and (c.has_opponent_citytile_on_boundary()
+                     or is_wood_cluster_full(c)))
                for c in self.ci.get_clusters(cids))
 
 
