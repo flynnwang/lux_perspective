@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_1']
+MAP_POS_LIST = [(11, 2), (10, 3)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1831,13 +1831,14 @@ class Strategy:
           # prt(f" > c={nb_cell.pos}, unit-id={nb_cell.unit and nb_cell.unit.id}, "
               # f"team={nb_cell.unit and nb_cell.unit.team} is_oppo={cell_has_opponent_unit(nb_cell, self.game)}")
 
-        # oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
-            # resource_tile)
+      if fuel_wt > 0:
+        oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
+            resource_tile)
 
         # Use a small weight to bias the position towards opponent's positions.
-        # if nearest_oppo_unit:
-          # if oppo_arrival_turns < MAX_PATH_WEIGHT:
-            # opponent_weight += 1e-3 / dd(oppo_arrival_turns)
+        if nearest_oppo_unit:
+          if oppo_arrival_turns < MAX_PATH_WEIGHT:
+            opponent_weight += 1e-3 / dd(oppo_arrival_turns)
 
         # Use a large weight to defend my resource
         # 0) opponent unit is near this tile
