@@ -21,12 +21,12 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 
-DRAW_UNIT_TARGET_VALUE = 0
+DRAW_UNIT_TARGET_VALUE = 1
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_10']
-MAP_POS_LIST = [(9, 10), (1, 11)]
+DRAW_UNIT_LIST = ['u_9']
+MAP_POS_LIST = [(4, 4)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1809,16 +1809,17 @@ class Strategy:
         # prt(f'>> t={self.game.turn} pos={resource_tile.pos}, player={self.game.player.team} has_oppo={cell_has_opponent_unit(resource_tile, self.game)}'
             # f' oppo={resource_tile.unit}, team={resource_tile.unit and resource_tile.unit.team}, on_cluster={c.on_cluster(worker.pos)}')
 
+      oppo_decay_r = 1.8
       if (fuel_wt > 0 and c.on_cluster(worker.pos)):
         _, min_arrival_unit_ids = self.get_nearest_player_unit_to_cell(resource_tile)
         if worker.id in min_arrival_unit_ids:
           cell_has_oppo_unit = cell_has_opponent_unit(resource_tile, self.game)
           if cell_has_oppo_unit > 0:
-            opponent_weight = 500 / dd(arrival_turns, r=1.7)
+            opponent_weight = 500 / dd(arrival_turns, r=oppo_decay_r)
             oppo_weight_type = 'oppo_unit/'
 
           n_oppo_unit, n_oppo_citytile = count_cell_neighbour_opponent_unit_and_city_tile(resource_tile, self.game)
-          opponent_weight += min((n_oppo_citytile*200 + n_oppo_unit*300), 500) / dd(arrival_turns, r=1.7)
+          opponent_weight += min((n_oppo_citytile*0 + n_oppo_unit*200), 500) / dd(arrival_turns, r=oppo_decay_r)
           oppo_weight_type += f'oppo(nb_unit={n_oppo_unit}, nb_citytile={n_oppo_citytile})'
 
       # if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
@@ -1870,6 +1871,7 @@ class Strategy:
           # if is_threatened_cid and arrival_turns < oppo_arrival_turns:
             # opponent_weight += 21
 
+      default_res_wt /= dd(arrival_turns, r=1.5)
       v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
            opponent_weight + default_res_wt)
       if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
@@ -2101,6 +2103,8 @@ class Strategy:
       if (worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST
           and plan_idx == 1):
         debug = True
+      if cell_has_opponent_unit(near_resource_tile, self.game):
+        return -9999
 
       is_opponent_citytile = cell_has_target_player_citytile(near_resource_tile,
                                                              self.game.opponent)
@@ -2140,9 +2144,9 @@ class Strategy:
       # fuel_wt /= 3  # Use smaller weight for near resource tile
 
       # TODO: should consider wait time
-      default_res_wt = 0
+      default_nrt_wt = 0
       if is_fuelable_near_resource_tile > 0:
-        default_res_wt = DEFAULT_RESOURCE_WT
+        default_nrt_wt = DEFAULT_RESOURCE_WT
 
       # Boost the target collect amount by 2 (for cooldown) to test for citytile building.
       # it's 2, because one step move and one step for cooldown
@@ -2151,7 +2155,7 @@ class Strategy:
       build_city_bonus = False
       build_city_bonus_off_reason = '-'
       if (is_fuelable_near_resource_tile and
-          worker_enough_cargo_to_build(worker, amount * 3)):
+          worker_enough_cargo_to_build(worker, amount * 2)):
         build_city_bonus = f'build_near_resource_tile'
 
       # To build on transfer build location.
@@ -2253,7 +2257,7 @@ class Strategy:
                 opponent_weight += 500 / dd(arrival_turns, r=1.1)
                 oppo_weight_type = 'faster_cell'
 
-            if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
+            if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
               # prt(f"attack_boundary_cids={attack_boundary_cids}")
               # prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
               prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, "
@@ -2301,18 +2305,21 @@ class Strategy:
 
       # TODO: why need this threshold?
       # if (build_city_bonus and arrival_turns <= 3):
+      build_city_wt = 0
       if build_city_bonus:
-        wt += (400 if is_opponent_citytile else 1001)
+        build_city_wt += (200 if is_opponent_citytile else 1001)
+
+        # demote city tile weight to encourage city delivery
+        if self.game.is_night:
+          build_city_wt /= 10
 
         # Demote worker to build city tile on neighbour NRT, encourage woker moving.
-        if near_resource_tile.n_citytile_neighbour > 0:
-          wt *= 0.6
+        # if near_resource_tile.n_citytile_neighbour > 0:
+          # TODO: test if this works
+          # build_city_wt *= 0.7
 
         # mark build city cell
         self.worker_build_city_tasks.add((worker.id, near_resource_tile.pos))
-
-      # if near_resource_tile.pos in MAP_POS_LIST:
-      # prt(f'c[{near_resource_tile.pos}] @1, wt={wt}, arrival_turns={arrival_turns}')
 
       debug = False
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
@@ -2328,17 +2335,21 @@ class Strategy:
       # if self.has_can_act_opponent_unit_as_neighbour(near_resource_tile):
       # demote_opponent_unit = -0.1
 
+      # if worker_cargo_amt(worker) > 0:
+        # default_nrt_wt += 500 / dd(1.8)
+      build_city_wt /= dd(arrival_turns, r=1.8)
+      default_nrt_wt /= dd(arrival_turns, r=1.5)
       v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
            opponent_weight + transfer_build_wt + demote_opponent_unit +
-           default_res_wt)
+           default_nrt_wt + build_city_wt)
       if debug:
         prt(f'[NRT] t={self.game.turn} w[{worker.id}] nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
             f'v={v}. wt={wt}, clustr={boost_cluster}, fuel_wt={fuel_wt}'
             f' collect_amt={amount} opponent={opponent_weight}({oppo_weight_type}), '
             f'transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, '
-            f'build_city={build_city_bonus}, off={build_city_bonus_off_reason}'
+            f'build_city={build_city_wt}, off={build_city_bonus_off_reason}'
             f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
-            f' default_res_wt={default_res_wt}, n_open={n_open}, in_non_wood=({near_resource_tile.pos in self.non_wood_resource_locations})'
+            f' default_nrt_wt={default_nrt_wt}, n_open={n_open}, in_non_wood=({near_resource_tile.pos in self.non_wood_resource_locations})'
            )
         # prt(f' {self.worker_build_city_tasks}')
       return v
@@ -2468,8 +2479,8 @@ class Strategy:
       target = target_cells[target_idx]
       worker.target = target
       worker.target_pos = target.pos
-      # if worker.id in DRAW_UNIT_LIST:
-        # print(f'[TARGET] t={self.game.turn} {worker.id}@{worker.pos} => {target.pos}, plan_idx={plan_idx}')
+      if worker.id in DRAW_UNIT_LIST:
+        print(f'[TARGET] t={self.game.turn} {worker.id}@{worker.pos} => {target.pos}, plan_idx={plan_idx} v={wt}')
 
       if DRAW_UNIT_ACTION and plan_idx == 1:
         # x = annotate.x(worker.pos.x, worker.pos.y)
