@@ -20,13 +20,14 @@ DEBUG = True
 
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
+DRAW_UNIT_TRANSFER_ACTION = 1
 
 DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_10']
-MAP_POS_LIST = [(6, 10)]
+DRAW_UNIT_LIST = []
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -3119,13 +3120,18 @@ class Strategy:
           # TODO: support other resource: use max resource
           if (worker_amt + collect_amt + nb_unit.cargo.wood >= CITY_BUILD_COST):
             transfer_amount = CITY_BUILD_COST - (worker_amt + collect_amt)
-            prt(f'$A {worker.id}{worker.cargo}@{worker.pos} accept transfer from {nb_unit.id}{nb_unit.cargo} ${transfer_amount} to goto {target_cell.pos}',
-                file=sys.stderr)
+            # prt(f'$A {worker.id}{worker.cargo}@{worker.pos} accept transfer from {nb_unit.id}{nb_unit.cargo} ${transfer_amount} to goto {target_cell.pos}',
+                # file=sys.stderr)
             self.add_unit_action(
                 nb_unit,
                 nb_unit.transfer(worker.id, RESOURCE_TYPES.WOOD,
                                  transfer_amount))
             nb_unit.is_transfer_worker = True
+
+            if DRAW_UNIT_TRANSFER_ACTION:
+              pos = nb_unit.pos
+              a = annotate.text(pos.x, pos.y, 'T$', fontsize=50)
+              self.actions.append(a)
 
 
             worker.transfer_build_locations.add(target_cell.pos)
