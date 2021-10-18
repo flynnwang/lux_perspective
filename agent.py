@@ -2959,7 +2959,7 @@ class Strategy:
 
       n_oppo_on_cluster = cluster.opponent_unit_count
       n_days = day_count_by_arrival_turns(self.game.turn, arrival_turns)
-      avg_build_city_cile_turns = 5
+      avg_build_city_cile_turns = 6
       n_remain_open = n_open - (n_days * n_oppo_on_cluster
                                 / avg_build_city_cile_turns)
       # n_remain_open = max(n_remain_open, 0)
