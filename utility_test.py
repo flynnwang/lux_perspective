@@ -231,3 +231,12 @@ def test_remaining_nights():
 
   assert get_remaining_nights(39) == 8 * 10 + 1
   assert get_remaining_nights(40) == 8 * 10
+
+
+def test_day_count_by_arrival_turns():
+
+  assert day_count_by_arrival_turns(0, 10) == 10
+  assert day_count_by_arrival_turns(0, 30) == 30
+  assert day_count_by_arrival_turns(0, 35) == 30
+  assert day_count_by_arrival_turns(0, 40) == 30
+  assert day_count_by_arrival_turns(0, 41) == 31

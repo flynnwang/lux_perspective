@@ -372,6 +372,27 @@ def get_night_count_by_dist(turn, dist, unit_cooldown, cooldown):
             total_turns + nights_left + other_day_turns)
 
 
+def day_count_by_arrival_turns(turn, arrival_turns):
+  if arrival_turns <= 0:
+    return 0
+
+  if arrival_turns >= 360:
+    return 30 * 9
+
+  turn %= CIRCLE_LENGH
+  if is_day(turn):
+    days_left = DAY_LENGTH - turn
+    if days_left >= arrival_turns:
+      return arrival_turns
+
+    return days_left + day_count_by_arrival_turns(turn+days_left, arrival_turns-days_left)
+  else:
+    nights_left = CIRCLE_LENGH - turn
+    if nights_left >= arrival_turns:
+      return 0
+    return day_count_by_arrival_turns(turn+nights_left, arrival_turns-nights_left)
+
+
 def city_last_nights(city, add_fuel=0):
   fuel = city.fuel + add_fuel
   light_upkeep = city.light_upkeep

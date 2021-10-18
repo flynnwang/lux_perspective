@@ -1894,9 +1894,9 @@ class Strategy:
             # opponent_weight += 21
 
       wood_full_boost = 0
-      if (is_resource_wood(resource_tile.resource)
-          and resource_tile.resource.amount >= MAX_WOOD_AMOUNT):
-        wood_full_boost = 5
+      # if (is_resource_wood(resource_tile.resource)
+          # and resource_tile.resource.amount >= MAX_WOOD_AMOUNT):
+        # wood_full_boost = 5
 
       default_res_wt /= dd(arrival_turns, r=1.5)
       v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt +
@@ -2958,7 +2958,7 @@ class Strategy:
       n_open = len(open_positions)
 
       n_oppo_on_cluster = cluster.opponent_unit_count
-      n_days = self.game.days_this_round
+      n_days = day_count_by_arrival_turns(self.game.turn, arrival_turns)
       avg_build_city_cile_turns = 5
       n_remain_open = n_open - (n_days * n_oppo_on_cluster
                                 / avg_build_city_cile_turns)
@@ -3464,9 +3464,10 @@ class Strategy:
 
     # TODO: fine tune the ratio
     def is_wood_cluster_full(c):
-      n_res = len(c.resource_positions)
-      n_full = c.count_full_wood_cells()
-      return n_full / n_res > 0.5
+      return False
+      # n_res = len(c.resource_positions)
+      # n_full = c.count_full_wood_cells()
+      # return n_full / n_res > 0.5
 
     # TODO: should exhaust if invaded and worker is not near boundary.
     # If cluster is invaded or wood is full
