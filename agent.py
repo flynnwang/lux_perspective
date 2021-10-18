@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(10, 3), (3, 1)]
+DRAW_UNIT_LIST = ['u_3']
+MAP_POS_LIST = [(4, 2), ((4, 4))]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -2328,11 +2328,15 @@ class Strategy:
       # 1) transfer build: so owner don't need that much resource to goto next cluster
       # 2) build citytile when defending.
       if (worker.is_cluster_owner and not is_next_to_target_cluster and
-          self.ci.cell_has_player_citytile_on_target_cluster(
-              worker, near_resource_tile) and
+          worker.target_cluster.player_citytile_count == 0 and
           ((not is_transfer_build_position) and (opponent_weight < 1))):
         build_city_bonus = False
         build_city_bonus_off_reason = '(cluster_owner)'
+
+      # if debug:
+        # prt(f" >> t={self.game.turn}, is_cluster_owner={worker.is_cluster_owner}"
+            # f" is_next_to_target_cluster={is_next_to_target_cluster} "
+            # f" target_cluster_cc={worker.target_cluster.player_citytile_count}")
 
       # Keep at least X near resource tile for a coal or urnaium cluster
       n_boundary, n_open = self.cluster_info.count_min_boundary_near_resource_tiles(
@@ -2351,7 +2355,7 @@ class Strategy:
       # if (build_city_bonus and arrival_turns <= 3):
       build_city_wt = 0
       if build_city_bonus:
-        build_city_wt += (200 if is_opponent_citytile else 1001)
+        build_city_wt += (200 if is_opponent_citytile else 2001)
 
         # demote city tile weight to encourage city delivery
         if self.game.is_night:
@@ -2980,8 +2984,9 @@ class Strategy:
             c.resource_type == Constants.RESOURCE_TYPES.WOOD):
           continue
 
-
-        yield c
+        n_dup = int(min(2, c.size / 2.5))
+        for _ in range(n_dup):
+          yield c
 
 
     workers = self.player_available_workers()
