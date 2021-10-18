@@ -43,6 +43,10 @@ KEEP_RESOURCE_OPEN = 1
 
 MIN_DEFEND_ENEMY_ARRIVAL_TRUNS = 8
 
+MAX_WAIT_RESORUCE_TURNS = CIRCLE_LENGH
+
+MAX_WAIT_ON_CLUSTER_TURNS = CIRCLE_LENGH
+
 # def prt(line, file=sys.stderr):
 # print(line, file=file)
 
@@ -178,7 +182,6 @@ def resource_researched_wait_turns(resource,
   return 0
 
 
-MAX_WAIT_RESORUCE_TURNS = CIRCLE_LENGH
 
 
 @functools.lru_cache(maxsize=4096)
@@ -2947,10 +2950,6 @@ class Strategy:
           move_days=arrival_turns,
           surviving_turns=surviving_turns)
 
-      # if debug:
-      # prt(f"send worker{worker.id} to cluster{tile_pos}, survive={surviving_turns}, wait_turns={wait_turns}")
-      # TODO: should i limit it?
-      MAX_WAIT_ON_CLUSTER_TURNS = 8
       if wait_turns < 0 or wait_turns > MAX_WAIT_ON_CLUSTER_TURNS:
         return MIN_CLUSTER_WT
 
