@@ -2400,7 +2400,7 @@ class Strategy:
       # if (build_city_bonus and arrival_turns <= 3):
       build_city_wt = 0
       if build_city_bonus:
-        build_city_wt += (200 if is_opponent_citytile else 2001)
+        build_city_wt += (200 if is_opponent_citytile else 1001)
 
         # demote city tile weight to encourage city delivery
         if self.game.is_night:
@@ -3045,7 +3045,9 @@ class Strategy:
             c.resource_type == Constants.RESOURCE_TYPES.WOOD):
           continue
 
+        # TODO; reset it to 1 for testing
         n_dup = int(min(2, c.size / 2.5))
+        n_dup = 1
         for _ in range(n_dup):
           yield c
 
