@@ -75,6 +75,9 @@ class Position:
     def __eq__(self, pos) -> bool:
         return self.x == pos.x and self.y == pos.y
 
+    def __lt__(self, pos) -> bool:
+        return self.x < pos.x or (self.x == pos.x and self.y < pos.y)
+
     def equals(self, pos):
         return self == pos
 
