@@ -26,7 +26,7 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_3', 'u_7']
+DRAW_UNIT_LIST = ['u_4']
 MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
@@ -2975,12 +2975,13 @@ class Strategy:
     if self.cluster_info.max_cluster_id == 0:
       return
 
-    MIN_CLUSTER_WT = 0
+    HARD_MIN_CLUSTER_WT = -99999
+    SOFT_MIN_CLUSTER_WT = -1e-3
 
     def get_cluster_weight(worker, cluster):
       # TODO: MAYBE keep it?
       if worker.target_city_id:
-        return MIN_CLUSTER_WT
+        return HARD_MIN_CLUSTER_WT
 
       debug = False
       if worker and worker.id in DRAW_UNIT_LIST:
@@ -2995,7 +2996,7 @@ class Strategy:
       worker.cid_to_tile_pos[cid] = tile_pos  # could be near resource tile
       worker.cid_to_cluster_turns[cid] = arrival_turns
       if arrival_turns >= MAX_PATH_WEIGHT:
-        return MIN_CLUSTER_WT
+        return HARD_MIN_CLUSTER_WT
 
       # resource cluster not researched.
       cell = self.game_map.get_cell_by_pos(tile_pos)
@@ -3009,9 +3010,10 @@ class Strategy:
           self.player,
           move_days=arrival_turns,
           surviving_turns=surviving_turns)
-
-      if wait_turns < 0 or wait_turns > MAX_WAIT_ON_CLUSTER_TURNS:
-        return MIN_CLUSTER_WT
+      if wait_turns < 0:
+        return  HARD_MIN_CLUSTER_WT
+      # if wait_turns >= MAX_WAIT_ON_CLUSTER_TURNS:
+        # return SOFT_MIN_CLUSTER_WT
 
       open_positions = cluster.get_open_boundary_positions()
       n_open = len(open_positions)
@@ -3021,19 +3023,20 @@ class Strategy:
       avg_build_city_cile_turns = 6
       n_remain_open = n_open - (n_days * n_oppo_on_cluster
                                 / avg_build_city_cile_turns)
-      n_remain_open = max(n_remain_open, 0)
+      # n_remain_open = max(n_remain_open, 0)
 
       boundary_positions = cluster.boundary_positions
       open_ratio = n_remain_open / len(boundary_positions)
       if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
 
-      unit_bias = 1e-4 / get_unid_id(worker)
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.5)
-      if wt > 0:
-        wt += unit_bias
-      else:
-        unit_bias = 0
+      unit_bias = 0
+      # unit_bias = 1e-4 / get_unid_id(worker)
+      # if wt > 0:
+        # wt += unit_bias
+      # else:
+        # unit_bias = 0
       if worker.id in DRAW_UNIT_LIST:
         prt(f"t={self.game.turn}, cid={cluster.cid} edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}, unit_bias={unit_bias}", file=sys.stderr)
       return wt
@@ -3056,7 +3059,7 @@ class Strategy:
     resource_clusters = list(gen_resource_clusters())
     # print(f'Number of cluster: {len(resource_clusters)}')
 
-    weights = np.ones((len(workers), len(resource_clusters))) * MIN_CLUSTER_WT
+    weights = np.ones((len(workers), len(resource_clusters))) * HARD_MIN_CLUSTER_WT
     for j, cluster in enumerate(resource_clusters):
       for i, worker in enumerate(workers):
         weights[i, j] = get_cluster_weight(worker, cluster)
@@ -3067,12 +3070,12 @@ class Strategy:
     for worker_idx, cluster_idx in sorted_pairs:
       worker = workers[worker_idx]
       cluster = resource_clusters[cluster_idx]
+      cid = cluster.cid
 
-      # cid = cluster.cid
       # tile_pos = worker.cid_to_tile_pos[cid]
       # prt(f'Assign Cluster t={self.game.turn} {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
 
-      if weights[worker_idx, cluster_idx] <= 0:
+      if weights[worker_idx, cluster_idx] < 0:
         continue
 
       # Keep the mapping, but not do cluster boost (not good)
