@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_1']
-MAP_POS_LIST = [(10, 3), (3, 1)]
+DRAW_UNIT_LIST = ['u_2']
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1465,6 +1465,41 @@ class OpponentBias:
     return 1e-7 / dd(d, r=1.2)
 
 
+class LockLock:
+
+  def __init__(self):
+    self.game = None
+    self.game_map = None
+    self.last_step_unit_moves = {} # unit id => (unit_pos, next_position)
+    self.locked_moves = set() # (cur_pos, next_position)
+
+  def detect_lock(self, game):
+    self.game = game
+    self.game_map = game.game_map
+    if game.turn == 0:
+      return
+    self.locked_moves = set()
+    for unit in self.game.player.units:
+      # Because it's a new born unit.
+      if unit.id not in self.last_step_unit_moves:
+        continue
+
+      unit_last_pos, next_position = self.last_step_unit_moves[unit.id]
+      # stay at same place, not moved: failed the move command
+      if unit_last_pos != next_position and unit.pos == unit_last_pos:
+        self.locked_moves.add((unit_last_pos, next_position))
+        # if unit.id in DRAW_UNIT_LIST:
+          # prt(f"[LOCK] {unit.id}@{unit.pos} move onto {next_position} failed.")
+
+  def update_unit_moves(self):
+    self.last_step_unit_moves = {}
+    for unit in self.game.player.units:
+      self.last_step_unit_moves[unit.id] = (unit.pos, unit.next_position)
+
+  def is_locked(self, cur_pos, next_position):
+    return (cur_pos, next_position) in self.locked_moves
+
+
 class Strategy:
 
   def __init__(self):
@@ -1477,6 +1512,7 @@ class Strategy:
     self.non_wood_resource_locations = set()
     self.idle_woker_ids = set()
     self.bias = None
+    self.lock_lock = LockLock()
 
 
   @property
@@ -1508,11 +1544,15 @@ class Strategy:
     # Clear up actions for current step.
     self.actions = []
 
-  def add_unit_action(self, unit, action):
+  def add_unit_action(self, unit, action, next_position=None):
     assert unit.has_planned_action == False
 
     unit.has_planned_action = True
     self.actions.append(action)
+
+    # for lock detection.
+    if next_position:
+      unit.next_position = next_position
 
   @functools.lru_cache(maxsize=4096, typed=False)
   def select_quicker_path(self, worker, target_pos):
@@ -1589,6 +1629,7 @@ class Strategy:
       unit.target = self.game_map.get_cell_by_pos(unit.pos)
       unit.target_score = 0
       unit.target_scores = defaultdict(int)
+      unit.next_position = unit.pos
 
       unit.transfer_build_locations = set()
       unit.target_cluster_id = -1
@@ -2810,7 +2851,8 @@ class Strategy:
         continue
 
       move_dir = worker.pos.direction_to(next_position)
-      self.add_unit_action(worker, worker.move(move_dir))
+      self.add_unit_action(worker, worker.move(move_dir),
+                           next_position=next_position)
 
   @functools.lru_cache(maxsize=512)
   def has_only_one_wood_neighbour_resource_tile(self, cell):
@@ -2959,6 +3001,8 @@ class Strategy:
 
     self.update_unit_info()
     self.update_city_info()
+
+    self.lock_lock.detect_lock(self.game)
 
   def assign_worker_to_resource_cluster(self, multi_worker=False):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
@@ -3464,7 +3508,8 @@ class Strategy:
         # Unit **waits** for city unit to receive fuel.
         if city.last_turns > 0:
           move_dir = unit.pos.direction_to(unit.pos)
-          self.add_unit_action(unit, unit.move(move_dir))
+          self.add_unit_action(unit, unit.move(move_dir),
+                               next_position=unit.pos)
         return
 
       prt(f'$B {unit.id}{unit.cargo}@{unit.pos} transfer {transfer_amt} to city {unit.target.pos}',
@@ -3520,6 +3565,11 @@ class Strategy:
     self.try_build_citytile()
 
     self.compute_worker_moves()
+
+    self.post_execute()
+
+  def post_execute(self):
+    self.lock_lock.update_unit_moves()
 
   def turn_on_exhaust(self, worker, cluster_query_pos):
     if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
