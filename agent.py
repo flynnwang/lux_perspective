@@ -1424,7 +1424,7 @@ class ClusterInfo:
     return min_turns
 
 
-class OppnentBias:
+class OpponentBias:
 
   def __init__(self, game):
     self.game = game
@@ -1462,7 +1462,7 @@ class OppnentBias:
       d = map_size - c
     else:
       d = c
-    return 1e-4 / dd(d, r=1.1)
+    return 1e-7 / dd(d, r=1.2)
 
 
 class Strategy:
@@ -1477,7 +1477,6 @@ class Strategy:
     self.non_wood_resource_locations = set()
     self.idle_woker_ids = set()
     self.bias = None
-    # self.
 
 
   @property
@@ -1906,7 +1905,7 @@ class Strategy:
         # Use a small weight to bias the position towards opponent's positions.
         if nearest_oppo_unit:
           if oppo_arrival_turns < MAX_PATH_WEIGHT:
-            opponent_weight += 1e-2 / dd(oppo_arrival_turns)
+            opponent_weight += 1e-4 / dd(oppo_arrival_turns, 1.2)
 
         # Use a large weight to defend my resource
         # 0) opponent unit is near this tile
@@ -2282,7 +2281,7 @@ class Strategy:
         oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
             near_resource_tile, debug=debug)
         if oppo_arrival_turns < MAX_PATH_WEIGHT:
-          opponent_weight += 1e-2 / dd(oppo_arrival_turns, 1.1)
+          opponent_weight += 1e-4 / dd(oppo_arrival_turns, 1.2)
 
         threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
         if self.game.is_night:
@@ -2952,7 +2951,7 @@ class Strategy:
     self.cluster_info.cluster()
 
     if self.bias is None:
-      self.bias = OppnentBias(self.game)
+      self.bias = OpponentBias(self.game)
       self.bias.initialize()
 
     self.update_player_info()
@@ -2971,7 +2970,7 @@ class Strategy:
     if self.cluster_info.max_cluster_id == 0:
       return
 
-    MIN_CLUSTER_WT = 0
+    MIN_CLUSTER_WT = -0.001
 
     def get_cluster_weight(worker, cluster):
       # TODO: MAYBE keep it?
@@ -3017,19 +3016,21 @@ class Strategy:
       avg_build_city_cile_turns = 6
       n_remain_open = n_open - (n_days * n_oppo_on_cluster
                                 / avg_build_city_cile_turns)
-      n_remain_open = max(n_remain_open, 0)
+      # n_remain_open = max(n_remain_open, 0)
 
       boundary_positions = cluster.boundary_positions
       open_ratio = n_remain_open / len(boundary_positions)
       if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
 
-      unit_bias = 1e-4 / get_unid_id(worker)
       wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.5)
-      if wt > 0:
-        wt += unit_bias
-      else:
-        unit_bias = 0
+      unit_bias = 0
+
+      # unit_bias = 1e-4 / get_unid_id(worker)
+      # if wt > 0:
+        # wt += unit_bias
+      # else:
+        # unit_bias = 0
       if worker.id in DRAW_UNIT_LIST:
         prt(f"t={self.game.turn}, cid={cluster.cid} edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}, unit_bias={unit_bias}", file=sys.stderr)
       return wt
@@ -3060,12 +3061,12 @@ class Strategy:
     for worker_idx, cluster_idx in sorted_pairs:
       worker = workers[worker_idx]
       cluster = resource_clusters[cluster_idx]
+      cid = cluster.cid
 
-      # cid = cluster.cid
       # tile_pos = worker.cid_to_tile_pos[cid]
       # prt(f'Assign Cluster t={self.game.turn} {worker.id}, cell[{tile_pos}], wt={weights[worker_idx, cluster_idx]}')
 
-      if weights[worker_idx, cluster_idx] <= 0:
+      if weights[worker_idx, cluster_idx] < 0:
         continue
 
       # Keep the mapping, but not do cluster boost (not good)
