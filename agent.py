@@ -199,7 +199,7 @@ def get_cell_resource_values(cell,
                              debug=False):
   # Returns: (amount, fuel_weight)
   if not cell.has_resource():
-    return 0, 0
+    return 0, 0, MAX_DAYS
 
   resource = cell.resource
   wait_turns = resource_researched_wait_turns(resource,
@@ -212,18 +212,18 @@ def get_cell_resource_values(cell,
   if wait_turns < 0:
     # if debug:
       # prt(f' return from wait_turns: {wait_turns}')
-    return 0, 0
+    return 0, 0, MAX_DAYS
   if wait_turns > MAX_WAIT_RESORUCE_TURNS:
     # if debug:
       # prt(f' such a long wait: {wait_turns}')
-    return 0, 0
+    return 0, 0, wait_turns
 
   amount = get_worker_collection_rate(resource)
   amount = min(amount, resource.amount)
   if unit:
     amount = min(amount, unit.get_cargo_space_left())
   fuel = amount * get_resource_to_fuel_rate(resource)
-  return amount, fuel / dd(move_days + wait_turns, r=1.2)
+  return amount, fuel / dd(move_days + wait_turns, r=1.2), wait_turns
 
 
 # TODO(wangfei): try more accurate estimate
@@ -245,7 +245,7 @@ def get_one_step_collection_values(cell,
                                    unit=None,
                                    debug=False):
   game_map = game.map
-  amount, fuel_wt = get_cell_resource_values(cell,
+  amount, fuel_wt, wait_turns = get_cell_resource_values(cell,
                                              player,
                                              move_days=move_days,
                                              surviving_turns=surviving_turns,
@@ -255,8 +255,9 @@ def get_one_step_collection_values(cell,
   # Use neighbour average as resource weight
   nb_fuel_wt = 0
   nb_amt = 0
+  nb_wait_turns = MAX_DAYS
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
-    a, f = get_cell_resource_values(nb_cell,
+    a, f, w = get_cell_resource_values(nb_cell,
                                     player,
                                     move_days=move_days,
                                     surviving_turns=surviving_turns,
@@ -264,15 +265,16 @@ def get_one_step_collection_values(cell,
                                     debug=debug)
     nb_amt += a
     nb_fuel_wt += f
+    nb_wait_turns = min(nb_wait_turns, w)
   if debug:
     prt(f" main cell value [{cell.pos}]: amt={amount}, nb_amt={nb_amt}, fuel={fuel_wt}, nb_wt = {nb_fuel_wt}")
-  return amount + nb_amt, fuel_wt + nb_fuel_wt
+  return amount + nb_amt, fuel_wt + nb_fuel_wt, min(wait_turns, nb_wait_turns)
 
 
 def collect_amount_at_cell(cell, player, game_map):
-  amount, _ = get_cell_resource_values(cell, player)
+  amount, _, _ = get_cell_resource_values(cell, player)
   for nb_cell in get_neighbour_positions(cell.pos, game_map, return_cell=True):
-    nb_amt, _ = get_cell_resource_values(nb_cell, player)
+    nb_amt, _, _ = get_cell_resource_values(nb_cell, player)
     amount += nb_amt
   return amount
 
@@ -1845,7 +1847,7 @@ class Strategy:
       # Use surviving_turns at the arrival state.
       surviving_turns = get_surviving_turns_at_cell(worker, quick_path,
                                                     resource_tile)
-      _, fuel_wt = get_one_step_collection_values(
+      _, fuel_wt, _ = get_one_step_collection_values(
           resource_tile,
           player,
           self.game,
@@ -2205,7 +2207,7 @@ class Strategy:
 
         dest_state = path.get_dest_state(near_resource_tile.pos)
         if dest_state is None:
-          return MAX_PATH_WEIGHT
+          return MAX_DAYS
 
         arrival_turns = dest_state.turn - self.game.turn
 
@@ -2215,16 +2217,15 @@ class Strategy:
 
         surviving_turns = get_surviving_turns_at_cell(worker, path,
                                                       near_resource_tile)
-        # TODO: need to consider time to wait.
-        one_step_amt, _ = get_one_step_collection_values(
+        one_step_amt, _, wait_turns = get_one_step_collection_values(
             near_resource_tile,
             player,
             self.game,
             move_days=arrival_turns,
             surviving_turns=surviving_turns,
             debug=debug)
-        if one_step_amt == 0:
-          return MAX_PATH_WEIGHT
+        if one_step_amt == 0 or wait_turns >= MAX_DAYS:
+          return MAX_DAYS
         collect_turns = int(math.ceil(req_amt / one_step_amt))
 
         city_crash_wait_turns = 0
@@ -2235,7 +2236,8 @@ class Strategy:
           # Use a larger value for estimation
           # city_crash_wait_turns = (oppo_city.last_turns - arrival_turns) * 2
 
-        return arrival_turns + collect_turns + city_crash_wait_turns
+        return (arrival_turns + wait_turns + collect_turns
+                + city_crash_wait_turns)
 
       normal_path, no_city_path = strategy.quickest_path_pairs[worker.id]
       fast_path = normal_path
@@ -2409,7 +2411,7 @@ class Strategy:
         # do not build city if there is no neighbour citytile
         # near non-researched resource tile
         if near_resource_tile.n_citytile_neighbour == 0:
-          cur_amt, _ = get_one_step_collection_values(near_resource_tile,
+          cur_amt, _, _ = get_one_step_collection_values(near_resource_tile,
                                                       player, self.game,
                                                       surviving_turns=self.game.days_this_round)
           if cur_amt == 0:
@@ -2682,7 +2684,7 @@ class Strategy:
 
         # Try step on resource: the worker version is better, maybe because
         # other worker can use that.
-        amount, fuel = get_cell_resource_values(next_cell, g.player)
+        amount, fuel, _ = get_cell_resource_values(next_cell, g.player)
         if fuel > 0:
           encourage_resource_score = 1
 
@@ -3122,7 +3124,7 @@ class Strategy:
         return True
 
       # Collect then build
-      collect_amt, _ = get_one_step_collection_values(cell,
+      collect_amt, _, _ = get_one_step_collection_values(cell,
                                                       self.game.player,
                                                       self.game,
                                                       unit=unit)
