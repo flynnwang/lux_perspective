@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_18']
-MAP_POS_LIST = [(2, 10), (1, 8)]
+DRAW_UNIT_LIST = ['u_8']
+MAP_POS_LIST = [(10, 9)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -73,7 +73,12 @@ def is_wood_resource_worker(worker):
 
 @functools.lru_cache(maxsize=1024, typed=False)
 def dd(dist, r=1.8):
-  return r**dist
+  dist = min(dist, 60)
+  try:
+    return r**dist
+  except Exception as e:
+    print(f"r={r}, dist={dist}")
+    raise e
 
 @functools.lru_cache(maxsize=1024, typed=False)
 def log(x):
@@ -246,8 +251,6 @@ def get_one_step_collection_values(cell,
                                              surviving_turns=surviving_turns,
                                              unit=unit,
                                              debug=debug)
-  # if debug:
-  # prt(f" main cell value [{cell.pos}]: amt={amount} fuel={fuel_wt}")
 
   # Use neighbour average as resource weight
   nb_fuel_wt = 0
@@ -261,6 +264,8 @@ def get_one_step_collection_values(cell,
                                     debug=debug)
     nb_amt += a
     nb_fuel_wt += f
+  if debug:
+    prt(f" main cell value [{cell.pos}]: amt={amount}, nb_amt={nb_amt}, fuel={fuel_wt}, nb_wt = {nb_fuel_wt}")
   return amount + nb_amt, fuel_wt + nb_fuel_wt
 
 
@@ -2186,7 +2191,7 @@ class Strategy:
                                       quick_path):
       debug = False
       if (worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST
-          and plan_idx == 1):
+          and plan_idx == 0):
         debug = True
       if cell_has_opponent_unit(near_resource_tile, self.game):
         return -9999
@@ -2210,6 +2215,7 @@ class Strategy:
 
         surviving_turns = get_surviving_turns_at_cell(worker, path,
                                                       near_resource_tile)
+        # TODO: need to consider time to wait.
         one_step_amt, _ = get_one_step_collection_values(
             near_resource_tile,
             player,
@@ -2231,10 +2237,10 @@ class Strategy:
 
         return arrival_turns + collect_turns + city_crash_wait_turns
 
-      fast_path = None
+      normal_path, no_city_path = strategy.quickest_path_pairs[worker.id]
+      fast_path = normal_path
       fast_build_turns = MAX_PATH_WEIGHT
 
-      normal_path, no_city_path = strategy.quickest_path_pairs[worker.id]
       normal_build_turns = compute_build_turns(normal_path)
       if normal_build_turns < fast_build_turns:
         fast_path = normal_path
@@ -2256,9 +2262,8 @@ class Strategy:
         build_city_bonus_off_reason = 'cant_arrival'
 
       # To build on transfer build location.
-      # prt(f'w[{worker.id}], transfer_build_locations={worker.transfer_build_locations}')
       transfer_build_wt = get_boost_transfer_build_weight(
-          worker, near_resource_tile)
+          worker, near_resource_tile, debug)
       is_transfer_build_position = (transfer_build_wt > 0)
       if is_transfer_build_position:
         build_city_bonus = 'transfer_build'
@@ -2428,7 +2433,13 @@ class Strategy:
       # Add defualt weight for build_city_wt if it's active
       default_nrt_wt = 0
       if build_city_wt > 0:
-        build_city_wt /= dd(fast_build_turns, r=1.2)
+        try:
+          build_city_wt /= dd(fast_build_turns, r=1.2)
+        except Exception as e:
+          prt(f'[DEBUG] t={self.game.turn} w[{worker.id}] {worker.pos} nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
+              f' normal_build_turns={normal_build_turns}, no_city_build_turns={no_city_build_turns} not_leaving={no_city_path.not_leaving_citytile} , arrival_turns={arrival_turns}'
+              f' tranfer_build={is_transfer_build_position}/{transfer_build_wt}')
+          raise e
         build_city_wt += 10
         default_nrt_wt = DEFAULT_RESOURCE_WT / dd(arrival_turns, r=1.5)
 
@@ -3088,13 +3099,17 @@ class Strategy:
       return
 
     def cell_can_build_citytile(cell, sender_unit=None):
+      """Must also not be the first night."""
       if sender_unit and cell.pos == sender_unit.pos:
         return False
 
       is_resource_tile = cell.has_resource()
       is_citytile = cell.citytile is not None
       unit_can_not_act = (cell.unit and not cell.unit.can_act())
-      return (not is_resource_tile and not is_citytile and not unit_can_not_act)
+
+      is_buildable_turn = self.game.is_day or is_first_night(self.game.turn)
+      return (not is_resource_tile and not is_citytile and not unit_can_not_act
+              and is_buildable_turn)
 
     def unit_can_collect_and_build(cell, unit):
       cell_can_build = cell_can_build_citytile(cell, unit)
@@ -3193,8 +3208,8 @@ class Strategy:
           # TODO: support other resource: use max resource
           if (worker_amt + collect_amt + nb_unit.cargo.wood >= CITY_BUILD_COST):
             transfer_amount = CITY_BUILD_COST - (worker_amt + collect_amt)
-            # prt(f'$A {worker.id}{worker.cargo}@{worker.pos} accept transfer from {nb_unit.id}{nb_unit.cargo} ${transfer_amount} to goto {target_cell.pos}',
-                # file=sys.stderr)
+            prt(f'$A {worker.id}{worker.cargo}@{worker.pos} accept transfer from {nb_unit.id}{nb_unit.cargo} ${transfer_amount} to goto {target_cell.pos}',
+                file=sys.stderr)
             self.add_unit_action(
                 nb_unit,
                 nb_unit.transfer(worker.id, RESOURCE_TYPES.WOOD,

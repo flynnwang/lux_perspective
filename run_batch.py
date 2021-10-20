@@ -1,4 +1,6 @@
+
 import argparse
+import os
 import subprocess
 from multiprocessing import Pool
 
@@ -12,7 +14,7 @@ parser.add_argument('--dataset', help='path to dataset of (map_size, agent_id)')
 parser.add_argument('--base', help='base agent main.py path')
 parser.add_argument('--feature', help='feature agent main.py path')
 parser.add_argument('--work_dir', help='output dir')
-parser.add_argument('-C', '--concurrency', default=3, type=int, help='concurent match count')
+parser.add_argument('-C', '--concurrency', default=4, type=int, help='concurent match count')
 
 args = parser.parse_args()
 
@@ -32,6 +34,8 @@ def run(args):
 df = pd.read_csv(args.dataset)
 match_args = [(i.map_seed, i.agent_id, args.base, args.feature, args.work_dir)
               for i in df.itertuples()]
+if not os.path.exists(args.work_dir):
+  os.makedirs(args.work_dir)
 with Pool(args.concurrency) as pool:
   for _ in tqdm(pool.imap_unordered(run, match_args)):
     pass
