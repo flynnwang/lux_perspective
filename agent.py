@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_13']
-MAP_POS_LIST = [(7, 14), (8, 13)]
+DRAW_UNIT_LIST = ['u_5']
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1035,6 +1035,21 @@ class Cluster:
     self.cells = cells
     self.game = game
     self.game_map = self.game.game_map
+    self.nb_dist_clusters = []
+    self.is_assigned = False
+
+  @functools.lru_cache(maxsize=1)
+  def nearest_wood_clusters_weight(self, n=3, r=1.5):
+    # For non-assinged cluster, only consider non-assigned
+    wood_clusters = [(c.total_fuel / dd(dist, r=r), c)
+                  for dist, c in self.nb_dist_clusters
+                  if (c.resource_type == Constants.RESOURCE_TYPES.WOOD
+                      and (self.is_assigned or not c.is_assigned))]
+    wood_clusters.sort(key=lambda x: -x[0])
+    nb_fuel = 0
+    for w, nb_cluster in wood_clusters[:n]:
+      nb_fuel += w
+    return nb_fuel
 
   @property
   def any_cell(self):
@@ -1175,7 +1190,7 @@ class Cluster:
 
 class ClusterInfo:
 
-  def __init__(self, game):
+  def __init__(self, game, assigned_positions):
     self.game = game
     self.game_map = game.game_map
     self.position_to_cid = np.ones(
@@ -1183,6 +1198,8 @@ class ClusterInfo:
     self.max_cluster_fuel = 0
     self.max_cluster_id = 0
     self.clusters = {}
+    self.c2c_dist = {}
+    self.assigned_positions = assigned_positions
 
   def set_cid(self, pos, cid):
     self.position_to_cid[pos.x][pos.y] = cid
@@ -1305,6 +1322,30 @@ class ClusterInfo:
       # c = self.c(cid)
       # prt(f"  cid={cid}, cell={c.any_cell.pos}, resource_tiles={c.resource_positions}")
 
+    def c2c_dist(c1, c2):
+      min_dist = 99999
+      for p1 in c1.boundary_positions:
+        for p2 in c2.boundary_positions:
+          min_dist = min(min_dist, p1.distance_to(p2))
+      return min_dist
+
+    assigned_cluster_ids = set()
+    for pos in self.assigned_positions:
+      assigned_cluster_ids |= self.get_neighbour_cells_cluster_ids(pos)
+
+    for cid1 in range(self.max_cluster_id):
+      c1 = self.c(cid1)
+      c1.is_assigned = c1.cid in assigned_cluster_ids
+      for cid2 in range(cid1+1, self.max_cluster_id):
+        c2 = self.c(cid2)
+        d = c2c_dist(c1, c2)
+        c1.nb_dist_clusters.append((d, c2))
+        c2.nb_dist_clusters.append((d, c1))
+
+    # Sort by dist in ascending
+    for c in self.clusters.values():
+      c.nb_dist_clusters.sort(key=lambda x: -x[0])
+
   def query_cluster_fuel_factor(self, pos):
     cid = self.position_to_cid[pos.x][pos.y]
     if cid < 0:
@@ -1358,7 +1399,7 @@ class ClusterInfo:
     return min_turns, min_pos
 
   # TODO: is threat_dist=2 a good choice?
-  @functools.lru_cache(maxsize=512)
+  @functools.lru_cache(maxsize=128)
   def get_opponent_unit_nearest_cluster_ids(self,
                                             unit,
                                             threat_turns=4,
@@ -1420,6 +1461,7 @@ class ClusterInfo:
       return MAX_PATH_WEIGHT
     min_turns = unit_arrival_turns(self.game.turn, unit, min_dist)
     return min_turns
+
 
 
 class OpponentBias:
@@ -1511,7 +1553,7 @@ class Strategy:
     self.idle_woker_ids = set()
     self.bias = None
     self.lock_lock = LockLock()
-
+    self.cluster_assigned_positions = set()
 
   @property
   def circle_turn(self):
@@ -2368,7 +2410,7 @@ class Strategy:
               oppo_weight_type = 'faster_cell'
 
           if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
-            prt(f"attack_boundary_cids={attack_boundary_cids}")
+            # prt(f"attack_boundary_cids={attack_boundary_cids}")
             # prt(f"min_near_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
             prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, "
                 f"{near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns},"
@@ -2404,12 +2446,16 @@ class Strategy:
       # exceptions:
       # 1) transfer build: so owner don't need that much resource to goto next cluster
       # 2) build citytile when defending.
-      if (worker.is_cluster_owner and not is_next_to_target_cluster and
-          self.ci.cell_has_player_citytile_on_target_cluster(
-              worker, near_resource_tile) and
-          ((not is_transfer_build_position) and (opponent_weight < 1))):
-        build_city_bonus = False
-        build_city_bonus_off_reason = '(cluster_owner)'
+      cur_amt, _, _ = get_one_step_collection_values(near_resource_tile,
+                                                  player, self.game,
+                                                  surviving_turns=self.game.days_this_round)
+      is_near_researched_resource = (cur_amt > 0)
+      if (worker.is_cluster_owner and not is_next_to_target_cluster):
+        has_city = self.ci.cell_has_player_citytile_on_target_cluster(worker, near_resource_tile)
+        # if has_city or (not is_near_researched_resource):
+        if has_city and ((not is_transfer_build_position) and (opponent_weight < 1)):
+          build_city_bonus = False
+          build_city_bonus_off_reason = '(cluster_owner)'
 
       # Keep at least X near resource tile for a coal or urnaium cluster
       n_boundary, n_open = self.cluster_info.count_min_boundary_near_resource_tiles(
@@ -2437,10 +2483,7 @@ class Strategy:
         # do not build city if there is no neighbour citytile
         # near non-researched resource tile
         if near_resource_tile.n_citytile_neighbour == 0:
-          cur_amt, _, _ = get_one_step_collection_values(near_resource_tile,
-                                                      player, self.game,
-                                                      surviving_turns=self.game.days_this_round)
-          if cur_amt == 0:
+          if not is_near_researched_resource:
             build_city_bonus = False
             build_city_bonus_off_reason = f'wait_research_point'
 
@@ -2479,7 +2522,7 @@ class Strategy:
             f'v={v}. wt={wt}, clustr={boost_cluster}, '
             f' opponent={opponent_weight}({oppo_weight_type}), '
             f'transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, '
-            f'build_city={build_city_wt} build_wait_turns={fast_build_turns}, off={build_city_bonus_off_reason}'
+            f'build_city={build_city_wt} build_turns={fast_build_turns}, off={build_city_bonus_off_reason}'
             f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
             f' default_nrt_wt={default_nrt_wt}, n_open={n_open}, in_non_wood=({near_resource_tile.pos in self.non_wood_resource_locations})'
            )
@@ -2979,7 +3022,7 @@ class Strategy:
 
   @timeit
   def update_game_info(self):
-    self.cluster_info = ClusterInfo(self.game)
+    self.cluster_info = ClusterInfo(self.game, self.cluster_assigned_positions)
     self.cluster_info.cluster()
 
     if self.bias is None:
@@ -3057,16 +3100,24 @@ class Strategy:
       if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
 
-      wt = fuel * open_ratio / dd((arrival_turns + wait_turns), r=1.5)
-      unit_bias = 0
 
+      nb_fuel = cluster.nearest_wood_clusters_weight()
+      cluster_wt = (fuel + nb_fuel) * open_ratio / dd((arrival_turns + wait_turns), r=1.2)
+
+      # unit_bias = 0
       # unit_bias = 1e-4 / get_unid_id(worker)
       # if wt > 0:
         # wt += unit_bias
       # else:
         # unit_bias = 0
-      # if worker.id in DRAW_UNIT_LIST:
-        # prt(f"t={self.game.turn}, cid={cluster.cid} edge {worker.id}, c@{tile_pos} fuel={fuel}, wait={wait_turns}, arrival_turns={arrival_turns}, wt={wt}, open_ratio={open_ratio}, unit_bias={unit_bias}", file=sys.stderr)
+
+      wt = cluster_wt
+
+      if worker.id in DRAW_UNIT_LIST:
+        prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
+            f'edge {worker.id}, c@{tile_pos} wait={wait_turns}, arrival_turns={arrival_turns}, '
+            f'wt={wt:.1f}, open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
+            f'nb_fuel={nb_fuel:.2f}, cfuel={fuel:.2f}', file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
@@ -3566,8 +3617,17 @@ class Strategy:
 
     self.post_execute()
 
+
+  def record_assigned_cluster(self):
+    self.cluster_assigned_positions = set()
+    for unit in self.game.player.units:
+      if unit.target_cluster_id >= 0:
+        tile_pos = unit.cid_to_tile_pos[unit.target_cluster_id]
+        self.cluster_assigned_positions.add(tile_pos)
+
   def post_execute(self):
     self.lock_lock.update_unit_moves()
+    self.record_assigned_cluster()
 
   def turn_on_exhaust(self, worker, cluster_query_pos):
     if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
