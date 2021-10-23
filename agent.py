@@ -1761,7 +1761,7 @@ class Strategy:
 
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_turns = {}
-      unit.cid_to_open_ratio = {}
+      # unit.cid_to_open_ratio = {}
 
     for unit in self.game.opponent.units:
       shortest_path = ShortestPath(self.game, unit, ignore_unit=True)
@@ -1925,9 +1925,9 @@ class Strategy:
       wt = 0
 
       cid = self.cluster_info.get_cid(resource_tile.pos)
-      open_ratio = worker.cid_to_open_ratio.get(cid, -1)
-      if open_ratio < 0:
-        return -99999
+      # open_ratio = worker.cid_to_open_ratio.get(cid, -1)
+      # if open_ratio < 0:
+        # return -99999
 
 
       # Use surviving_turns at the arrival state.
@@ -2292,11 +2292,11 @@ class Strategy:
 
       cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
         near_resource_tile.pos)
-      if cell_cluster_ids:
-        open_ratio = max(worker.cid_to_open_ratio.get(cid, -1)
-                         for cid in cell_cluster_ids)
-        if open_ratio < 0:
-          return -99999
+      # if cell_cluster_ids:
+        # open_ratio = max(worker.cid_to_open_ratio.get(cid, -1)
+                         # for cid in cell_cluster_ids)
+        # if open_ratio < 0:
+          # return -99999
 
       # To build on transfer build location.
       transfer_build_wt = get_boost_transfer_build_weight(
@@ -3158,8 +3158,8 @@ class Strategy:
       open_ratio = n_remain_open / len(boundary_positions)
       if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
-      if open_ratio > 0:
-        worker.cid_to_open_ratio[cid] = open_ratio
+      # if open_ratio > 0:
+        # worker.cid_to_open_ratio[cid] = open_ratio
 
 
       nb_fuel = cluster.nearest_wood_clusters_weight()
