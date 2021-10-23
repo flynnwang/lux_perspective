@@ -21,12 +21,13 @@ DEBUG = True
 DRAW_UNIT_ACTION = 1
 DRAW_UNIT_CLUSTER_PAIR = 1
 DRAW_UNIT_TRANSFER_ACTION = 1
+DRAW_OFFENDER_ACTION = 1
 
 DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = []
+DRAW_UNIT_LIST = ['u_1']
 MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
@@ -458,16 +459,19 @@ class LuxGame(Game):
 class ShortestPath:
 
   # TODO: this number could be lower
-  MAX_SEARCH_DIST = 16
+  MAX_SEARCH_DIST = 12
 
-  def __init__(self, game, unit, ignore_unit=False):
+  def __init__(self, game, unit, ignore_unit=False, ci=None):
     self.game = game
     self.game_map = game.game_map
     self.unit = unit
     self.start_pos = self.unit.pos
     self.dist = np.ones(
-        (self.game_map.width, self.game_map.height)) * MAX_PATH_WEIGHT
+        (self.game_map.width, self.game_map.height), dtype=int) * MAX_PATH_WEIGHT
     self.ignore_unit = ignore_unit
+
+    self.ci = ci
+    self.reached_cids = set()
 
   @property
   def player(self):
@@ -484,18 +488,20 @@ class ShortestPath:
     while q:
       cur = q.popleft()
       cur_dist = self.dist[cur.x, cur.y]
+
+      cur_cell = self.game_map.get_cell_by_pos(cur)
+      # Can not go pass through enemy citytile.
+      if cell_has_target_player_citytile(cur_cell, self.opponent):
+        continue
+
+      # Skip opponent unit.
+      if (not self.ignore_unit and cur_cell.unit and
+          cur_cell.unit.team == self.opponent.team):
+        continue
+
       for nb_cell in get_neighbour_positions(cur,
                                              self.game_map,
                                              return_cell=True):
-        # Can not go pass through enemy citytile.
-        if cell_has_target_player_citytile(nb_cell, self.opponent):
-          continue
-
-        # Skip opponent unit.
-        if (not self.ignore_unit and nb_cell.unit and
-            nb_cell.unit.team == self.opponent.team):
-          continue
-
         newpos = nb_cell.pos
         nb_dist = self.dist[newpos.x, newpos.y]
         if cur_dist + 1 >= nb_dist:
@@ -506,67 +512,14 @@ class ShortestPath:
           continue
 
         q.append(newpos)
+        if self.ci:
+          cid = self.ci.get_cid(newpos)
+          if cid >= 0:
+            self.reached_cids.add(cid)
         # prt(f' start_from {self.start_pos}, append {newpos}, cur_dist={cur_dist}', file=sys.stderr)
 
   def shortest_dist(self, pos):
     return self.dist[pos.x, pos.y]
-
-  def path_blocked_by_citytile(self, target_pos):
-    path_positions = {}
-
-    target_dist = self.shortest_dist(target_pos)
-    if target_dist >= MAX_PATH_WEIGHT:
-      return True
-
-    if self.game_map.get_cell_by_pos(target_pos).citytile is not None:
-      return True
-
-    q = deque([target_pos])
-    path_positions[target_pos] = self.dist[target_pos.x, target_pos.y]
-    while q:
-      cur = q.popleft()
-      cur_dist = self.dist[cur.x, cur.y]
-      for nb_cell in get_neighbour_positions(cur,
-                                             self.game_map,
-                                             return_cell=True):
-        newpos = nb_cell.pos
-        nb_dist = self.dist[newpos.x, newpos.y]
-        if nb_dist == cur_dist - 1:
-          if newpos in path_positions:
-            continue
-          if self.game_map.get_cell_by_pos(newpos).citytile is not None:
-            continue
-
-          q.append(newpos)
-          path_positions[newpos] = cur_dist - 1
-    return self.start_pos not in path_positions
-
-  def compute_shortest_path_points(self, target_pos):
-    path_positions = {}
-
-    target_dist = self.shortest_dist(target_pos)
-    if target_dist >= MAX_PATH_WEIGHT:
-      return path_positions
-
-    q = deque([target_pos])
-    path_positions[target_pos] = self.dist[target_pos.x, target_pos.y]
-
-    total_append = 0
-    while q:
-      cur = q.popleft()
-      cur_dist = self.dist[cur.x, cur.y]
-      for nb_cell in get_neighbour_positions(cur,
-                                             self.game_map,
-                                             return_cell=True):
-        newpos = nb_cell.pos
-        nb_dist = self.dist[newpos.x, newpos.y]
-        if nb_dist == cur_dist - 1 and newpos not in path_positions:
-          total_append += 1
-          q.append(newpos)
-          path_positions[newpos] = cur_dist - 1
-
-    # prt(f'path points {self.start_pos}, totol_append={total_append}', file=sys.stderr)
-    return path_positions
 
 
 class SearchState:
@@ -1044,7 +997,6 @@ class Cluster:
     self.is_assigned = False
     self.is_largest_wood = False
 
-
   @functools.lru_cache(maxsize=1)
   def nearest_wood_clusters_weight(self, n=3, r=1.5):
     # For non-assinged cluster, only consider non-assigned
@@ -1097,6 +1049,18 @@ class Cluster:
         if (not nb_cell.has_resource() or
             nb_cell.resource.type != self.resource_type):
           positions.add(nb_cell.pos)
+    return positions
+
+  @property
+  @functools.lru_cache(maxsize=1, typed=False)
+  def nb9_boundary_positions(self):
+    """boundary positions:
+    1) not a resoruce cell
+    2) resource cell, but not the same type as cluster type."""
+    positions = set()
+    for cluster_cell in self.cells:
+      for nb_cell in get_nb9_positions(cluster_cell.pos, self.game_map):
+        positions.add(nb_cell.pos)
     return positions
 
   @property
@@ -1195,6 +1159,15 @@ class Cluster:
         cnt += 1
     return cnt
 
+class LandingInfo:
+
+  def __init__(self, oppo_unit, dist, is_landing):
+    self.oppo_unit = oppo_unit
+    self.is_landing = is_landing
+    self.dist = dist
+    self.arrival_turns = -1
+
+
 class ClusterInfo:
 
   def __init__(self, game, assigned_positions):
@@ -1207,6 +1180,15 @@ class ClusterInfo:
     self.clusters = {}
     self.c2c_dist = {}
     self.assigned_positions = assigned_positions
+    self.landing_points = {}
+    self.threaten_points = {}
+
+  def add_landing_info(self, pos, oppo_unit, dist, is_landing):
+    i = LandingInfo(oppo_unit, dist, is_landing)
+    added_to = self.landing_points if is_landing else self.threaten_points
+    if pos not in added_to or dist < added_to[pos].dist:
+      i.arrival_turns = unit_arrival_turns(self.game.turn, oppo_unit, dist)
+      added_to[pos] = i
 
   def set_cid(self, pos, cid):
     self.position_to_cid[pos.x][pos.y] = cid
@@ -1411,7 +1393,7 @@ class ClusterInfo:
     for cell in cluster.cells:
       cluster_pos = cell.pos
 
-      shortest_path, _ = strategy.quickest_path_pairs[unit.id]
+      shortest_path = unit.shortest_path
       dist = shortest_path.shortest_dist(cluster_pos)
       if dist < min_dist:
         min_dist = dist
@@ -1443,7 +1425,7 @@ class ClusterInfo:
       if cluster_pos is None:
         continue
 
-      # TODO(wangfei): add some moargin
+      # TODO(wangfei): add some margin
       cluster_cell = self.game_map.get_cell_by_pos(cluster_pos)
       if not is_resource_researched(
           cluster_cell.resource, self.game.opponent, move_days=turns,
@@ -1576,25 +1558,124 @@ class LockLock:
 
 
 class OffenderDetector:
+  """Used to defend opponent from outside of a cluster."""
 
   # TODO: extend to 3 moves to see if it's getting close.
-  MAX_RECORD_MOVES = 3
+  MAX_RECORD_MOVES = 2
+
+  ATTACK_CHECK_DIST = 6
+  NEAR_CHECK_DIST = 3
 
   def __init__(self):
     self.game = None
     self.game_map = None
     # deque could support auto pop on the opposite end with maxlen
     self.oppo_unit_history = defaultdict(lambda : deque(maxlen=self.MAX_RECORD_MOVES))
+    self.ci = None
 
-  def update(self, game):
+  # @functools.lru_cache(maxsize=256, typed=False)
+  def get_cluster_dist(self, cid, unit):
+    min_positions = None
+    min_dist = MAX_PATH_WEIGHT
+
+    cluster = self.ci.c(cid)
+    # if unit.id in DRAW_UNIT_LIST:
+      # prt(f'[CLUSTER_DIST] t={self.game.turn} u_t={unit.turn} cluster{cluster.any_cell.pos} {unit.id}@{unit.pos} at resource={unit.pos in cluster.resource_positions}, at bounday={unit.pos in cluster.boundary_positions}'
+          # f' ')
+    if unit.pos in cluster.resource_positions:
+      # prt('(return)')
+      return 0, [unit.pos]
+
+    positions = cluster.nb9_boundary_positions
+    if unit.pos in positions:
+      return 0, [unit.pos]
+
+    open_positions = cluster.get_open_boundary_positions()
+    for pos in open_positions:
+      shortest_path = unit.shortest_path
+      dist = shortest_path.shortest_dist(pos)
+      if dist == MAX_PATH_WEIGHT:
+        continue
+
+      if dist < min_dist:
+        min_dist = dist
+        min_positions = [pos]
+      elif dist == min_dist:
+        min_positions.append(pos)
+    return min_dist, min_positions
+
+
+  def compute_oppo_unit_target_cluster(self, unit):
+    """Offender:
+
+    0) not on any cluster
+    1) unit to cluster dist: d0 <= 4
+    2) last position dist: d1 > d0
+    3) only attack on nearest landing points
+    """
+    history = self.oppo_unit_history[unit.id]
+
+    # Skip new born worker.
+    if len(history) < 2:
+      return
+
+    last_unit = history[-2]
+    unit_on_cluster = False
+
+    landing_dist = MAX_PATH_WEIGHT
+    landing_pos = None
+
+    # threaten_positions = set()
+    for cid in unit.shortest_path.reached_cids:
+      # How to handle multiple landing positions.
+      min_dist, min_positions = self.get_cluster_dist(cid, unit)
+      if not min_positions:
+        continue
+      for min_pos in min_positions:
+        if min_dist > self.ATTACK_CHECK_DIST:
+          continue
+
+        # If opponent unit is very close, defend it anyway.
+        if min_dist <= self.NEAR_CHECK_DIST:
+          self.ci.add_landing_info(min_pos, unit, min_dist,
+                                   is_landing=False)
+
+        # On cluster now., must leave cluster to count.
+        if min_dist == 0:
+          unit_on_cluster = True
+          continue
+
+        last_min_dist, last_positions = self.get_cluster_dist(cid, last_unit)
+        if last_positions is None:
+          continue
+
+          # Approaching...
+        if last_min_dist > min_dist:
+          if min_dist < landing_dist:
+            landing_dist = min_dist
+            landing_pos = min_pos
+
+    if not unit_on_cluster and landing_pos:
+      # Assume only attack on the nearset landing positions.
+      self.ci.add_landing_info(landing_pos, unit, landing_dist, is_landing=True)
+            # f'cur_dist={landing_dist}@{unit.pos}=>{landing_pos}, ')
+
+
+  def update(self, game, ci):
     """Records history opponent unit info."""
     self.game = game
     self.game_map = game.game_map
+    self.ci = ci
+
     for unit in game.opponent.units:
       # Skip cooldown position, since it will not move on that turn.
-      if unit.cooldown > 0:
-        continue
-      self.oppo_unit_history[unit.id].append(unit)
+      # if unit.cooldown > 0:
+        # continue
+      unit.turn = self.game.turn
+      if (unit.id not in self.oppo_unit_history
+          or unit.pos != self.oppo_unit_history[unit.id][-1].pos):
+        self.oppo_unit_history[unit.id].append(unit)
+      self.compute_oppo_unit_target_cluster(unit)
 
 
 class Strategy:
@@ -1787,11 +1868,13 @@ class Strategy:
       # unit.cid_to_open_ratio = {}
 
     for unit in self.game.opponent.units:
-      shortest_path = ShortestPath(self.game, unit, ignore_unit=True)
+      shortest_path = ShortestPath(self.game, unit, ignore_unit=True,
+                                   ci=self.cluster_info)
       shortest_path.compute()
       self.quickest_path_pairs[unit.id] = (shortest_path, None)
 
       unit.surviving_turns = unit_surviving_turns(self.game.turn, unit)
+      unit.shortest_path = shortest_path
 
 
     # Add first city as wood city
@@ -2157,18 +2240,16 @@ class Strategy:
             min_city_arrival_turns  # only goto nearest city tiles.
             and arrival_turns_wo_city <=
             city_last_turns):  # city should last when arrived, +1 to account for the last turn
-          not_full_woker_goto_city = (
-              city_last_turns - arrival_turns_wo_city <=
-              6  # do not goto city too earlier.
-              and dest_state.arrival_fuel >= 80 and unit_fuel >= 80)
+          not_full_woker_goto_city = (dest_state.arrival_fuel >= 300
+                                      and unit_fuel >= 300)
           # full_worker_goto_city = worker.get_cargo_space_left() == 0
           full_worker_goto_city = (worker.get_cargo_space_left() == 0 and
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
-            city_crash_boost += worker_total_fuel(worker) * log(n_citytile)
+            city_crash_boost += worker_total_fuel(worker) * n_citytile
             # city_crash_boost += n_citytile * max(CITYTILE_LOST_WEIGHT,
             # worker_total_fuel(worker))
-            city_crash_boost_loc = 'other_city_crash'
+            city_crash_boost_loc = 'city_crash'
 
       # Also limit resource to next day.
       if (plan_idx > 0 and
@@ -2417,95 +2498,64 @@ class Strategy:
         cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
           near_resource_tile.pos, use_nb9=True)
 
+      # Defend opponent weight
       oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
           near_resource_tile, debug=debug)
       if oppo_arrival_turns < MAX_PATH_WEIGHT:
         opponent_weight += 1e-4 / dd(oppo_arrival_turns)
 
-      threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
-      if self.game.is_night:
-        threat_turns *= 2
 
-      # Use a larget weight to defend oppo unit come into near resource tile
-      if nearest_oppo_unit and oppo_arrival_turns <= threat_turns:
+      # Defend outside opponent unit from inside
+      is_landing_point = self.ci.landing_points.get(near_resource_tile.pos)
+      is_threaten_point = self.ci.threaten_points.get(near_resource_tile.pos)
+      is_defend_position = is_landing_point or is_threaten_point
+      if is_defend_position:
+        is_worker_on_cluster = any(self.ci.c(cid).on_cluster(worker.pos)
+                                   for cid in cell_cluster_ids)
+        # Defend offender from inside
+        if is_worker_on_cluster:
+          if arrival_turns <= oppo_arrival_turns:
+            opponent_weight += 100 / dd(arrival_turns, 1.2)
+            oppo_weight_type = 'defend'
 
-        # This is important becasuse if opponent arrival first, then we won't
-        # be able to do anything
-        if arrival_turns <= oppo_arrival_turns:
-          # Use min, in case there is more than one resource types.
-          one_step_fuel = min(self.ci.c(cid).one_step_fuel for cid in cell_cluster_ids)
-          # one_step_fuel *= 10
+          if is_landing_point:
+            is_quick_arrive = (arrival_turns <= oppo_arrival_turns
+                               if (arrival_turns <= 6)
+                               else arrival_turns < oppo_arrival_turns)
+            if is_quick_arrive:
+              opponent_weight += 5000 / dd(arrival_turns, r=1.2)
+              oppo_weight_type = 'atk'
+          elif is_threaten_point:
+            opponent_weight += 500 / dd(arrival_turns, r=1.2)
+            oppo_weight_type = 'threaten'
 
-          # Add a constant weight, so we'll try to move to tihs cell, but
-          # still build tile bonus will drag it away.
-          opponent_weight += one_step_fuel / dd(arrival_turns, 1.1)
-          oppo_weight_type = 'weak_boost'
+      # Defend inside opponent into non-connection point
+      if not is_connection_point and nearest_oppo_unit:
+        is_oppo_unit_on_cluster = any(self.ci.c(cid).on_cluster(nearest_oppo_unit.pos)
+                                      for cid in cell_cluster_ids)
+        if is_oppo_unit_on_cluster and arrival_turns <= oppo_arrival_turns:
+          opponent_weight += 200 / dd(arrival_turns, r=1.2)
+          oppo_weight_type = 'inside'
 
-        # early_arrival_turns = oppo_arrival_turns - arrival_turns
-        # Move at all cost to the attacking point.
-        if arrival_turns <= oppo_arrival_turns:
-          oppo_nearest_cids = self.ci.get_opponent_unit_nearest_cluster_ids(
-              nearest_oppo_unit, debug=debug)
-          attack_boundary_cids = oppo_nearest_cids & cell_cluster_ids
-          # if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST:
-            # prt(f"nearest_oppo_unit@{nearest_oppo_unit.pos}, attack_boundary_cids={attack_boundary_cids}, oppo_nearest_cids={oppo_nearest_cids}"
-                # f", cell_cluster_ids={cell_cluster_ids}, oppo_arrival_turns={oppo_arrival_turns}")
-          is_nearest_nrt_in_cluster = False
-          if attack_boundary_cids:
-            is_nearest_nrt_in_cluster = any(
-                (self.ci.
-                get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-                    cid, nearest_oppo_unit, debug) == oppo_arrival_turns)
-                for cid in attack_boundary_cids)
-            # if debug:
-              # prt(f'++++ is_nearest_nrt_in_cluster={is_nearest_nrt_in_cluster}')
+      if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
+        prt(f"[defend] {near_resource_tile.pos} landing_point={is_landing_point}, "
+            f" threaten_point={is_threaten_point} "
+            f" oppo_weight_type={oppo_weight_type} ")
 
-            # Worker must on the attack cluster
-            # is_oppo_unit_on_attack_cluster = any(self.ci.c(cid).on_cluster(nearest_oppo_unit.pos)
-                                              # for cid in attack_boundary_cids)
-            is_worker_on_attack_cluster = any(self.ci.c(cid).on_cluster(worker.pos)
-                                              for cid in attack_boundary_cids)
+      # Push opponent weight; not necerrary?
+      # oppo_decay_r = 1.8
+      # unit_cids = self.ci.get_neighbour_cells_cluster_ids(worker.pos, include_pos=True)
+      # if unit_cids & cell_cluster_ids:
+        # _, min_arrival_unit_ids = self.get_nearest_player_unit_to_cell(near_resource_tile)
+        # if worker.id in min_arrival_unit_ids:
+          # cell_has_oppo_unit = cell_has_opponent_unit(near_resource_tile, self.game)
+          # if cell_has_oppo_unit > 0:
+            # opponent_weight += 100 / dd(arrival_turns, r=oppo_decay_r)
+            # oppo_weight_type += '/oppo_unit'
 
-            if is_nearest_nrt_in_cluster:
-              # This is the most dangerous cell, that enemy approach from outside
-
-              # do not protect connection_point from inside opponent unit
-              do_not_protect_inside_oppo_unit = (is_connection_point
-                                                 and is_worker_on_attack_cluster)
-              if do_not_protect_inside_oppo_unit:
-                pass
-              else:
-                opponent_weight += 5000 / dd(arrival_turns, r=1.2)
-                oppo_weight_type = 'atk_cluster'
-          else:
-            wait_turns = oppo_arrival_turns - arrival_turns
-            can_arrival_quicker_than_oppo = (arrival_turns <= oppo_arrival_turns and wait_turns <= 2)
-            if can_arrival_quicker_than_oppo:
-              opponent_weight += 100 / dd(arrival_turns, r=1.2)
-              oppo_weight_type = 'faster_cell'
-
-          if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
-            prt(f"attack_boundary_cids={attack_boundary_cids}")
-            prt(f"min_turns_to_nearest_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}")
-            prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, "
-                f"{near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns},"
-                f" player_unit_arrival_turns={arrival_turns}, "
-                f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
-                f"is_nearest_nrt_in_cluster={is_nearest_nrt_in_cluster}")
-
-      oppo_decay_r = 1.8
-      unit_cids = self.ci.get_neighbour_cells_cluster_ids(worker.pos, include_pos=True)
-      if unit_cids & cell_cluster_ids:
-        _, min_arrival_unit_ids = self.get_nearest_player_unit_to_cell(near_resource_tile)
-        if worker.id in min_arrival_unit_ids:
-          cell_has_oppo_unit = cell_has_opponent_unit(near_resource_tile, self.game)
-          if cell_has_oppo_unit > 0:
-            opponent_weight += 100 / dd(arrival_turns, r=oppo_decay_r)
-            oppo_weight_type += '/oppo_unit'
-
-          n_oppo_unit, n_oppo_citytile = count_cell_neighbour_opponent_unit_and_city_tile(near_resource_tile, self.game)
-          opponent_weight += min((n_oppo_citytile*0 + n_oppo_unit*100), 300) / dd(arrival_turns, r=oppo_decay_r)
-          oppo_weight_type += f'/oppo(nb_unit={n_oppo_unit}, nb_citytile={n_oppo_citytile})'
+          # n_oppo_unit, n_oppo_citytile = count_cell_neighbour_opponent_unit_and_city_tile(near_resource_tile, self.game)
+          # opponent_weight += min((n_oppo_citytile*0 + n_oppo_unit*100), 300) / dd(arrival_turns, r=oppo_decay_r)
+          # oppo_weight_type += f'/oppo(nb_unit={n_oppo_unit}, nb_citytile={n_oppo_citytile})'
           # threat_boundary_cids = oppo_threat_cids & cell_cluster_ids
           # if threat_boundary_cids and arrival_turns < oppo_arrival_turns:
             # opponent_weight += 500
@@ -2513,6 +2563,7 @@ class Strategy:
               # prt(f" threat_cell_boost: oppo={nearest_oppo_unit.id}@{nearest_oppo_unit.pos} oppo_arrival_turns={oppo_arrival_turns}, player_arrival_turns={arrival_turns}")
 
       # Do not send worker to opponent city to defend.
+      # won't trigger if filtered out at beginning.
       if is_opponent_citytile:
         opponent_weight = 0
         oppo_weight_type = 'reset_by_oppo_citytile'
@@ -3118,7 +3169,15 @@ class Strategy:
     self.update_city_info()
 
     self.lock_lock.detect_lock(self.game)
-    self.offender_detector.update(self.game)
+    self.offender_detector.update(self.game, self.ci)
+
+    if DRAW_OFFENDER_ACTION:
+      for pos, landing_info in self.ci.landing_points.items():
+        atk = annotate.text(pos.x, pos.y, f'A[{int(landing_info.dist)}]', fontsize=50)
+        self.actions.append(atk)
+        offender = landing_info.oppo_unit.pos
+        line = annotate.line(offender.x, offender.y, pos.x, pos.y)
+        self.actions.append(line)
 
   def assign_worker_to_resource_cluster(self, multi_worker=False):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
