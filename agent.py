@@ -1235,7 +1235,7 @@ class ClusterInfo:
     return wood_clusters
 
 
-  @functools.lru_cache(maxsize=1023)
+  @functools.lru_cache(maxsize=255)
   def get_neighbour_cells_cluster_ids(self, pos, include_pos=False, use_nb9=False):
     cluster_ids = set()
 
@@ -1750,6 +1750,7 @@ class Strategy:
 
       unit.cid_to_tile_pos = {}
       unit.cid_to_cluster_turns = {}
+      unit.cid_to_open_ratio = {}
 
     for unit in self.game.opponent.units:
       shortest_path = ShortestPath(self.game, unit, ignore_unit=True)
@@ -1912,6 +1913,11 @@ class Strategy:
       # Give a small weight for any resource 0.1 TODO: any other option?
       wt = 0
 
+      cid = self.cluster_info.get_cid(resource_tile.pos)
+      open_ratio = worker.cid_to_open_ratio.get(cid, -1)
+      if open_ratio < 0:
+        return -99999
+
 
       # Use surviving_turns at the arrival state.
       surviving_turns = get_surviving_turns_at_cell(worker, quick_path,
@@ -1944,7 +1950,6 @@ class Strategy:
         wt += UNIT_SAVED_BY_RES_WEIGHT
 
       # TODO: Consider drop cluster boosting when dist <= 1
-      cid = self.cluster_info.get_cid(resource_tile.pos)
       boost_cluster = 0
       if (worker.is_cluster_owner and worker.target_cluster_id == cid):
         c = self.ci.c(cid)
@@ -2267,12 +2272,20 @@ class Strategy:
           and plan_idx == 1):
         debug = True
       if cell_has_opponent_unit(near_resource_tile, self.game):
-        return -9999
+        return -99999
 
       is_opponent_citytile = cell_has_target_player_citytile(near_resource_tile,
                                                              self.game.opponent)
       if is_opponent_citytile:
-        return -9999
+        return -99999
+
+      cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
+        near_resource_tile.pos)
+      if cell_cluster_ids:
+        open_ratio = max(worker.cid_to_open_ratio.get(cid, -1)
+                         for cid in cell_cluster_ids)
+        if open_ratio < 0:
+          return -99999
 
       # To build on transfer build location.
       transfer_build_wt = get_boost_transfer_build_weight(
@@ -2365,8 +2378,6 @@ class Strategy:
       opponent_weight = 0
       oppo_weight_type = ''
 
-      cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
-        near_resource_tile.pos)
       is_connection_point = (len(cell_cluster_ids) == 0)
       if is_connection_point:
         cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
@@ -3130,6 +3141,8 @@ class Strategy:
       open_ratio = n_remain_open / len(boundary_positions)
       if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
+      if open_ratio > 0:
+        worker.cid_to_open_ratio[cid] = open_ratio
 
 
       nb_fuel = cluster.nearest_wood_clusters_weight()
