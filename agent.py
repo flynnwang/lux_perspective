@@ -457,6 +457,7 @@ class LuxGame(Game):
 
 class ShortestPath:
 
+  # TODO: this number could be lower
   MAX_SEARCH_DIST = 16
 
   def __init__(self, game, unit, ignore_unit=False):
@@ -1574,6 +1575,27 @@ class LockLock:
     return locked and has_player_unit
 
 
+class OffenderDetector:
+
+  # TODO: extend to 3 moves to see if it's getting close.
+  MAX_RECORD_MOVES = 3
+
+  def __init__(self):
+    self.game = None
+    self.game_map = None
+    # deque could support auto pop on the opposite end with maxlen
+    self.oppo_unit_history = defaultdict(lambda : deque(maxlen=self.MAX_RECORD_MOVES))
+
+  def update(self, game):
+    """Records history opponent unit info."""
+    self.game = game
+    self.game_map = game.game_map
+    for unit in game.opponent.units:
+      # Skip cooldown position, since it will not move on that turn.
+      if unit.cooldown > 0:
+        continue
+      self.oppo_unit_history[unit.id].append(unit)
+
 
 class Strategy:
 
@@ -1589,6 +1611,7 @@ class Strategy:
     self.bias = None
     self.lock_lock = LockLock()
     self.cluster_assigned_positions = set()
+    self.offender_detector = OffenderDetector()
 
   @property
   def circle_turn(self):
@@ -3095,6 +3118,7 @@ class Strategy:
     self.update_city_info()
 
     self.lock_lock.detect_lock(self.game)
+    self.offender_detector.update(self.game)
 
   def assign_worker_to_resource_cluster(self, multi_worker=False):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
