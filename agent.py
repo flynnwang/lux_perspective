@@ -382,6 +382,10 @@ def cell_has_opponent_unit(cell, game):
   return bool(cell.unit and cell.unit.team == game.opponent.team)
 
 
+def cell_has_player_unit(cell, game):
+  return bool(cell.unit and cell.unit.team == game.player.team)
+
+
 @functools.lru_cache(maxsize=4096)
 def count_cell_neighbour_opponent_unit_and_city_tile(cell, game):
   unit_count = 0
@@ -1563,6 +1567,13 @@ class LockLock:
   def is_locked(self, cur_pos, next_position):
     return (cur_pos, next_position) in self.locked_moves
 
+  def is_locked_with_player_unit(self, cur_pos, next_position):
+    locked = (cur_pos, next_position) in self.locked_moves
+    next_cell = self.game_map.get_cell_by_pos(next_position)
+    has_player_unit = cell_has_player_unit(next_cell, self.game)
+    return locked and has_player_unit
+
+
 
 class Strategy:
 
@@ -2638,6 +2649,10 @@ class Strategy:
         if target.unit and target.unit.cooldown >= 1 and worker.id != target.unit.id:
           continue
 
+        # Do not target locked position with player unit.
+        if self.lock_lock.is_locked_with_player_unit(worker.pos, target.pos):
+          continue
+
         if cell_has_player_citytile(target, self.game):
           v = get_city_tile_weight(worker, target, quicker_dest_turns)
           # if worker.id in DRAW_UNIT_LIST and target.pos in MAP_POS_LIST:
@@ -2743,7 +2758,6 @@ class Strategy:
       # If woker is building city.
       # if worker.is_building_city:
       # return 1000
-
       assert worker.target_pos is not None
       assert next_step_positions is not None
 
@@ -2763,6 +2777,9 @@ class Strategy:
           next_cell.pos != worker.target.pos and worker_total_fuel(worker) > 0):
         return -MAX_MOVE_WEIGHT
 
+      # Do not move onto lock position with player unit.
+      if self.lock_lock.is_locked_with_player_unit(worker.pos, next_position):
+        return -MAX_MOVE_WEIGHT
 
       # Use target score if forced into other positions
       bg_score = worker.target_scores[next_position] * 1e-8
