@@ -108,8 +108,11 @@ def test_city_wont_last_at_nights():
   city = City(0, 'c_10', fuel=4, light_upkeep=2)
   assert city_wont_last_at_nights(37, city)
 
-  city = City(0, 'c_10', fuel=5, light_upkeep=2)
-  assert not city_wont_last_at_nights(38, city)
+  city = City(0, 'c_10', fuel=4, light_upkeep=2)
+  assert city_wont_last_at_nights(38, city) == False
+
+  # city = City(0, 'c_10', fuel=5, light_upkeep=2)
+  # assert not city_wont_last_at_nights(38, city)
 
 
 def test_get_night_count_this_round():
