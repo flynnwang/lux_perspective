@@ -4,6 +4,7 @@ import math, sys
 import time
 from collections import defaultdict, deque
 from copy import deepcopy
+from enum import Enum
 from itertools import chain
 
 import numpy as np
@@ -226,7 +227,7 @@ def get_cell_resource_values(cell,
     amount = min(amount, unit.get_cargo_space_left())
   # fuel = amount * get_resource_to_fuel_rate(resource)
   # Use constant weight
-  fuel = 1
+  fuel = 0.1
   return amount, fuel / dd(move_days + wait_turns, r=1.2), wait_turns
 
 
@@ -989,6 +990,13 @@ class QuickestPath:
     return next_step_path_points
 
 
+class ClusterType(Enum):
+  UNKNOWN = 0
+  OWNED = 1
+  LOST = 2
+  COMPETITION = 3
+  UNEXPLOITED = 4
+
 class Cluster:
 
   def __init__(self, cid, cells, game):
@@ -999,6 +1007,30 @@ class Cluster:
     self.nb_dist_clusters = []
     self.is_assigned = False
     self.is_largest_wood = False
+    self.ctype = ClusterType.UNKNOWN
+    self.update_cluster_type()
+
+  def update_cluster_type(self):
+    n_player_entities = 0 # city only
+    n_oppo_entities = 0
+
+    for pos in self.boundary_positions:
+      cell = self.game_map.get_cell_by_pos(pos)
+      if (cell_has_opponent_citytile(cell, self.game)):
+          # or cell_has_opponent_unit(cell, self.game)):
+        n_oppo_entities += 1
+      elif (cell_has_player_citytile(cell, self.game)):
+            # or cell_has_player_unit(cell, self.game)):
+        n_player_entities += 1
+
+    if n_player_entities == 0 and n_oppo_entities == 0:
+      self.ctype = ClusterType.UNEXPLOITED
+    elif n_player_entities > 0 and n_oppo_entities == 0:
+      self.ctype = ClusterType.OWNED
+    elif n_player_entities == 0 and n_oppo_entities > 0:
+      self.ctype = ClusterType.LOST
+    else:
+      self.ctype = ClusterType.COMPETITION
 
   @functools.lru_cache(maxsize=1)
   def nearest_wood_clusters_weight(self, n=3, r=1.5):
@@ -1049,6 +1081,7 @@ class Cluster:
       for nb_cell in get_neighbour_positions(cluster_cell.pos,
                                              self.game_map,
                                              return_cell=True):
+        # TODO: check is not needed?
         if (not nb_cell.has_resource() or
             nb_cell.resource.type != self.resource_type):
           positions.add(nb_cell.pos)
@@ -1057,9 +1090,6 @@ class Cluster:
   @property
   @functools.lru_cache(maxsize=1, typed=False)
   def nb9_boundary_positions(self):
-    """boundary positions:
-    1) not a resoruce cell
-    2) resource cell, but not the same type as cluster type."""
     positions = set()
     for cluster_cell in self.cells:
       for nb_cell in get_nb9_positions(cluster_cell.pos, self.game_map):
@@ -1832,6 +1862,13 @@ class Strategy:
       unit.is_transfer_worker = False
       unit.target_city_id = None
 
+      cids = self.ci.get_neighbour_cells_cluster_ids(unit.pos,
+                                                     include_pos=True,
+                                                     use_nb9=True)
+      unit.nb_cids = cids
+      # unit.cluster_types = {self.ci.c(cid).ctype for cid in cids}
+
+
       # Flag the unit if after the worker has not task after initial planning.
       unit.is_idle_worker = False
 
@@ -2222,6 +2259,8 @@ class Strategy:
         if city_last:
           wt += max(min(city_last_nights(city) / 10, 1),
                     0) * 0.5 * self.day_factor
+        else:
+          wt = 1e-5
         # elif cargo_total_amount(worker.cargo) == 0:
         # Escape from dying city.
         # wt = -99999
@@ -2578,7 +2617,7 @@ class Strategy:
         is_oppo_unit_on_cluster = any(self.ci.c(cid).on_cluster(nearest_oppo_unit.pos)
                                       for cid in cell_cluster_ids)
         if is_oppo_unit_on_cluster and arrival_turns <= oppo_arrival_turns:
-          opponent_weight += 200 / dd(arrival_turns, r=1.2)
+          opponent_weight += 500 / dd(arrival_turns, r=1.2)
           oppo_weight_type = 'inside'
 
 
@@ -2655,7 +2694,7 @@ class Strategy:
             and worker_has_enough_build_resource
             and not worker_has_coal_or_ruanium):
           fast_build_turns = 1
-          build_city_wt *= 5
+          build_city_wt *= 3
 
         # Lower the weight for coal or uranium for city building
         if self.game.is_night:
@@ -2795,6 +2834,12 @@ class Strategy:
         if self.lock_lock.is_locked_with_player_unit(worker.pos, target.pos):
           continue
 
+        # FEATURE: lock lock user case.
+        # if unit not on cluster or on LOST/ UNEXPLOITED cluster
+        if len(worker.nb_cids) == 0:
+          if self.lock_lock.is_locked(worker.pos, target.pos):
+            continue
+
         if cell_has_player_citytile(target, self.game):
           v = get_city_tile_weight(worker, target, quicker_dest_turns)
           # if worker.id in DRAW_UNIT_LIST and target.pos in MAP_POS_LIST:
@@ -2922,6 +2967,10 @@ class Strategy:
       # Do not move onto lock position with player unit.
       if self.lock_lock.is_locked_with_player_unit(worker.pos, next_position):
         return -MAX_MOVE_WEIGHT
+
+      if len(worker.nb_cids) == 0:
+        if self.lock_lock.is_locked(worker.pos, next_position):
+          return -MAX_MOVE_WEIGHT
 
       # Use target score if forced into other positions
       bg_score = worker.target_scores[next_position] * 1e-8
