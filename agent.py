@@ -1008,29 +1008,47 @@ class Cluster:
     self.is_assigned = False
     self.is_largest_wood = False
     self.ctype = ClusterType.UNKNOWN
-    self.update_cluster_type()
 
   def update_cluster_type(self):
-    n_player_entities = 0 # city only
-    n_oppo_entities = 0
+    n_player_unit = 0
+    n_player_citytile = 0 # city only
+    n_oppo_citytile = 0
 
     for pos in self.boundary_positions:
       cell = self.game_map.get_cell_by_pos(pos)
       if (cell_has_opponent_citytile(cell, self.game)):
           # or cell_has_opponent_unit(cell, self.game)):
-        n_oppo_entities += 1
+        n_oppo_citytile += 1
       elif (cell_has_player_citytile(cell, self.game)):
             # or cell_has_player_unit(cell, self.game)):
-        n_player_entities += 1
+        n_player_citytile += 1
 
-    if n_player_entities == 0 and n_oppo_entities == 0:
+      if cell_has_player_unit(cell, self.game):
+        n_player_unit += 1
+
+    for pos in self.resource_positions | self.nb9_boundary_positions:
+      cell = self.game_map.get_cell_by_pos(pos)
+      if cell_has_player_unit(cell, self.game):
+        n_player_unit += 1
+
+    self.n_player_citytile = n_player_citytile
+    self.n_oppo_citytile = n_oppo_citytile
+    self.n_player_unit = n_player_unit
+
+    if n_player_citytile == 0 and n_oppo_citytile == 0:
       self.ctype = ClusterType.UNEXPLOITED
-    elif n_player_entities > 0 and n_oppo_entities == 0:
+    elif n_player_citytile > 0 and n_oppo_citytile == 0:
       self.ctype = ClusterType.OWNED
-    elif n_player_entities == 0 and n_oppo_entities > 0:
+    elif n_player_citytile == 0 and n_oppo_citytile > 0:
       self.ctype = ClusterType.LOST
     else:
       self.ctype = ClusterType.COMPETITION
+
+
+  def is_sustained_mode_on(self, new_build):
+    return (self.ctype == ClusterType.OWNED
+            and (self.n_player_citytile + self.n_player_unit * 1.5 + new_build
+                 >= len(self.boundary_positions)))
 
   @functools.lru_cache(maxsize=1)
   def nearest_wood_clusters_weight(self, n=3, r=1.5):
@@ -1866,7 +1884,7 @@ class Strategy:
                                                      include_pos=True,
                                                      use_nb9=True)
       unit.nb_cids = cids
-      # unit.cluster_types = {self.ci.c(cid).ctype for cid in cids}
+      unit.cluster_types = {self.ci.c(cid).ctype for cid in cids}
 
 
       # Flag the unit if after the worker has not task after initial planning.
@@ -3281,9 +3299,11 @@ class Strategy:
 
     self.update_player_info()
     self.update_game_map_info()
-
     self.update_unit_info()
     self.update_city_info()
+
+    for c in self.ci.clusters.values():
+      c.update_cluster_type()
 
     self.lock_lock.detect_lock(self.game)
     self.offender_detector.update(self.game, self.ci)
@@ -3740,6 +3760,28 @@ class Strategy:
         for pos in list(build_positions)[:n]:
           self.blacklist_city_building_positions.add(pos)
 
+    # TODO: better condition
+    if self.game.player.research_points < 50:
+      return
+    danger_positions = ({pos for pos in self.ci.landing_points.keys()}
+                        | {pos for pos in self.ci.threaten_points.keys()})
+    # Work on wood cluster build
+    for cluster in self.ci.get_clusters(cluster_ids):
+      if cluster.resource_type != Constants.RESOURCE_TYPES.WOOD:
+        continue
+
+      new_build = 0
+      open_positions = cluster.get_open_boundary_positions()
+      build_positions = open_positions & city_building_positions
+      for pos in build_positions:
+        if (pos in danger_positions
+            or not cluster.is_sustained_mode_on(new_build)):
+          new_build += 1
+          continue
+
+        # Blacklist this position to save more wood
+        self.blacklist_city_building_positions.add(pos)
+
   def transfer_resource_to_city_tile(self):
     """Use transfer resoruce to city if:
     0) worker assigned fuel city task and can_act() and next to target
@@ -3901,13 +3943,10 @@ class Strategy:
     if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
       return True
 
-
-    # TODO: fine tune the ratio
     def is_wood_cluster_full(c):
-      return False
-      # n_res = len(c.resource_positions)
-      # n_full = c.count_full_wood_cells()
-      # return n_full / n_res > 0.5
+      n_res = len(c.resource_positions)
+      n_full = c.count_full_wood_cells()
+      return n_full / n_res > 0.9
 
     # TODO: should exhaust if invaded and worker is not near boundary.
     # If cluster is invaded or wood is full
