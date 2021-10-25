@@ -28,7 +28,7 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_4', 'u_2']
+DRAW_UNIT_LIST = ['u_6', 'u_7']
 # MAP_POS_LIST = [(9, 2), (8, 5)]
 MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
@@ -1173,7 +1173,7 @@ class Cluster:
     """Returns the number of turns to arrive at the cluster and the arrival
     position."""
     # If woker already on boundary or cluster resource cells.
-    if (worker.pos in self.boundary_positions or
+    if (worker.pos in self.nb9_boundary_positions or
         worker.pos in self.resource_positions):
       return 0, [worker.pos]
 
@@ -3366,6 +3366,7 @@ class Strategy:
         line = annotate.line(offender.x, offender.y, pos.x, pos.y)
         self.actions.append(line)
 
+  CLUSTER_PIN = set()
   def assign_worker_to_resource_cluster(self, multi_worker=False):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
       And set its target pos."""
@@ -3396,6 +3397,8 @@ class Strategy:
       worker.cid_to_tile_pos[cid] = tile_pos  # could be near resource tile
       worker.cid_to_cluster_turns[cid] = arrival_turns
       if arrival_turns >= MAX_PATH_WEIGHT:
+        if worker.id in DRAW_UNIT_LIST:
+          prt(f' >> {worker.id} can not arrive at c={cid} {tile_pos}: {arrival_turns}')
         return MIN_CLUSTER_WT
 
       # resource cluster not researched.
@@ -3412,6 +3415,8 @@ class Strategy:
           surviving_turns=surviving_turns)
 
       if wait_turns < 0 or wait_turns > MAX_WAIT_ON_CLUSTER_TURNS:
+        if worker.id in DRAW_UNIT_LIST:
+          prt(f' >> {worker.id} wait for c={cid} {tile_pos} too long: {wait_turns}')
         return MIN_CLUSTER_WT
 
       open_positions = cluster.get_open_boundary_positions()
@@ -3426,7 +3431,7 @@ class Strategy:
 
       boundary_positions = cluster.boundary_positions
       open_ratio = n_remain_open / len(boundary_positions)
-      if worker.pos in boundary_positions or worker.pos in cluster.resource_positions:
+      if worker.pos in cluster.nb9_boundary_positions or worker.pos in cluster.resource_positions:
         open_ratio = 1
       # if open_ratio > 0:
         # worker.cid_to_open_ratio[cid] = open_ratio
@@ -3435,6 +3440,10 @@ class Strategy:
       nb_fuel = cluster.nearest_wood_clusters_weight()
       cluster_wt = (fuel + nb_fuel) * open_ratio / dd((arrival_turns + wait_turns), r=1.2)
 
+      pin_wt = 0
+      if (worker.id, tile_pos) in self.CLUSTER_PIN:
+        pin_wt = 100
+
       # unit_bias = 0
       # unit_bias = 1e-4 / get_unid_id(worker)
       # if wt > 0:
@@ -3442,13 +3451,13 @@ class Strategy:
       # else:
         # unit_bias = 0
 
-      wt = cluster_wt
+      wt = cluster_wt + pin_wt
 
       if worker.id in DRAW_UNIT_LIST:
         prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
             f'edge {worker.id}, c@{tile_pos} wait={wait_turns}, arrival_turns={arrival_turns}, '
-            f'wt={wt:.1f}, open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
-            f'nb_fuel={nb_fuel:.2f}, cfuel={fuel:.2f}', file=sys.stderr)
+            f'wt={wt:.1f}, pin_wt={pin_wt} open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
+            f'nb_fuel={nb_fuel:.2f}, fuel={fuel:.2f}', file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
@@ -3476,6 +3485,7 @@ class Strategy:
     rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
     sorted_pairs = sorted(list(zip(rows, cols)),
                           key=lambda x: -weights[x[0], x[1]])
+    self.CLUSTER_PIN = set()
     for worker_idx, cluster_idx in sorted_pairs:
       worker = workers[worker_idx]
       cluster = resource_clusters[cluster_idx]
@@ -3497,6 +3507,11 @@ class Strategy:
       worker.target_cluster = cluster
       worker.target_cid_turns = worker.cid_to_cluster_turns[cid]
       worker.is_cluster_owner = True
+
+      # Pin cluster
+      for pos in cluster.resource_positions:
+        self.CLUSTER_PIN.add((worker.id, pos))
+
 
       if DRAW_UNIT_CLUSTER_PAIR:
         tile_pos = worker.cid_to_tile_pos[cid]
@@ -3798,8 +3813,8 @@ class Strategy:
     for cluster in self.ci.get_clusters(cluster_ids):
       # TODO: this is the reason woo cluster don't have open positon.
       # Only check coal and uranium cluster.
-      if cluster.resource_type == Constants.RESOURCE_TYPES.WOOD:
-        continue
+      # if cluster.resource_type == Constants.RESOURCE_TYPES.WOOD:
+        # continue
 
       open_positions = cluster.get_open_boundary_positions()
       build_positions = open_positions & city_building_positions
