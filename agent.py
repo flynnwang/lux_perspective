@@ -1,6 +1,6 @@
 import functools
 import heapq
-import math, sys
+import math, sys, os
 import time
 from collections import defaultdict, deque
 from copy import deepcopy
@@ -28,8 +28,9 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_2']
-MAP_POS_LIST = [(7, 4), (8, 5)]
+DRAW_UNIT_LIST = ['u_4', 'u_2']
+# MAP_POS_LIST = [(9, 2), (8, 5)]
+MAP_POS_LIST = []
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 
@@ -50,10 +51,16 @@ MAX_WAIT_RESORUCE_TURNS = CIRCLE_LENGH
 
 MAX_WAIT_ON_CLUSTER_TURNS = CIRCLE_LENGH
 
-# def prt(line, file=sys.stderr):
-# print(line, file=file)
+LOG_PATH = '/home/flynnwang/dev/playground/log/a.log'
+os.remove(LOG_PATH)
 
-prt = print
+
+def prt(line, file=sys.stderr):
+  print(line, file=file)
+  with open(LOG_PATH, 'a') as f:
+    f.write(line + '\n')
+
+# prt = print
 
 
 def timeit(func):
@@ -125,6 +132,7 @@ def get_neighbour_positions(pos, game_map, return_cell=False):
 N9_DIRS = [(-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
 
 
+# TODO: add cache
 def get_nb9_positions(pos, game_map, return_cell=True):
   positions = []
   for dx, dy in N9_DIRS:
@@ -1111,7 +1119,9 @@ class Cluster:
     positions = set()
     for cluster_cell in self.cells:
       for nb_cell in get_nb9_positions(cluster_cell.pos, self.game_map):
-        positions.add(nb_cell.pos)
+        if (not nb_cell.has_resource() or
+            nb_cell.resource.type != self.resource_type):
+          positions.add(nb_cell.pos)
     return positions
 
   @property
@@ -1119,8 +1129,12 @@ class Cluster:
   def resource_positions(self):
     return {c.pos for c in self.cells}
 
-  def on_cluster(self, pos):
-    return pos in self.boundary_positions or pos in self.resource_positions
+  def on_cluster(self, pos, use_nb9=False):
+    if pos in self.resource_positions:
+      return True
+    if use_nb9 and pos in self.nb9_boundary_positions:
+      return True
+    return pos in self.boundary_positions
 
   def is_arrived(self, pos):
     return pos in self.boundary_positions or pos in self.resource_positions
@@ -1218,6 +1232,12 @@ class LandingInfo:
     self.dist = dist
     self.arrival_turns = -1
 
+  def __str__(self):
+    return f"Landing(u={self.oppo_unit.id}@{self.oppo_unit.pos}, d={self.dist}, landing={self.is_landing})"
+
+  def __repr__(self):
+    return self.__str__()
+
 
 class ClusterInfo:
 
@@ -1240,6 +1260,7 @@ class ClusterInfo:
     if pos not in added_to or dist < added_to[pos].dist:
       i.arrival_turns = unit_arrival_turns(self.game.turn, oppo_unit, dist)
       added_to[pos] = i
+    return i
 
   def set_cid(self, pos, cid):
     self.position_to_cid[pos.x][pos.y] = cid
@@ -1630,21 +1651,32 @@ class OffenderDetector:
     self.ci = None
 
   # @functools.lru_cache(maxsize=256, typed=False)
-  def get_cluster_dist(self, cid, unit):
+  def get_cluster_dist(self, cluster, unit, debug=False, add_threaten_point=False):
     min_positions = None
     min_dist = MAX_PATH_WEIGHT
-
-    cluster = self.ci.c(cid)
+    threaten_positions = []
     # if unit.id in DRAW_UNIT_LIST:
       # prt(f'[CLUSTER_DIST] t={self.game.turn} u_t={unit.turn} cluster{cluster.any_cell.pos} {unit.id}@{unit.pos} at resource={unit.pos in cluster.resource_positions}, at bounday={unit.pos in cluster.boundary_positions}'
           # f' ')
     if unit.pos in cluster.resource_positions:
       return 0, [unit.pos]
 
+    # if unit.pos in cluster.boundary_positions:
+      # return 0, [unit.pos]
+
     positions = cluster.nb9_boundary_positions
+    # if unit.id == 'u_3' and debug and cid == 6:
+      # prt(f' >>>> boundary points, cid={cid},  n={len(positions)} pts={positions}')
     for pos in positions:
-      # Unit on boundary
-      if unit.pos == pos:
+      # if unit.id == 'u_3' and debug and cluster.cid == 6:
+        # prt(f' >>> boundary {pos}, cid={cluster.cid}, sz={cluster.size}')
+
+      # if unit.id == 'u_1' and pos in MAP_POS_LIST and debug:
+        # shortest_path = unit.shortest_path
+        # dist = shortest_path.shortest_dist(pos)
+        # prt(f' >>>> {pos}, unit.pos={unit.pos}, shortet_dist={dist}, cid={cluster.cid}')
+
+      if pos == unit.pos:
         return 0, [unit.pos]
 
       # Skip any citytile
@@ -1657,6 +1689,10 @@ class OffenderDetector:
       if dist == MAX_PATH_WEIGHT:
         continue
 
+      # If opponent unit is very close, defend it anyway.
+      if add_threaten_point and dist <= self.NEAR_CHECK_DIST:
+        self.ci.add_landing_info(pos, unit, dist, is_landing=False)
+
       if dist < min_dist:
         min_dist = dist
         min_positions = [pos]
@@ -1668,10 +1704,14 @@ class OffenderDetector:
   def compute_oppo_unit_target_cluster(self, unit):
     """Offender:
 
+    Landing points:
     0) not on any cluster
-    1) unit to cluster dist: d0 <= 4
+    1) unit to cluster dist: d0 <= ATTACK_CHECK_DIST
     2) last position dist: d1 > d0
     3) only attack on nearest landing points
+
+    Threaten points:
+    0) dist to cluster <= NEAR_CHECK_DIST
     """
     history = self.oppo_unit_history[unit.id]
 
@@ -1680,48 +1720,53 @@ class OffenderDetector:
       return
 
     last_unit = history[-2]
-    unit_on_cluster = False
 
-    landing_dist = MAX_PATH_WEIGHT
-    landing_positions = []
+    unit_on_cluster = False
+    landing_candidates = []
+
 
     # threaten_positions = set()
     for cid in unit.shortest_path.reached_cids:
+      cluster = self.ci.c(cid)
+
       # How to handle multiple landing positions.
-      min_dist, min_positions = self.get_cluster_dist(cid, unit)
+      min_dist, min_positions = self.get_cluster_dist(cluster, unit, debug=True,
+                                                      add_threaten_point=True)
       if not min_positions:
         continue
+
+      landing_dist = MAX_PATH_WEIGHT
+      landing_positions = []
       for min_pos in min_positions:
         if min_dist > self.ATTACK_CHECK_DIST:
           continue
 
-        # If opponent unit is very close, defend it anyway.
-        if min_dist <= self.NEAR_CHECK_DIST:
-          self.ci.add_landing_info(min_pos, unit, min_dist,
-                                   is_landing=False)
-
-        # On cluster now., must leave cluster to count.
+        # On cluster now, must leave cluster to count.
         if min_dist == 0:
           unit_on_cluster = True
           continue
 
-        last_min_dist, last_positions = self.get_cluster_dist(cid, last_unit)
+        last_min_dist, last_positions = self.get_cluster_dist(cluster, last_unit)
         if last_positions is None:
           continue
 
-          # Approaching...
-        if last_min_dist > min_dist:
+        # if min_pos in MAP_POS_LIST:
+          # prt(f' ## {min_pos} min_dist={min_dist}, last_min_dist={last_min_dist}, last_positions={last_positions}')
+
+        # Approaching, at least not leaving
+        if min_dist <= last_min_dist:
           if min_dist < landing_dist:
             landing_dist = min_dist
-            landing_positions = [min_pos]
+            landing_positions = [(min_dist, min_pos)]
           elif min_dist == landing_dist:
-            landing_positions.append(min_pos)
+            landing_positions.append([min_dist, min_pos])
 
-    if not unit_on_cluster and landing_positions:
-      # Assume only attack on the nearset landing positions.
-      for landing_pos in landing_positions:
-        self.ci.add_landing_info(landing_pos, unit, landing_dist,
-                                 is_landing=True)
+      landing_candidates.extend(landing_positions)
+
+    if not unit_on_cluster:
+      for dist, pos in landing_candidates:
+        i = self.ci.add_landing_info(pos, unit, dist, is_landing=True)
+        # prt(f' [L] {i}')
 
 
   def update(self, game, ci):
@@ -1939,8 +1984,7 @@ class Strategy:
       # unit.cid_to_open_ratio = {}
 
     for unit in self.game.opponent.units:
-      shortest_path = ShortestPath(self.game, unit, ignore_unit=True,
-                                   ci=self.cluster_info)
+      shortest_path = ShortestPath(self.game, unit, ci=self.cluster_info)
       shortest_path.compute()
       self.quickest_path_pairs[unit.id] = (shortest_path, None)
 
@@ -2531,9 +2575,9 @@ class Strategy:
           # # Use a larger value for estimation
           # city_crash_wait_turns = (oppo_city.last_turns - arrival_turns)
 
-        if debug:
-          prt(f'[BUILD_TURNS] {near_resource_tile.pos} '
-              f' arrival_turns={arrival_turns}, wait_turns={wait_turns}, collect_turns={collect_turns}')
+        # if debug:
+          # prt(f'[BUILD_TURNS] {near_resource_tile.pos} '
+              # f' arrival_turns={arrival_turns}, wait_turns={wait_turns}, collect_turns={collect_turns}')
 
         # TODO: add dest state cooldown
         collect_turns = max(collect_turns, dest_state.cooldown)
@@ -2602,7 +2646,8 @@ class Strategy:
       is_threaten_point = self.ci.threaten_points.get(near_resource_tile.pos)
       is_defend_position = is_landing_point or is_threaten_point
       if is_defend_position:
-        is_worker_on_cluster = any(self.ci.c(cid).on_cluster(worker.pos)
+        is_worker_on_cluster = any(self.ci.c(cid).on_cluster(worker.pos,
+                                                             use_nb9=True)
                                    for cid in cell_cluster_ids)
         # Defend offender from inside
         if is_worker_on_cluster:
@@ -2612,22 +2657,25 @@ class Strategy:
 
           if is_landing_point:
             is_quick_arrive = (arrival_turns <= oppo_arrival_turns
-                               if (arrival_turns <= 6)
+                               if (arrival_turns <= 8)
                                else arrival_turns < oppo_arrival_turns)
             if is_quick_arrive:
               opponent_weight += 5000 / dd(arrival_turns, r=1.2)
               oppo_weight_type = 'atk'
-          # TODO:  should the elif be if?
           elif is_threaten_point:
-            opponent_weight += 500 / dd(arrival_turns, r=1.2)
+            opponent_weight += 1000 / dd(arrival_turns, r=1.2)
             oppo_weight_type = 'threaten'
 
-          # lower opponent_weight at connection???
           if is_connection_point:
-            opponent_weight *= 0.6
+            # Only protect connection point at close dist
+            if oppo_arrival_turns > 2:
+              opponent_weight = 0
+            # lower opponent_weight at connection???, WHY?
+            # opponent_weight *= 0.6
 
-            # TODO: could use nearest_oppo_unit?
-            if self.game.turn >= 27 and worker.surviving_turns <= 10:
+            # Do not defend rule.
+            if (near_resource_tile.n_citytile_neighbour >= 2
+                or (self.game.turn >= 27 and worker.surviving_turns <= 10)):
               opponent_weight = 0
 
 
@@ -2636,7 +2684,7 @@ class Strategy:
         is_oppo_unit_on_cluster = any(self.ci.c(cid).on_cluster(nearest_oppo_unit.pos)
                                       for cid in cell_cluster_ids)
         if is_oppo_unit_on_cluster and arrival_turns <= oppo_arrival_turns:
-          opponent_weight += 500 / dd(arrival_turns, r=1.2)
+          opponent_weight += 1000 / dd(arrival_turns, r=1.2)
           oppo_weight_type = 'inside'
 
 
@@ -2644,7 +2692,8 @@ class Strategy:
       if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
         prt(f"[defend] {near_resource_tile.pos} landing_point={is_landing_point}, "
             f" threaten_point={is_threaten_point} "
-            f" oppo_weight_type={oppo_weight_type} ")
+            f" oppo_weight_type={oppo_weight_type} "
+            f" near_oppo_unit={nearest_oppo_unit.id}@{nearest_oppo_unit.pos}")
 
       # Push opponent weight; not necerrary?
       # oppo_decay_r = 1.8
@@ -2713,7 +2762,7 @@ class Strategy:
             and worker_has_enough_build_resource
             and not worker_has_coal_or_ruanium):
           fast_build_turns = 1
-          build_city_wt *= 3
+          build_city_wt *= 1.3
 
         # Lower the weight for coal or uranium for city building
         if self.game.is_night:
@@ -2771,7 +2820,7 @@ class Strategy:
            default_nrt_wt + build_city_wt)
       if debug:
         prt(f'[NRT] t={self.game.turn} w[{worker.id}] nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
-            f'v={v}. wt={wt}, clustr={boost_cluster}, '
+            f'v={v}. wt={wt}, cluster={boost_cluster}, '
             f' opponent={opponent_weight}({oppo_weight_type}), '
             f'transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, '
             f'build_city={build_city_wt} build_turns={fast_build_turns}, off={build_city_bonus_off_reason}'
@@ -3395,11 +3444,11 @@ class Strategy:
 
       wt = cluster_wt
 
-      # if worker.id in DRAW_UNIT_LIST:
-        # prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
-            # f'edge {worker.id}, c@{tile_pos} wait={wait_turns}, arrival_turns={arrival_turns}, '
-            # f'wt={wt:.1f}, open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
-            # f'nb_fuel={nb_fuel:.2f}, cfuel={fuel:.2f}', file=sys.stderr)
+      if worker.id in DRAW_UNIT_LIST:
+        prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
+            f'edge {worker.id}, c@{tile_pos} wait={wait_turns}, arrival_turns={arrival_turns}, '
+            f'wt={wt:.1f}, open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
+            f'nb_fuel={nb_fuel:.2f}, cfuel={fuel:.2f}', file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
