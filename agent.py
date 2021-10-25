@@ -28,8 +28,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_22']
-MAP_POS_LIST = [(23, 11), (23, 10)]
+DRAW_UNIT_LIST = ['u_2']
+MAP_POS_LIST = [(7, 4), (8, 5)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 
@@ -2483,7 +2483,7 @@ class Strategy:
       is_transfer_build_position = (transfer_build_wt > 0)
 
       worker_has_enough_build_resource = cargo_total_amount(worker.cargo) == CITY_BUILD_COST
-      def compute_build_turns(path, debug=debug):
+      def compute_build_turns(path, debug=False):
         is_worker_full_at_cur_cell = (worker.pos == near_resource_tile.pos
             and worker_has_enough_build_resource)
         if (is_worker_full_at_cur_cell or is_transfer_build_position):
@@ -2531,13 +2531,13 @@ class Strategy:
           # # Use a larger value for estimation
           # city_crash_wait_turns = (oppo_city.last_turns - arrival_turns)
 
-        # if debug:
-          # prt(f'[BUILD_TURNS] {near_resource_tile.pos} '
-              # f' arrival_turns={arrival_turns}, wait_turns={wait_turns}')
+        if debug:
+          prt(f'[BUILD_TURNS] {near_resource_tile.pos} '
+              f' arrival_turns={arrival_turns}, wait_turns={wait_turns}, collect_turns={collect_turns}')
 
         # TODO: add dest state cooldown
-        return (arrival_turns + wait_turns + collect_turns
-                + city_crash_wait_turns)
+        collect_turns = max(collect_turns, dest_state.cooldown)
+        return (arrival_turns + wait_turns + collect_turns + city_crash_wait_turns)
 
       normal_path, no_city_path = strategy.quickest_path_pairs[worker.id]
       fast_path = normal_path
@@ -2617,11 +2617,12 @@ class Strategy:
             if is_quick_arrive:
               opponent_weight += 5000 / dd(arrival_turns, r=1.2)
               oppo_weight_type = 'atk'
+          # TODO:  should the elif be if?
           elif is_threaten_point:
             opponent_weight += 500 / dd(arrival_turns, r=1.2)
             oppo_weight_type = 'threaten'
 
-          # lower opponent_weight at connection
+          # lower opponent_weight at connection???
           if is_connection_point:
             opponent_weight *= 0.6
 
