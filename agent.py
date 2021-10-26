@@ -2766,9 +2766,15 @@ class Strategy:
           build_city_bonus = False
           build_city_bonus_off_reason = '(cluster_owner)'
 
-        if is_connection_point:
-          build_city_bonus = False
-          build_city_bonus_off_reason = 'C_owner_at_CP'
+        # if is_connection_point:
+          # build_city_bonus = False
+          # build_city_bonus_off_reason = 'C_owner_at_CP'
+
+      # Do not build at connection point
+      if is_connection_point:
+        build_city_wt = 0
+        build_city_bonus = False
+        build_city_bonus_off_reason = f'CP_no_build'
 
       # Keep at least X near resource tile for a coal or urnaium cluster
       n_boundary, n_open = self.cluster_info.count_min_boundary_near_resource_tiles(
@@ -2788,16 +2794,16 @@ class Strategy:
                                 or worker.cargo.uranium > 0)
 
         # If worker is next to connection point
-        if is_connection_point:
-          if (arrival_turns <= 1
-              and worker_has_enough_build_resource
-              and not worker_has_coal_or_ruanium):
-            fast_build_turns = 1
-            build_city_wt *= 1.3
-          else:
-            build_city_wt = 0
-            build_city_bonus = False
-            build_city_bonus_off_reason = f'CP'
+        # if is_connection_point:
+          # if (arrival_turns <= 1
+              # and worker_has_enough_build_resource
+              # and not worker_has_coal_or_ruanium):
+            # fast_build_turns = 1
+            # build_city_wt *= 1.3
+          # else:
+            # build_city_wt = 0
+            # build_city_bonus = False
+            # build_city_bonus_off_reason = f'CP'
 
         # Lower the weight for coal or uranium for city building
         if self.game.is_night:
