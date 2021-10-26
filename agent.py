@@ -2807,9 +2807,9 @@ class Strategy:
       build_city_wt = 0
       if build_city_bonus:
         build_city_wt += (200 if is_opponent_citytile else 1001)
-        fuel_rate = min(get_resource_to_fuel_rate(self.ci.c(cid).any_cell.resource)
-                        for cid in cell_cluster_ids)
-        build_city_wt *= fuel_rate
+        # fuel_rate = min(get_resource_to_fuel_rate(self.ci.c(cid).any_cell.resource)
+                        # for cid in cell_cluster_ids)
+        # build_city_wt *= fuel_rate
 
         worker_has_coal_or_ruanium = (worker.cargo.coal > 0
                                 or worker.cargo.uranium > 0)
