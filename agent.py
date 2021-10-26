@@ -2394,9 +2394,7 @@ class Strategy:
           full_worker_goto_city = (worker.get_cargo_space_left() == 0 and
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
-            city_crash_boost += worker_total_fuel(worker) * n_citytile
-            # city_crash_boost += n_citytile * max(CITYTILE_LOST_WEIGHT,
-            # worker_total_fuel(worker))
+            city_crash_boost += worker_total_fuel(worker) * log(n_citytile)
             city_crash_boost_loc = 'city_crash'
 
       # Also limit resource to next day.
@@ -2458,7 +2456,7 @@ class Strategy:
 
         decay = 1
         fuel = worker_total_fuel(worker)
-        city_survive_boost += (1 - surviving_rate) * n_citytile * fuel / decay
+        city_survive_boost += (1 - surviving_rate) * log(n_citytile) * fuel / decay
 
       # Ignore |city_survive_boost| after plan=0 if city already receive enough fuel
       # from the plan=0.
