@@ -440,9 +440,11 @@ def resource_surviving_nights(turn, resource, upkeep):
   return nights_to_last_turns(turn, nights)
 
 
-def city_wont_last_at_nights(turn, city, add_fuel=0):
+def city_wont_last_at_nights(turn, city, add_fuel=0, debug=False):
   round_nights = get_night_count_this_round(turn)
   city_nights = city_last_nights(city, add_fuel)
+  if debug:
+    print(f'** city_wont_last_at_nights {round_nights}, {city_nights}')
   return city_nights <= round_nights
 
 

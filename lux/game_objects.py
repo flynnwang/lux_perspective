@@ -19,6 +19,10 @@ class Player:
     def researched_uranium(self, plus=0) -> bool:
         return (self.research_points + plus) >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
+    @property
+    def unit_count(self):
+      return len(self.units)
+
 
 class City:
     def __init__(self, teamid, cityid, fuel, light_upkeep):
