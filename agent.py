@@ -28,8 +28,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_19']
-MAP_POS_LIST = [(10, 10), (8, 4)]
+DRAW_UNIT_LIST = ['u_1']
+MAP_POS_LIST = [(0, 14), (7, 3)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 
@@ -50,17 +50,17 @@ MAX_WAIT_RESORUCE_TURNS = CIRCLE_LENGH
 
 MAX_WAIT_ON_CLUSTER_TURNS = CIRCLE_LENGH
 
-LOG_PATH = '/home/flynnwang/dev/playground/log/a.log'
-if os.path.exists(LOG_PATH):
-  os.remove(LOG_PATH)
+# LOG_PATH = '/home/flynnwang/dev/playground/log/b.log'
+# if os.path.exists(LOG_PATH):
+  # os.remove(LOG_PATH)
 
 
-def prt(line, file=sys.stderr):
-  print(line, file=file)
-  with open(LOG_PATH, 'a') as f:
-    f.write(line + '\n')
+# def prt(line, file=sys.stderr):
+  # print(line, file=file)
+  # with open(LOG_PATH, 'a') as f:
+    # f.write(line + '\n')
 
-# prt = print
+prt = print
 
 
 def timeit(func):
@@ -202,7 +202,7 @@ def resource_researched_wait_turns(resource,
     wait_turns = more_points / point_growth_rate
     # wait_turns = turns_to_wait(player, res_require_points, debug=debug)
     if debug:
-      prt(f" >> resource_researched_wait_turns: {wait_turns}")
+      prt(f" >> resource_researched_wait_turns {resource}: {wait_turns}")
 
     # if debug:
       # prt(f"move_days={move_days}, wait_turns={wait_turns}, surviving_turns={surviving_turns}"
@@ -241,8 +241,8 @@ def get_cell_resource_values(cell,
                                               move_days,
                                               surviving_turns,
                                               debug=debug)
-  if debug:
-    prt(f'get_cell_resource_values: [{cell.pos}] wait_turns={wait_turns}')
+  # if debug:
+    # prt(f'get_cell_resource_values: [{cell.pos}] wait_turns={wait_turns}')
   if wait_turns < 0:
     # if debug:
       # prt(f' return from wait_turns: {wait_turns}')
@@ -551,6 +551,10 @@ class ShortestPath:
           cid = self.ci.get_cid(newpos)
           if cid >= 0:
             self.reached_cids.add(cid)
+          for nb_cell in get_neighbour_positions(newpos, self.game_map, return_cell=True):
+            cid = self.ci.get_cid(nb_cell.pos)
+            if cid >= 0:
+              self.reached_cids.add(cid)
         # prt(f' start_from {self.start_pos}, append {newpos}, cur_dist={cur_dist}', file=sys.stderr)
 
   def shortest_dist(self, pos):
@@ -1687,14 +1691,15 @@ class OffenderDetector:
     # if unit.pos in cluster.boundary_positions:
       # return 0, [unit.pos]
 
-    positions = cluster.nb9_boundary_positions
+    # positions = cluster.nb9_boundary_positions
+    positions = cluster.boundary_positions
     # if unit.id == 'u_3' and debug and cid == 6:
       # prt(f' >>>> boundary points, cid={cid},  n={len(positions)} pts={positions}')
     for pos in positions:
-      # if unit.id == 'u_3' and debug and cluster.cid == 6:
+      # if unit.id == 'u_2' and debug:
         # prt(f' >>> boundary {pos}, cid={cluster.cid}, sz={cluster.size}')
 
-      # if unit.id == 'u_1' and pos in MAP_POS_LIST and debug:
+      # if unit.id == 'u_2' and pos in MAP_POS_LIST and debug:
         # shortest_path = unit.shortest_path
         # dist = shortest_path.shortest_dist(pos)
         # prt(f' >>>> {pos}, unit.pos={unit.pos}, shortet_dist={dist}, cid={cluster.cid}')
@@ -1705,16 +1710,27 @@ class OffenderDetector:
       # Skip any citytile
       bcell = self.game_map.get_cell_by_pos(pos)
       if bcell.citytile is not None:
+        # if unit.id == 'u_2' and pos in MAP_POS_LIST and debug:
+          # prt(' skip city tile')
         continue
 
       shortest_path = unit.shortest_path
       dist = shortest_path.shortest_dist(pos)
       if dist == MAX_PATH_WEIGHT:
+        # if unit.id == 'u_2' and pos in MAP_POS_LIST and debug:
+          # prt(' skip dist')
         continue
 
+
+      # if unit.id == 'u_2' and pos in MAP_POS_LIST and debug:
+        # prt(f' t={self.game.turn}, add_threaten_point={add_threaten_point}, pos={pos} dist={dist}, check_dist={self.NEAR_CHECK_DIST}')
       # If opponent unit is very close, defend it anyway.
       if add_threaten_point and dist <= self.NEAR_CHECK_DIST:
+        # if unit.id == 'u_2' and pos in MAP_POS_LIST and debug:
+          # prt(f' before add={self.ci.threaten_points.keys()}')
         self.ci.add_landing_info(pos, unit, dist, is_landing=False)
+        # if unit.id == 'u_2' and pos in MAP_POS_LIST and debug:
+          # prt(f' after add={self.ci.threaten_points.keys()}')
 
       if dist < min_dist:
         min_dist = dist
@@ -2388,13 +2404,13 @@ class Strategy:
             min_city_arrival_turns  # only goto nearest city tiles.
             and arrival_turns_wo_city <=
             city_last_turns):  # city should last when arrived, +1 to account for the last turn
-          not_full_woker_goto_city = (dest_state.arrival_fuel >= 300
-                                      and unit_fuel >= 300)
+          not_full_woker_goto_city = (dest_state.arrival_fuel >= 80
+                                      and unit_fuel >= 80)
           # full_worker_goto_city = worker.get_cargo_space_left() == 0
           full_worker_goto_city = (worker.get_cargo_space_left() == 0 and
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
-            city_crash_boost += worker_total_fuel(worker) * log(n_citytile)
+            city_crash_boost += worker_total_fuel(worker) * n_citytile
             city_crash_boost_loc = 'city_crash'
 
       # Also limit resource to next day.
@@ -2456,7 +2472,7 @@ class Strategy:
 
         decay = 1
         fuel = worker_total_fuel(worker)
-        city_survive_boost += (1 - surviving_rate) * log(n_citytile) * fuel / decay
+        city_survive_boost += (1 - surviving_rate) * n_citytile * fuel / decay
 
       # Ignore |city_survive_boost| after plan=0 if city already receive enough fuel
       # from the plan=0.
@@ -2466,8 +2482,8 @@ class Strategy:
         city_survive_boost = 0
 
       is_wood_city = city_cell.pos in self.is_wood_city_tile
-      if (not self.turn_on_exhaust(worker, city_cell.pos) and
-          is_wood_city and is_wood_resource_worker(worker)):
+      if (#not self.turn_on_exhaust(worker, city_cell.pos) and
+          (n_citytile <= 1) and is_wood_city and is_wood_resource_worker(worker)):
         city_crash_boost = 0
         city_survive_boost = 0
         city_crash_boost_loc = 'wood_woker'
@@ -2624,6 +2640,10 @@ class Strategy:
       if no_city_build_turns < fast_build_turns:
         fast_path = no_city_path
         fast_build_turns = no_city_build_turns
+
+      if is_transfer_build_position:
+        # mark build city cell
+        self.worker_build_city_tasks[(worker.id, near_resource_tile.pos)] = fast_path
 
       if fast_build_turns >= MAX_DAYS:
         if debug:
@@ -2787,6 +2807,9 @@ class Strategy:
       build_city_wt = 0
       if build_city_bonus:
         build_city_wt += (200 if is_opponent_citytile else 1001)
+        fuel_rate = min(get_resource_to_fuel_rate(self.ci.c(cid).any_cell.resource)
+                        for cid in cell_cluster_ids)
+        build_city_wt *= fuel_rate
 
         worker_has_coal_or_ruanium = (worker.cargo.coal > 0
                                 or worker.cargo.uranium > 0)
@@ -2843,7 +2866,7 @@ class Strategy:
       default_nrt_wt = 0
       if build_city_wt > 0:
         try:
-          build_city_wt /= dd(fast_build_turns, r=1.2)
+          build_city_wt /= dd(fast_build_turns, r=1.07)
         except Exception as e:
           prt(f'[DEBUG] t={self.game.turn} w[{worker.id}] {worker.pos} nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
               f' normal_build_turns={normal_build_turns}, no_city_build_turns={no_city_build_turns} not_leaving={no_city_path.not_leaving_citytile} , arrival_turns={arrival_turns}'
@@ -3457,8 +3480,8 @@ class Strategy:
           surviving_turns=surviving_turns)
 
       if wait_turns < 0 or wait_turns > MAX_WAIT_ON_CLUSTER_TURNS:
-        if worker.id in DRAW_UNIT_LIST:
-          prt(f' >> {worker.id} wait for c={cid} {tile_pos} too long: {wait_turns}')
+        # if worker.id in DRAW_UNIT_LIST:
+          # prt(f' >> {worker.id} wait for c={cid} {tile_pos} too long: {wait_turns}')
         return MIN_CLUSTER_WT
 
       open_positions = cluster.get_open_boundary_positions()
@@ -3495,11 +3518,11 @@ class Strategy:
 
       wt = cluster_wt + pin_wt
 
-      if worker.id in DRAW_UNIT_LIST:
-        prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
-            f'edge {worker.id}, c@{tile_pos} wait={wait_turns}, arrival_turns={arrival_turns}, '
-            f'wt={wt:.1f}, pin_wt={pin_wt} open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
-            f'nb_fuel={nb_fuel:.2f}, fuel={fuel:.2f}', file=sys.stderr)
+      # if worker.id in DRAW_UNIT_LIST:
+        # prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
+            # f'edge {worker.id}, c@{tile_pos} wait={wait_turns}, arrival_turns={arrival_turns}, '
+            # f'wt={wt:.1f}, pin_wt={pin_wt} open_ratio={open_ratio:.2f}, cluster_wt={cluster_wt:.2f}, '
+            # f'nb_fuel={nb_fuel:.2f}, fuel={fuel:.2f}', file=sys.stderr)
       return wt
 
     def gen_resource_clusters():
@@ -3868,8 +3891,9 @@ class Strategy:
           self.blacklist_city_building_positions.add(pos)
 
     # TODO: better condition
-    if self.game.player.research_points < 50:
-      return
+    # if self.game.player.research_points < 50:
+    # if self.game.turn < 40:
+    return
     danger_positions = ({pos for pos in self.ci.landing_points.keys()}
                         | {pos for pos in self.ci.threaten_points.keys()})
     # Work on wood cluster build
@@ -4081,6 +4105,7 @@ class Strategy:
     self.record_assigned_cluster()
 
   def turn_on_exhaust(self, worker, cluster_query_pos):
+    return True
     if self.game.turn >= 320 and worker.get_cargo_space_left() == 0:
       return True
 
