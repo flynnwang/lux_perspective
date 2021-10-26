@@ -152,12 +152,12 @@ def is_resource_researched(resource,
   if resource is None:
     return False
 
-  if move_days == 0 and surviving_turns == 0:
-    plus = 0
-  else:
-    t = player.turn + max(move_days, surviving_turns)
-    plus = player.RP_ESTIMATOR(t) - player.research_points
-  # plus = max(move_days, surviving_turns) * player.avg_research_point_growth
+  # if move_days == 0 and surviving_turns == 0:
+    # plus = 0
+  # else:
+    # t = player.turn + max(move_days, surviving_turns)
+    # plus = player.RP_ESTIMATOR(t) - player.research_points
+  plus = max(move_days, surviving_turns) * player.avg_research_point_growth
   if debug:
     prt(f' researched_coal={player.researched_coal(plus)}, '
         f'dR={player.avg_research_point_growth}, move_days={move_days},'
@@ -196,11 +196,11 @@ def resource_researched_wait_turns(resource,
     return 0
 
   def waiting_turns(res_require_points):
-    # more_points = res_require_points - player.research_points
-    # more_points = max(0, more_points)
-    # point_growth_rate = player.avg_research_point_growth + 0.01
-    # wait_turns = more_points / point_growth_rate
-    wait_turns = turns_to_wait(player, res_require_points, debug=debug)
+    more_points = res_require_points - player.research_points
+    more_points = max(0, more_points)
+    point_growth_rate = player.avg_research_point_growth + 0.01
+    wait_turns = more_points / point_growth_rate
+    # wait_turns = turns_to_wait(player, res_require_points, debug=debug)
     if debug:
       prt(f" >> resource_researched_wait_turns: {wait_turns}")
 
@@ -3402,7 +3402,7 @@ class Strategy:
         line = annotate.line(offender.x, offender.y, pos.x, pos.y)
         self.actions.append(line)
 
-    self.record_research_points()
+    # self.record_research_points()
 
   CLUSTER_PIN = set()
   def assign_worker_to_resource_cluster(self, multi_worker=False):
