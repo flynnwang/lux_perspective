@@ -2385,6 +2385,7 @@ class Strategy:
 
       city_crash_boost = 0
       city_survive_boost = 0
+      city_crash_boost_loc = ''
 
       # TODO: tmp disalbe it.
       # If the worker is a wood full worker, goto nearest city tiles when possible.
@@ -2395,7 +2396,7 @@ class Strategy:
 
       # If a worker can arrive at this city with some min fuel (or full cargo)
       unit_fuel = cargo_total_fuel(worker.cargo)
-      city_crash_boost_loc = ''
+      is_wood_city = city_cell.pos in self.is_wood_city_tile
       if city_wont_last:
         _, quick_path = self.quickest_path_pairs[worker.id]
         arrival_turns_wo_city = quick_path.query_dest_turns(city_cell.pos)
@@ -2404,14 +2405,21 @@ class Strategy:
             min_city_arrival_turns  # only goto nearest city tiles.
             and arrival_turns_wo_city <=
             city_last_turns):  # city should last when arrived, +1 to account for the last turn
-          not_full_woker_goto_city = (dest_state.arrival_fuel >= 80
+
+          # do not goto city too earlier.
+          not_full_woker_goto_city = (city_last_turns - arrival_turns_wo_city <= 6
+                                      and dest_state.arrival_fuel >= 80
                                       and unit_fuel >= 80)
           # full_worker_goto_city = worker.get_cargo_space_left() == 0
           full_worker_goto_city = (worker.get_cargo_space_left() == 0 and
                                    worker.is_carrying_coal_or_uranium)
           if (not_full_woker_goto_city or full_worker_goto_city):
-            city_crash_boost += worker_total_fuel(worker) * n_citytile
-            city_crash_boost_loc = 'city_crash'
+            if n_citytile <= 1 and is_wood_city:
+              city_crash_boost = 1
+              city_crash_boost_loc = 'wood_city_crash'
+            else:
+              city_crash_boost += worker_total_fuel(worker) * n_citytile
+              city_crash_boost_loc = 'city_crash'
 
       # Also limit resource to next day.
       if (plan_idx > 0 and
@@ -2472,6 +2480,8 @@ class Strategy:
 
         decay = 1
         fuel = worker_total_fuel(worker)
+        if n_citytile <= 1 and is_wood_city:
+          fuel = 1
         city_survive_boost += (1 - surviving_rate) * n_citytile * fuel / decay
 
       # Ignore |city_survive_boost| after plan=0 if city already receive enough fuel
@@ -2481,13 +2491,12 @@ class Strategy:
           city.city_game_end_fuel_req < 0):
         city_survive_boost = 0
 
-      is_wood_city = city_cell.pos in self.is_wood_city_tile
-      if (#not self.turn_on_exhaust(worker, city_cell.pos) and
-          (n_citytile <= 1) and is_wood_city and is_wood_resource_worker(worker)):
-        city_crash_boost = 0
-        city_survive_boost = 0
-        city_crash_boost_loc = 'wood_woker'
-        city_survive_boost_loc = 'wood_worker'
+      # if (#not self.turn_on_exhaust(worker, city_cell.pos) and
+          # (n_citytile <= 1) and is_wood_city and is_wood_resource_worker(worker)):
+        # city_crash_boost = 0
+        # city_survive_boost = 0
+        # city_crash_boost_loc = 'wood_woker'
+        # city_survive_boost_loc = 'wood_worker'
 
 
       # collect_amt, _ = get_one_step_collection_values(city_cell, player, self.game)
