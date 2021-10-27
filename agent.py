@@ -2361,7 +2361,7 @@ class Strategy:
           # # Use a larger value for estimation
           # city_crash_wait_turns = (oppo_city.last_turns - arrival_turns)
 
-        # TODO: add dest state cooldown
+        collect_turns = max(collect_turns, dest_state.cooldown)
         return (arrival_turns + wait_turns + collect_turns
                 + city_crash_wait_turns)
 
@@ -2385,14 +2385,9 @@ class Strategy:
         return -99999
 
       wt = 0
-
       # Build city by default, but only turn it off when needed.
-      if fast_build_turns < MAX_PATH_WEIGHT:
-        build_city_bonus = f'build(wait={fast_build_turns}, not_leave={fast_path.not_leaving_citytile})'
-        build_city_bonus_off_reason = '-'
-      else:
-        build_city_bonus = False
-        build_city_bonus_off_reason = 'cant_arrival'
+      build_city_bonus = f'build(wait={fast_build_turns}, not_leave={fast_path.not_leaving_citytile})'
+      build_city_bonus_off_reason = '-'
 
       if is_transfer_build_position:
         build_city_bonus = 'transfer_build'
