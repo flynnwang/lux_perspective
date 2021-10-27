@@ -256,9 +256,9 @@ def get_cell_resource_values(cell,
   amount = min(amount, resource.amount)
   if unit:
     amount = min(amount, unit.get_cargo_space_left())
-  # fuel = amount * get_resource_to_fuel_rate(resource)
+  fuel = amount * get_resource_to_fuel_rate(resource)
   # Use constant weight
-  fuel = 0.1
+  # fuel = 0.1
   return amount, fuel / dd(move_days + wait_turns, r=1.2), wait_turns
 
 
