@@ -1736,6 +1736,11 @@ class Strategy:
       unit.is_transfer_worker = False
       unit.target_city_id = None
 
+
+      cids = self.ci.get_neighbour_cells_cluster_ids(unit.pos,)
+      unit.on_cluster = (len(cids) > 0)
+
+
       # Flag the unit if after the worker has not task after initial planning.
       unit.is_idle_worker = False
 
@@ -2671,6 +2676,11 @@ class Strategy:
         if self.lock_lock.is_locked_with_player_unit(worker.pos, target.pos):
           continue
 
+        # Do not lock with opponent unit if woker is not on cluster
+        if not worker.on_cluster and self.lock_lock.is_locked(worker.pos,
+                                                              target.pos):
+          continue
+
         if cell_has_player_citytile(target, self.game):
           v = get_city_tile_weight(worker, target, quicker_dest_turns)
           # if worker.id in DRAW_UNIT_LIST and target.pos in MAP_POS_LIST:
@@ -2797,6 +2807,11 @@ class Strategy:
 
       # Do not move onto lock position with player unit.
       if self.lock_lock.is_locked_with_player_unit(worker.pos, next_position):
+        return -MAX_MOVE_WEIGHT
+
+      # Do not lock with opponent unit if woker is not on cluster
+      if not worker.on_cluster and self.lock_lock.is_locked(worker.pos,
+                                                            next_position):
         return -MAX_MOVE_WEIGHT
 
       # Use target score if forced into other positions
