@@ -2177,7 +2177,7 @@ class Strategy:
 
     MAX_WEIGHT_VALUE = 10000
     CLUSTER_BOOST_WEIGHT = 200 * 40
-    UNIT_SAVED_BY_RES_WEIGHT = 15
+    UNIT_SAVED_BY_RES_WEIGHT = 10
 
     DEFAULT_RESOURCE_WT = 1.2
 
@@ -2638,7 +2638,7 @@ class Strategy:
 
       normal_path, no_city_path = strategy.quickest_path_pairs[worker.id]
       fast_path = normal_path
-      fast_build_turns = MAX_PATH_WEIGHT
+      fast_build_turns = MAX_DAYS
 
       normal_build_turns = compute_build_turns(normal_path, debug=debug)
       if normal_build_turns < fast_build_turns:
@@ -2662,7 +2662,7 @@ class Strategy:
       wt = 0
 
       # Build city by default, but only turn it off when needed.
-      if fast_build_turns < MAX_PATH_WEIGHT:
+      if fast_build_turns < MAX_DAYS:
         build_city_bonus = f'build(wait={fast_build_turns}, not_leave={fast_path.not_leaving_citytile})'
         build_city_bonus_off_reason = '-'
       else:
