@@ -1611,7 +1611,8 @@ class Strategy:
     self.bias = None
     self.lock_lock = LockLock()
     self.cluster_assigned_positions = set()
-    self.offender_detector = OffenderDetector()
+    # self.offender_detector = OffenderDetector()
+    self.cluster_pin = set()  # (worker.id, pos)
 
   @property
   def circle_turn(self):
@@ -3113,7 +3114,7 @@ class Strategy:
     self.update_city_info()
 
     self.lock_lock.detect_lock(self.game)
-    self.offender_detector.update(self.game)
+    # self.offender_detector.update(self.game)
 
   def assign_worker_to_resource_cluster(self, multi_worker=False):
     """For each no citytile cluster of size >= 2, find a worker with cargo space not 100.
@@ -3191,7 +3192,11 @@ class Strategy:
       # else:
         # unit_bias = 0
 
-      wt = cluster_wt
+      pin_wt = 0
+      if (worker.id, cluster.any_cell.pos) in self.cluster_pin:
+        pin_wt += 1
+
+      wt = cluster_wt + pin_wt
 
       # if worker.id in DRAW_UNIT_LIST:
         # prt(f't={self.game.turn}, cid={cluster.cid} assigned={int(cluster.is_assigned)} '
@@ -3225,6 +3230,8 @@ class Strategy:
     rows, cols = scipy.optimize.linear_sum_assignment(weights, maximize=True)
     sorted_pairs = sorted(list(zip(rows, cols)),
                           key=lambda x: -weights[x[0], x[1]])
+
+    self.cluster_pin = set()
     for worker_idx, cluster_idx in sorted_pairs:
       worker = workers[worker_idx]
       cluster = resource_clusters[cluster_idx]
@@ -3246,6 +3253,11 @@ class Strategy:
       worker.target_cluster = cluster
       worker.target_cid_turns = worker.cid_to_cluster_turns[cid]
       worker.is_cluster_owner = True
+
+      # Pin cluster to worker
+      for pos in cluster.resource_positions:
+        self.cluster_pin.add((worker.id, pos))
+
 
       if DRAW_UNIT_CLUSTER_PAIR:
         tile_pos = worker.cid_to_tile_pos[cid]
