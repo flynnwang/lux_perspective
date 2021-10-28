@@ -94,13 +94,429 @@ imagine every city is a hive, and there is a queue.
 ==========================
 
 
+# Grow Tree
+
+- [√] do not goto wood city tile with wood resource.
+- [√] Remove wood full city do_not_leave path limitation
+- [-] try not stay on near resource city tile
+  * add demote for wood city with collect amt
+  * test not adding this one
+- [√] Do not build on non-connection positions.
+  * do not add build city tile for task for city_tile_neighbour
+  * drop accept offer, so not stick.
+>>> version 1
 
 
-1633958661937_J6Dk3WdSMCMk, a0, defend_agent, 846813857
-- [] t54, cluster onwer drag back to fuel city! (a second case)
+- [√] Support step weight debugging by sources
+- [] Exhaust all wood resource at night? be careful, may cause large city failure.
+  * [] turn on city crash weight to accept resource
+  * [√] enable transfer build in this mode
+  * [] can also turn on transfer build when city no longer crash.
+- [] worker is not responding to resoruce delivery
+  * [] any worker can help with transefr
+
+
+- [-] 799356560, t24, u_4, why move to citytile (15, 13)
+  * because (14, 12) is a non-buildable location, and has lower value.
+  * [√] Try solve it by using the target score * 1e-8 as clue
+- [√] 28066107: t79, u22, not moving to boundary
+  * Bug: it's a bug due to previous left condtition to limit city building in initial 20 days
+
+
+- [√] 600758331, t5, u2, going to (6, 6)
+  * [√] should add cell (near resource tile) level opponent boosting.
+  * [] Also add cell opponent_weight for resource tile?
+
+
+1634072432279_ArrDFHCY4UU8, 455825312, a1
+- t9, u4, why goto (8, 7), not (7, 5)
+  * because cell opponent_weight is too large, and may wait long
+- t54, u4 not defending (11, 1), u_30 took the cell
+  * why opponent_weight not kicks in
+  * because opponent unit nearest cluster id is based on researched stauts
+    and it's not ready yet
+  * [√] Use unit.surviving_turns and unit.arrival_turns as estimation.
+- t170 u37, u32, (11, 11), 3 units, not share uranium well.
+  * [√] add boost score for step weight to force it into position
+- [√] t150, u_7, die (before 147)
+  * [√] BUG!: the return cargo from `consume_worker_resource` changed in later usage.
+  * [] Add decay for cell opponent weight
 
 
 
+
+
+[near resource position competition]
+always try to defend it, rather than consume it, even in the face of opponent unit.
+- [√] move towards crash city to gain more chance two build citytile!
+  * [√] extend near resource concept to include opponent citytile
+  * [√] support search to enter oppnent citytile
+  * [] Should we move towards player city?
+- [] move towards consumed resource, that's another way to build citytile
+- [] When competing resource with opponent, it's better to strengthen the citytile.
+  * maybe not necessary needed
+- [] Should we use dist decay for opponent weight?
+
+
+[coal competition]
+- [] need to move to resource to coal to stop opponent unit from accessing it.
+ * grow tree will slow down the coal research, but we still need to protect it.
+- [] Use transfer to export resource to wood city
+
+
+
+[cluster assignment]
+- [] Add gavitation from other cluster when choose cluster.
+- [] Use maximum of 2 for resource assignment? (or optionally use 2 for large cluster)
+
+[build worker]
+- [] use task assignment with virtual woker to compute which city to build worker
+
+[resource briage]
+- send transfer worker to build city tile near coal/uranium resource/city tile
+
+
+
+Points to improve
+- [] scatter cluster within the same city.
+
+- [√][P0] Predict opponent city crash during search.
+- [] add gavitation for near/resource tile with remote cluster resource
+- [] Avoid collision may be bad.
+- [] Do not close the wood city, which can lude enemy into the city
+- [] Should we remove resource collection when search?
+- [] Encourge tranfer resource out of wood factor.
+
+
+- [] Only save citytile that is near opponent citytile?
+
+
+
+1634563368909_fFPauqDwdqzK, a0, 542040790, defend_agent
+- [] send worker away when assign cluster
+  * use maximum of 2 for cluster assignment
+    > add more condition check with opponent unit on cluster?
+  * do not build city at current tile if *target cluster* does not has city tile
+    > t16, u3, going to (4, 2), not stay at (4, 4)
+    > becuase build_city_bonus is not large enough
+    > [√] inc build city weight to 2001
+- [√] t16 u_1, not moving towards opponent area.
+  - bias toward opponent direction
+- [√] t17, assign u_3, not u_7 as cluster owner
+  * same weight, for u_3, and u_7
+  * [√] break tie by sticky with smaller uid
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28502567
+709397033, a1, v.s. Toad
+- [-] t9, u4, why move to (9, 6), not stay at (10, 9)
+  * expecetd: to move to cell faster than opponent to protect cell
+- [] t106, u_34, not defending (10, 15)
+  * Because (9, 15) is a lock position and can't be moved onto.
+  * [] Support lock position (moved onto but failed last time) detection
+    > Need to keep the lock with opponent, but try resolve the lock with player unit.
+- Defend opponent unit at NRT+1?
+
+
+- [] Pay attention to cache usage
+
+
+[defend]
+to defend:
+* if it's a NRT, we should try move there earlier
+* if it's a RES, we shuold try push opponent unit out
+
+
+- [] Use other cluster weight when computing cluster weight
+- [] Use same weight for other resource types for cluster assigment
+    * in order to cover large wood cluster first
+- [] Do not use cluster owner to defend?
+
+* [] do not move to open NRT if it is very close to oppnent (what about cluster?)
+  > demote NRT with opponent near
+
+- [] use open ratio for cluster weight computing (not only cluster assignment)
+- [] detect lock and use it to order targets
+- [] test larger defend dist, 8 => 10
+- [] not move towads opponent when compete center wood cluster
+  > is it the case, that current move towards weight is too large?
+
+
+- [] optimize build city speed
+  * [√] use build wait turns for computing near resource tile weight
+  * [√] select path based on computing result
+  * [√] opponent decay r=1.8 (default)
+  * [√] include n9 near resourec tile
+  * [] Try add city crash weight for my own city (for rebuild)
+  * [] open up wood city cluster (fix keep open)
+- [] try hide in the city anyway
+
+1 [] defend resource within competing resource cluster
+  * [√] lower city crash weight, and inc resource defend weight to have resource defend behaviour
+  * [√] do not move to my unit position, who's target is opponent unit postion.
+    (because this move may fail)
+  * [√][UI] draw tranfer worker by text
+
+  * [] compute the number of worker required
+  * [] seduce opponent but defend the cluster from it (e.g. keep city open?)
+  * [] add more transfer behaviour
+  * [] make estimate opponent city crash more accurate
+
+  * [-] test build city tile outside wood city tile?
+    > covered with n9 NRT
+
+(not so sure)
+1.1 [] defend coal when opponent unit is ready (but maybe we're not)
+1.2 [] collect resource to save city at night?
+1.3 [] only save city that could help with defend opponent?
+[] do not fuel wood city!
+  * do fuel, otherwise, the city will crash?
+
+[] Use A* for search, to speed up
+  * not applicapable for single source all sinks.
+
+0 [] how to build worker within same cluster
+
+
+
+1634792632126_o8Wo735tc0e0, 190812630, a0, defend_agent
+- [√] wrong direction for first move, lost large cluster
+
+
+1634794955694_bFeyKJyP0k6X, 312235981, a0, defend_agent
+- [] transfer build should goto other resource cluster
+- [] cluster cowner do not defend
+- [] u_14, t53 (12, 10), (12, 5)
+  * Large build city bonus but not build.
+  * [] if not build, please do not build bonus?
+
+
+101842048, a1, defend_agent
+- t27, u5, at (4, 11) not moving to (12, 2)
+  * because no target available?
+  * why not go to city? because build_city_wt too large at non-researched connection point.
+  * why not build city at connection point? because it's also a NRT of uranium
+- [] Fix transfer move_and_collect condition.
+- [] inc city weight by lowering decay from 4 => 2
+- [] add one more slot for largest cluster
+- [] Fix only not defend opponent unit from inside from connection point
+
+- [] Add more condidate cells to larget wood cluster
+- [] Try larger weight for city_crash_weight (linear)
+
+
+1634970024052_9bklRCTMSYoD, 868931385, a0
+- [√] lock case
+  * [√] do not target lock player unit
+  * [√] do not move onto next position locked with player unit.
+
+
+
+>> Want to do
+
+- [] Support cluster type:
+  * use lock info for lost and unxeploied cluster
+
+- [] !!!build on extend point (similar to connection point)
+- [] Delayed RP point generation with new city born strategy
+- [] Use same weight for other types of resource when cluster assignment
+
+- [] defend my crashing city tile
+- [] Why wood resource has only 0.001 weight?
+
+killer features
+- [] save other units with transfer
+- [] merge resource to build more city at last.
+
+## Features
+
+[offender detection]
+- [√] Record oppo unit history moves
+- [√] computer cluster offender list.
+- [√] Use offender to to compute opponent weight
+
+[sustain mode]: build less city tile to gain more wood
+OWN / LOST / UNEXPLOITED / COMPETITION
+- [√] COMPETITION: use lock lock to unlock move with opponent units
+- [] OWN cluster: build less citytile: when RP >= 50, city tile + worker <= boundary count
+  * [] do not turn on exhaust, but use collect resource ?
+
+
+
+test map: replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
+- [√] t74, u17, not moving to connection point to defend
+  * [√] t66, u_25, not defend u7: (18, 6), (19, 6)
+    >> because one one_step_amt == 0 for connection point.
+    >> support connection point for NRT weight
+  * [√] Fix the definition of connection point: NRT that can has no cid for n4
+  * [√] t8, u2, stay at connection point (13, 2), (17, 6)
+    >> build weight at connection point should be small
+- [√] u_4 t13, clustser owner build at connection point.
+  * cluster owner should not build but other woker could build.
+- [√] t43, u8, multiple landing points
+  * [√] support multiple landing points
+  * [√] lower the opponent_weight
+  * [√] raise the build city bonus weight for connection point when worker full
+    >> missing use_nb9 for cell_next_to_target_cluster
+    >> and togather with nb_citytile count check to surppress direct build at connection point
+- [√] t69 u6, move to CP (13, 2) and die
+  * move becuase of defend weight
+  * [√] lower opponent_weight when night is around and surviving_turns is not enough
+
+- [√] t107, u_28, not going (19, 9), but (23, 11)
+  * should lower the build city weight for coal and uranium resource
+- [√] t149 u22, not stay at (23, 11), but goto (23, 10)
+  * large coal resource weight and build city weight too small
+  * [√] Use fixed resource collection weight
+
+
+- [] t101, u_20, defend bad case
+
+
+- [] t121, u28, goto CP (18, 18), not stay at (18, 17)
+  * build city tile on CP too strong than opponent weight
+
+- [] turn on sustain mode (do not build too much city on safe cluster)
+- [] Missing resource weight at NRT.
+
+- [] t76, u_9, not moving onto citytile (because of city won't last, but last)
+- [] t34, u8, goto (16, 7), not stay at (14, 1)
+- [] Try cluster owner do not transfer build
+- [] When attacking lost cluster t78, check lock
+
+
+1635115246243_0ZpbwVvnabTs, 12, 386971656, a1
+- [√] t7, u2, not defend to (7, 4), but goto (8, 5)
+  * Missing cooldown into build turns compute
+- [] t30 u2 give up (8, 5) to (10, 5)
+  * Why (8, 5) is not a threaten point: because CP is by current def is also on cluster (which is not)
+    >> [√] a bug in nb9 nbs
+  * [√] threaten point is not computed correctly
+  * [] Do not defend at CP if there is a nb citytile?
+- [√] t10 u2 goto (7, 5) not (7, 4)
+  * could be the case, two steps has same dist to cluster
+  * [√] add equal sign to landing points detection
+- [√] t11 u2 goto (8, 5) not (7, 4)
+  * on_cluster no include nb9
+- [√] t0 u2, not goto (7, 4), goto (8, 2)
+  * bug of on_cluster
+- [√] t12 u2, not defend at CP (7, 5) but build at (7, 4)
+  * (7, 4) has larger weight, (7, 5) is not buildable (single city)
+  * [√] fixed by separate threaten and landing
+- [√] t4 u2 not build at (7, 4), but move to (7, 3)
+  * lower build_city_wt at CP and fix bug of threaten dist
+- [√] t10 u_4, target (9, 2) not (8, 5)
+  * cluster assignment issue, tie related fliker
+  * [√] implement cluster pin
+- [] t33, u7, not goto coal cluster
+  * because of city crash
+  * [] use worker count to estimate RP point (becuase city crash will make it bad)
+  * [] remove wait turns for cluter assignment?
+  * [√] improve RP estimation with poly fit
+- [√] t30 u6 move to (4, 2) and die, not stay at (4, 1)
+  * (4, 2) is a CP
+  * [√] do not build at connection is build condition not met
+- [√] t56, u18 target CP (4, 11) not (7, 9)
+  * estimate is not accuraet enough , under estimate.
+  * use polyfit
+- [] t32 u19 born on dying city, target (10, 10), not (8, 4)
+  * NRT(8, 4) has default weight, but RES(10, 10) only has small weight
+  * [] Fix bug on is_worker_on_last_city_tiles: should return city last
+  * [] do not born worker before circile_turn >= 29
+
+- When to defend CP?
+
+
+# Reverts
+- [√] revert build at CP point
+- [√] revert citytile crash weight
+- [] eject worker to coal
+
+- [] cluter type: check opponent unit count is wrong
+
+
+1635250983707_tvZaYRlSACwC, 204919389, a0
+- [√] t63 u6, moving away from (8, 1) and goto (8, 2)
+  * both landing_point=None,  threaten_point=None
+  * a bug for how cluster ids is collected from shortest path
+- How to send worker to coal NRT
+  * [] t90, u_13, (11, 3), (14, 3)
+  * inc build city weight
+- [√] t13, u_1, target (0, 14), but cluster is at (7, 3)
+  * due to max fuel rate for cell_cluster ids
+- [√] t28, not build at connection point
+  * transfer build add build task
+- [] unit not move onto resource tile to push opponent away
+
+
+- [] no need to build city tile if the position is securied (e.g. with nb city)
+  
+
+
+## Tests
+
+
+658850527, a1
+- [] t97, u_13, stay (2, 9), not target (4, 9)
+  * because (2, 9) is a connection point
+- [] t30, u9, should defend CP (8, 7)
+  * t19, u6, CP (3, 7), NRT(4, 7)
+
+
+
+## Rebuild
+
+- [√] add cooldown for compute_build_turns: 84.4
+
+- [X] cluster pinning: 76.2
+- [X] lock with opponent unit when worker not on cluster:
+
+- [] connection point defend: rebuild_defend_CP
+  * compute_build_turns work with CP
+  * turn off CP build if not transfer build
+  * add nb9 boundary
+  * add oppo_arrival_turns > 2 for do_not_protect_cp_if_not_close
+
+
+- [] fix is_worker_on_last_city_tiles
+
+- remove max limit on cluster and resource wait time
+- inc defend range?
+- no need to turn on exhaust info for affending cluster?
+
+- open wood cluster
+
+- transfer coal
+- **secure city in danger.
+
+- circle to attack
+- better defend behaviour
+- sustain mode
+
+
+
+Toad: take control of wood to win?
+- Why not research? To build worker as fast as possible?
+  * just build fast
+  * protect coal/uranium well
+  * it's not about the speed of research points, but how you protect the coal/uranium resource
+  * that is to get to high level of resouce does not mean RP point fast
+    another way would be to build more workers and protect the resource.
+- Move along the boarder between city build, to cover border quickly.
+- It's moving the agent out side the city and later back to gain the new resource.
+
+- Why Toad can afford city crash, but still gain so much advantage at coal resource?
+
+
+# Strategy
+
+- Before: my goal is to build as fast as possible
+- After: own wood cluster, make opponent die out of stavation.
+
+
+
+===========================
+
+- ture parameters
 
 [] Add cell level threat weight.
 
@@ -113,7 +529,7 @@ imagine every city is a hive, and there is a queue.
 
 
 IDEAS:
-- [] Add cooldown into near_resource_tile discount?
+- [√] Add cooldown into near_resource_tile discount?
 - support wait on days for priority search (for resource research points)? why?
 
 - Learning
