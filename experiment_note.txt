@@ -1,5 +1,17 @@
 
 
+
+[grow_tree] 
+1) use `compute_build_turns` to build city tile;
+2) add lock detection;
+3) add neighbor cluster weight for cluster assignment;
+4) add global bias weight;
+5) support push opponent unit out of resource cluster;
+6) Exhaust resource only when competing with an opponent.;
+7) tons of bug fix
+
+
+
 >> run_2021_1028_17_defend_CP
 
 opponent_name	defend_agent	rebuild
