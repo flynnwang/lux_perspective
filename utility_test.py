@@ -148,7 +148,9 @@ def test_compute_last_turns():
 
   assert nights_to_last_turns(0, 10) == 70
   assert nights_to_last_turns(1, 10) == 69
-  assert nights_to_last_turns(213, 40) == 147
+  assert nights_to_last_turns(0, 20) == 40 + 40 + 30
+  assert nights_to_last_turns(3, 20) == 40 + 40 + 30 - 3
+  assert nights_to_last_turns(210, 40) == 30 + 40 * 3 + 30
 
 
 def test_consume_cargo_at_citytile():

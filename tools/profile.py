@@ -12,13 +12,13 @@ env = make("lux_ai_2021",
            configuration={
                "loglevel": 2,
                "annotations": True,
-               'episodeSteps': 200,
+               'episodeSteps': 100,
                "actTimeout": 30,
                "seed": 409783524
            },
            debug=True)
 
-config = Config(max_depth=18)
-graphviz = GraphvizOutput(output_file="agent_perf_409783524_opt.png")
+config = Config(max_depth=15)
+graphviz = GraphvizOutput(output_file="agent_perf_20211028.png")
 with PyCallGraph(output=graphviz, config=config):
   env.run(["simple_agent", agent])
