@@ -3,6 +3,931 @@
 
 
 
+>> run_2021_1028_23_perf: need to identify regression
+
+opponent_name	defend_agent	grow_tree
+short_name
+defend_agent	0.0	23.4
+grow_tree	76.6	0.0
+
+
+>> run_2021_1028_17_defend_CP
+
+opponent_name	defend_agent	rebuild
+short_name
+defend_agent	0.0	33.3
+rebuild	66.7	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild	12	26	21	47	55.3
+16	32	27	59	54.2
+24	47	22	69	68.1
+32	49	7	56	87.5
+
+
+>> run_2021_1028_00_unlock_oppo
+
+opponent_name	defend_agent	rebuild_player_lock
+short_name
+defend_agent	0.0	20.3
+rebuild_player_lock	80.1	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+defend_agent	12	12	35	47	25.5
+16	16	43	59	27.1
+24	14	55	69	20.3
+32	5	51	56	8.9
+rebuild_player_lock	12	36	11	47	76.6
+16	43	16	59	72.9
+24	55	14	69	79.7
+32	51	5	56	91.1
+
+
+
+>> run_2021_1028_00_cluster_pin
+- pin agent to cluster with small weight
+
+opponent_name	defend_agent	rebuild
+short_name
+defend_agent	0.0	23.8
+rebuild	76.2	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild	12	31	16	47	66.0
+16	40	19	59	67.8
+24	54	15	69	78.3
+32	51	5	56	91.1
+
+
+>> run_2021_1028_03_fix_build_turns: **FANTASTIC**
+
+opponent_name	defend_agent	grow_tree
+short_name
+defend_agent	0.0	15.6
+grow_tree	84.4	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	36	11	47	76.6
+16	47	12	59	79.7
+24	59	10	69	85.5
+32	53	3	56	94.6
+
+
+
+>> run_2021_1027_12_dist_res
+ opponent_name	defend_agent	distribute_resource
+short_name
+defend_agent	0.0	35.1
+distribute_resource	64.9	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+distribute_resource
+12	25	22	47	53.2
+16	33	26	59	55.9
+24	50	19	69	72.5
+32	42	14	56	75.0
+
+
+>> run_2021_1027_09
+- revert build_city_wt
+- revert constant fuel wt
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	32.9
+grow_tree_fast_n9	67.1	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	29	18	47	61.7
+16	35	24	59	59.3
+24	49	20	69	71.0
+32	42	14	56	75.0
+
+
+>> run_2021_1027_00
+- revert to build city agent
+  * always use exhaust mode
+  * linear city weight
+  * not_full_woker_goto_city = 80
+  * ignore size 1 citytile
+  * build_city_weight = r=1.07
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	41.1
+grow_tree_fast_n9	58.9	0.0
+
+
+>> run_2021_1026_20
+* revert city tile weight
+* reomve CP point build
+
+(not full check)
+opponent_name	defend_agent	grow_tree_fast_n9
+defend_agent	0.0	51.4
+grow_tree_fast_n9	48.6	0.0
+
+
+>> run_2021_1026_16
+* fix some CP behaviour
+
+(not full check)
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	45.1
+grow_tree_fast_n9	54.9	0.0
+
+
+
+>> run_2021_1025_07:
+* support sustain mode
+* unlock with opponent unit when at uncluster location.
+
+>> run_2021_1024_23: offender detector v2: connection point behaviour
+(large regression)
+
+* inc city_survive_boost: log to linear
+* multiple landing points
+* lower opponent_weight at connection point: *0.6, reset to 0 before night
+* reset build_city_bonus for cluster owner at is_connection_point
+* Support connection point city building
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	54.1
+grow_tree_fast_n9	46.3	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9	12	21	26	47	44.7
+16	23	36	59	39.0
+24	33	36	69	47.8
+32	30	26	56	53.6
+
+
+>> run_2021_1024_14: add offender detector v1
+* initial version of offender detection
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	27.3
+grow_tree_fast_n9	72.7	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	28	19	47	59.6
+16	36	23	59	61.0
+24	57	12	69	82.6
+32	47	9	56	83.9
+
+
+
+>> run_2021_1023_23: *GOOD*
+* add lock lock
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	22.1
+grow_tree_fast_n9	77.9	0.0
+
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	32	15	47	68.1
+16	43	16	59	72.9
+24	54	15	69	78.3
+32	51	5	56	91.1
+
+
+
+>> run_2021_1023_18: (*regression*)
+* skip target and next move with open_ratio < 0
+
+opponent_name	defend_agent	grow_tree
+short_name
+defend_agent	0.0	28.1
+grow_tree	71.9	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	26	21	47	55.3
+16	38	21	59	64.4
+24	53	16	69	76.8
+32	49	7	56	87.5
+
+
+>> run_2021_1023_12:
+* fix city wont last issue
+
+opponent_name	defend_agent	grow_tree
+short_name
+defend_agent	0.0	25.5
+grow_tree	74.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	30	17	47	63.8
+16	43	16	59	72.9
+24	50	19	69	72.5
+32	49	7	56	87.5
+
+
+>> run_2021_1023_08 (keep only two change from 1023_00)
+- [] Fix transfer move_and_collect condition.
+- [] inc city weight by lowering decay from 4 => 2
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	22.9
+grow_tree_fast_n9	77.1	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	35	12	47	74.5
+16	44	15	59	74.6
+24	50	19	69	72.5
+32	49	7	56	87.5
+
+
+
+>> run_2021_1023_00
+- [] Fix transfer move_and_collect condition.
+- [] inc city weight by lowering decay from 4 => 2
+- [] add one more slot for largest cluster
+- [] Fix only not defend opponent unit from inside from connection point
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	30	17	47	63.8
+16	43	16	59	72.9
+24	55	14	69	79.7
+32	50	6	56	89.3
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	22.9
+grow_tree_fast_n9	77.1	0.0
+
+
+
+>> grow_tree_fast_n9 - R6: run_2021_1022_14
+- enable cluster assignment with neighbour clusters
+- regression is acceptable
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	30	17	47	63.8
+16	43	16	59	72.9
+24	50	19	69	72.5
+32	52	4	56	92.9
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	24.2
+grow_tree_fast_n9	75.8	0.0
+
+
+
+
+>>>>> grow_tree_fast_n9 - R5: not much regression, not much gain neither
+* try add more weight for wood cluster
+
+opponent_name	defend_agent	grow_tree
+short_name
+defend_agent	0.0	22.9
+grow_tree	77.1	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	30	17	47	63.8
+16	47	12	59	79.7
+24	50	19	69	72.5
+32	51	5	56	91.1
+
+
+
+>>>>> grow_tree_fast_n9 - R4
+* Try exhaust small cluster
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	0.0	26.7
+grow_tree_fast_n9	73.3	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	27	19	46	58.7
+16	44	11	55	80.0
+24	44	19	63	69.8
+32	44	9	53	83.0
+
+1634793369907_y3aJiw434PAg, 664701512, a1, defend_agent
+- [√] lost wood city
+  * large city crash, because of no wood fuel to city
+  * exhaust small city.
+  * add more weight to city survive boost
+
+
+>>>> grow_tree_fast - R3
+* Try enable city crash wait (reverted for now)
+
+win_loss	win	loss
+short_name
+grow_tree_fast_n9	74.9	25.1
+defend_agent	25.1	74.9
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	34	13	47	72.3
+16	42	17	59	71.2
+24	48	21	69	69.6
+32	49	7	56	87.5
+
+
+
+>>>> grow_tree_fast - R2: run_2021_1021_12
+* Add connection point as NRT
+* Do not goto NRT if wait turns < 0
+
+opponent_name	defend_agent	grow_tree_fast_n9
+short_name
+defend_agent	    0.0	    22.5
+grow_tree_fast_n9	77.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_fast_n9
+12	28	19	47	59.6
+16	49	10	59	83.1
+24	51	18	69	73.9
+32	51	5	56	91.1
+
+
+308255806, a1
+- [√] t34, crash
+  * [√] near non-researched resource tile
+  * do not build at first night
+- [] t45, u_18 chose uranium NRT (11, 8) instead of (10, 0)
+  * fast_cell defend, no easy fix.
+- [√] include n9 near resourec tile
+  * [√] build city at corner point when cargo full
+  * prioritize city building at corner?
+  * to build city tile on connection point (at corner)
+  * to also defend opponent unit when access from corner
+- [√] t5 u2, why goto (8, 8) not (8, 10)
+  * lower opponent weight for non-5000 cases
+- [√] t22, u9, goto (6, 13)
+  * [√] A bug: worker should protecte from outside
+  * [√] do not protect inside opponent for connection point
+- [√] t29 u_13, goto (6, 14), not (7, 13)
+  * [√] turn off various defending rule for connection point
+- [√] t27, u_13, goto (7, 14)
+  * because (7, 14) is a NRT (build default value and opponent), and city tile (8, 13) has weight 0
+  * [√] should make build city bonus 0 when not possible (so to escape the default value of 10)
+  * [√] How not to protect a cluster and die worker? wait turns >= 0
+
+13810037, a0
+- [√] t65 crash: move onto a NRT of non-researched resource tile was also a tranfer build location.
+  * tranfer build should not trigger build city bonus?
+- [√] need to add wait turns for build turns
+
+
+================================================ 2021-10-20 ========================================
+
+
+>>>> grow_tree_fast - R1
+* add wait turns int build_turns estimation.
+
+opponent_name	defend_agent	grow_tree
+short_name
+defend_agent	0.0	    26.0
+grow_tree	    74.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	30	17	47	63.8
+16	43	16	59	72.9
+24	50	19	69	72.5
+32	48	8	56	85.7
+
+
+>>>> grow_tree_fast
+* Use step to build to decay build city bonus weight.
+
+win_loss	win	loss
+short_name
+grow_tree	    71.2	28.8
+defend_agent	28.8	71.2
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	27	20	47	57.4
+16	39	18	57	68.4
+24	47	17	64	73.4
+32	45	9	54	83.3
+
+================================================ 2021-10-18 ========================================
+
+grow_tree_1018_01
+(regression on large maps, does improved on small sized maps)
+
+* fix opponent weight to bias opponent direction
+* estimate open_ratio at arrival for cluster assignment; use researched resource for turn on exhaust for opponent invade detection
+* add default weight for build city tile
+* consume wood resource when full
+* boost wood full resource tile weight
+
+1634472916023_Hp2djmnkSF1X, a0, 12, defend_agent
+- [√] t0 first step not toward opponent
+  * a bug due to missing opponent bias weight, fixed
+- [√] t49, u_1, goto (11, 4) why?
+  * because connected cluster has opponent unit.
+  * [√] Fixed by only consider resource researched cluster
+- cluster assigntment update
+  * [√] estimate the open ratio at arrival
+  * [] Eject coal worker to deliver resource
+  * [] max 2 worker
+- [√] Due with ejectet worker come into city
+  * t28, u_1, resource (10, 3), far resource (3, 1)
+  * [√] possible to send it to another cluster with default build city tile weight with no decay
+- [√] consume wood if it's full, t100
+  * [√] turn_on_exhaust when >0.5 resource tile are full
+  * [√] inc the resource weight for full resource
+
+
+opponent_name	defend_agent	grow_tree_1018_01
+short_name
+defend_agent	0.0	33.1
+grow_tree_1018_01	67.4	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_01
+12	90	55	145	62.1
+16	68	49	117	58.1
+24	83	36	119	69.7
+32	109	29	138	79.0
+
+Total Matches: 524 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_01/main.py | PfvQdwqvQTGt   | 23.6246746      | μ=25.987, σ=0.787  | 524
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | zYzdpGuF3qVL   | 21.6513766      | μ=24.013, σ=0.787  | 524
+
+
+>>>> grow_tree_1018_01 - R1: could fix the large map error for most cases.
+* try remove boost wood full and boost full wood tile
+
+
+opponent_name	defend_agent	grow_tree_1018_01
+defend_agent	0.0	32.5
+grow_tree_1018_01	68.0	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_01
+12	29	32	61	47.5
+16	40	14	54	74.1
+24	34	15	49	69.4
+32	37	5	42	88.1
+
+Total Matches: 207 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_01/main.py | 8zHhLzWzdQn1   | 24.2349425      | μ=26.655, σ=0.807  | 207
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | tY2IQOskaaJ3   | 20.9251210      | μ=23.345, σ=0.807  | 207
+
+
+>>>> grow_tree_1018_01 - R2:
+* use day turns drived by arrival turns for cluster assignment
+
+opponent_name	defend_agent	grow_tree_1018_01
+short_name
+defend_agent	0.0	30.9
+grow_tree_1018_01	69.6	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_01
+12	25	22	47	53.2
+16	37	27	64	57.8
+24	33	12	45	73.3
+32	56	5	61	91.8
+
+Total Matches: 214 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_01/main.py | YncudSZ2rQF9   | 23.9038177      | μ=26.320, σ=0.805  | 214
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | WQ67VneSmPjS   | 21.2632483      | μ=23.680, σ=0.805  | 214
+
+
+>>>> grow_tree_1018_01 - R2:
+* tune avg_build_city_cile_turns = 6 (from 5)
+
+opponent_name	defend_agent	grow_tree_1018_01
+short_name
+defend_agent	0.0	31.1
+grow_tree_1018_01	68.9	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_01
+12	38	28	66	57.6
+16	31	22	53	58.5
+24	33	13	46	71.7
+32	40	1	41	97.6
+
+Total Matches: 206 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_01/main.py | OFyDWSqF21XV   | 24.1071878      | μ=26.528, σ=0.807  | 206
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | HQwApEimrIqj   | 21.0515237      | μ=23.472, σ=0.807  | 206
+
+
+>>>> grow_tree_1018_01 - R3*
+- use larger wait turns threshold for cluster assignment: 8 => 40 (could be larger?)
+
+win_loss	win	loss
+short_name
+grow_tree_1018_01	74.1	25.9
+defend_agent	25.9	74.1
+
+Total Matches: 232 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_01/main.py | E0IaJ0MzEGx4   | 24.4507144      | μ=26.892, σ=0.814  | 232
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | bhMilhBp2BNX   | 20.6671491      | μ=23.108, σ=0.814  | 232
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_01
+12	36	20	56	64.3
+16	34	20	54	63.0
+24	55	15	70	78.6
+32	47	5	52	90.4
+
+
+
+>>>> grow_tree_1018_23: regression on large map size
+- max=2 for resource cluster assignment inc build city tile
+
+opponent_name	defend_agent	grow_tree_1018_23
+short_name
+defend_agent	0.0	35.9
+grow_tree_1018_23	64.1	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_23
+12	10	5	15	66.7
+ 16	17	20	37	45.9
+24	21	4	25	84.0
+32	18	8	26	69.2
+
+Total Matches: 100 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_23/main.py | tLQQ6HHOzQee   | 23.3747488      | μ=26.064, σ=0.896  | 100
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | l1niW4ME37hR   | 21.2474661      | μ=23.936, σ=0.896  | 100
+
+>>> Test variour opponent bias weight, so far not good.
+- if there is still regression, then will reset all change based on
+
+
+>>>> grow_tree_1019_global_bias:
+- cherry-pick opponent bias onto 1018_01 branch
+
+Total Matches: 225 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1018_23/main.py | O7UE5pfGLkMQ   | 24.2553848      | μ=26.669, σ=0.804  | 225
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | ZbUF4MZcPMtT   | 20.9176241      | μ=23.331, σ=0.804  | 225
+
+opponent_name	defend_agent	grow_tree_1018_23
+short_name
+defend_agent	0.0	30.5
+grow_tree_1018_23	70.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1018_23
+12	27	20	47	57.4
+16	40	16	56	71.4
+24	48	18	66	72.7
+32	41	13	54	75.9
+
+
+
+
+
+
+================================================ 2021-10-17 ========================================
+
+
+grow_tree_version 1:
+
+Total Matches: 995 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree/main.py | kqO1YSDUQIgV   | 30.6778306      | μ=33.296, σ=0.873  | 383
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | SalDKbmlP5LB   | 29.4889249      | μ=32.102, σ=0.871  | 386
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | kWtCCUSM0oV0   | 25.2935479      | μ=27.773, σ=0.826  | 344
+/home/flynnwang/dev/playground/versions/priority_search/main.py | 9amrzjDuq0tz   | 23.7597759      | μ=26.257, σ=0.832  | 336
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | dfq1pscrx1LT   | 20.2078459      | μ=22.878, σ=0.890  | 280
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | KAJP0l2zHSBW   | 15.4123156      | μ=18.448, σ=1.012  | 261
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	6.8	1.6	9.1	4.0	26.7
+defend_agent	93.2	0.0	37.2	83.1	73.3	93.9
+grow_tree	98.4	62.8	0.0	80.0	77.9	98.5
+priority_search	90.9	16.9	22.5	0.0	38.0	73.4
+simple_defend	96.0	26.7	22.1	64.8	0.0	77.4
+tranfer_agent_v1	73.3	6.1	1.5	28.1	22.6	0.0
+
+
+
+
+>>> grow_tree: version 2
+* should add cell (near resource tile) level opponent boosting
+* Use unit.surviving_turns and unit.arrival_turns as estimation when computing nearest unit arrival cluster ids
+* add boost score for step weight to force it into position
+
+Total Matches: 882 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree/main.py | qrmRqkK27bWP   | 27.1135928      | μ=29.658, σ=0.848  | 334
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | mOxDLJdfTbNv   | 26.5917275      | μ=29.160, σ=0.856  | 332
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | a4MwRg1P9U90   | 24.2146095      | μ=26.701, σ=0.829  | 326
+/home/flynnwang/dev/playground/versions/priority_search/main.py | tnnwHDF2yXvY   | 21.4941848      | μ=23.992, σ=0.833  | 268
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | NOgUw1LhysTL   | 18.5849794      | μ=21.178, σ=0.864  | 267
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | xvLTqvmCLGIM   | 12.4430394      | μ=15.643, σ=1.066  | 237
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	0.0	1.9	8.9	0.0	30.6
+defend_agent	100.0	0.0	42.3	80.6	77.9	89.0
+grow_tree	98.1	57.7	0.0	75.4	74.4	84.1
+priority_search	91.1	19.4	24.6	0.0	37.3	63.6
+simple_defend	100.0	22.1	25.6	64.4	0.0	90.2
+tranfer_agent_v1	69.4	11.0	15.9	36.4	9.8	0.0
+
+
+
+>>> grow_tree: version 3 (small batch evaluation)
+* fix BUG!: the return cargo from `consume_worker_resource` changed in later usage.
+
+Total Matches: 259 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree/main.py | GgfpjhrildqH   | 28.9753939      | μ=32.113, σ=1.046  | 98
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | zJK2kvd0bK35   | 27.1200613      | μ=30.098, σ=0.993  | 105
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | TFvOZNFaYIOY   | 24.9566689      | μ=27.963, σ=1.002  | 88
+/home/flynnwang/dev/playground/versions/priority_search/main.py | Db65cyH06Rup   | 24.1628558      | μ=27.217, σ=1.018  | 82
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | NPhn5kaUsZmQ   | 17.9249380      | μ=21.575, σ=1.217  | 71
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | KaZwzJNAM4zq   | 12.3023315      | μ=16.895, σ=1.531  | 74
+
+pponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	5.3	0.0	25.0	0.0	14.3
+defend_agent	94.7	0.0	44.4	70.8	60.9	90.9
+grow_tree	100.0	55.6	0.0	76.9	68.0	100.0
+priority_search	75.0	29.2	23.1	0.0	53.3	90.0
+simple_defend	100.0	39.1	32.0	46.7	0.0	63.6
+tranfer_agent_v1	85.7	9.1	0.0	10.0	36.4	0.0
+
+
+>>> grow_tree: test multiple thresholds of cell boosting score
+
+Total Matches: 614 | Matches Queued: 14
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_cell_oppo_500/main.py | YTswfYaMWiJf   | 28.9412206      | μ=31.540, σ=0.866  | 200
+/home/flynnwang/dev/playground/versions/grow_tree_cell_oppo_200/main.py | J8n2HsBxE3Mu   | 28.7998478      | μ=31.406, σ=0.869  | 196
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | wKt72kDyPIDs   | 26.4405162      | μ=28.964, σ=0.841  | 162
+/home/flynnwang/dev/playground/versions/grow_tree_cell_oppo_1000/main.py | 4f98YNsipz8J   | 24.9377922      | μ=27.557, σ=0.873  | 144
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | MrUmDG3pjmjY   | 23.5176617      | μ=26.194, σ=0.892  | 142
+/home/flynnwang/dev/playground/versions/priority_search/main.py | 2c0zm56OjLHT   | 22.1759927      | μ=24.853, σ=0.892  | 133
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | JnoIcp6OUsdy   | 17.2978743      | μ=20.399, σ=1.034  | 135
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | MuZpBO6M5xQa   | 11.0448483      | μ=14.942, σ=1.299  | 116
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree_cell_oppo_1000	grow_tree_cell_oppo_200	grow_tree_cell_oppo_500	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	5.6	8.3	0.0	0.0	16.7	5.6	6.2
+defend_agent	94.4	0.0	52.4	35.9	41.5	69.2	75.0	72.2
+grow_tree_cell_oppo_1000	91.7	47.6	0.0	27.3	11.1	71.4	64.3	92.9
+grow_tree_cell_oppo_200	100.0	64.1	72.7	0.0	41.0	88.5	77.8	100.0
+grow_tree_cell_oppo_500	100.0	58.5	88.9	59.0	0.0	69.6	87.5	100.0
+priority_search	83.3	30.8	28.6	11.5	30.4	0.0	27.8	85.0
+simple_defend	94.4	25.0	35.7	22.2	12.5	72.2	0.0	80.0
+tranfer_agent_v1	93.8	27.8	7.1	0.0	0.0	15.0	20.0	0.0
+
+
+>>> version4: grow_tree with defend rework + exhaust to invaded cluster
+* clearly with regression, specially with transfer_agent_v1
+
+
+replays/1634197748077_WSLDgyHqSwzP.json	a0 656803065 priority_search
+to improve defend near resource strategy, from small to large weight
+- add default bias weight to try to move towards opponent unit position: 1e-3 / arrival turns
+- add weight to oppo unit getting near to nrt to attract unit: fuel / dd(oppo_arrival)
+- move to attack point at all cost. LARGE_VALUE
+- [√] Exhaust cluster if invaded by opponent unit.
+  * also the cluster should have no open positions.
+
+
+- [√] t11/u1/ not build on nrt (1, 6), (0, 7)
+- [√] t17 u_6, move onto res (0, 8), not stay at (0, 7)
+  * opponent weight attrack weight too large
+
+Total Matches: 589 | Matches Queued: 9
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_exhaust/main.py | A3BoI1HkWmjI   | 27.7117914      | μ=30.228, σ=0.839  | 215
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | Z6xh5T6wgYkd   | 27.3046700      | μ=29.888, σ=0.861  | 190
+/home/flynnwang/dev/playground/versions/grow_tree_non_exhaust/main.py | CMuHTaSZsdhC   | 26.7216439      | μ=29.242, σ=0.840  | 204
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | XsOLAZliEnEw   | 24.5027132      | μ=27.088, σ=0.862  | 153
+/home/flynnwang/dev/playground/versions/priority_search/main.py | TOsFdACdPi6C   | 22.6872688      | μ=25.374, σ=0.895  | 138
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | AVCknWYLPI78   | 20.1440991      | μ=22.955, σ=0.937  | 138
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 6oiUqDiP7YZf   | 10.9159514      | μ=14.899, σ=1.328  | 140
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree_exhaust	grow_tree_non_exhaust	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	0.0	0.0	0.0	12.5	0.0	18.2
+defend_agent	100.0	0.0	35.7	48.8	73.1	79.3	95.5
+grow_tree_exhaust	100.0	64.3	0.0	67.4	73.3	73.7	80.8
+grow_tree_non_exhaust	100.0	51.2	39.5	0.0	82.9	58.1	87.5
+priority_search	87.5	26.9	26.7	17.1	0.0	22.2	76.9
+simple_defend	100.0	20.7	26.3	41.9	77.8	0.0	59.1
+tranfer_agent_v1	81.8	4.5	19.2	12.5	23.1	40.9	0.0
+
+
+
+>>> version 5:
+* Fixed by using build_city_bonus as flag to choose path;
+* use arrival_turns < or <= oppo_unit_arrival_turns for opponent_weight;
+* add tranfer boosting conflict with history offer positions
+
+
+replays/1634254980085_uLyc7MitjRhC.json, a0, 815506456 transfer_agent_v1
+- [√] t7, u_3, goto (6, 3), not (5, 0)
+  * why arrival of (5, 0) is 4? it is 4, because (6, 3) use passing city path
+  * [√] Fixed by using build_city_bonus as flag to choose path.
+- [√] Should consider arrival order when boost defend weight
+- [-] t86, u_5, not interupting oppo unit from entering coal.
+  * this is because current cell is strong opponent weight, while the neighobur
+    is equal arrival position
+- [√] t53, u_5, not arrival but not build city at (8, 2)
+  * conflict tranfer build position: solved by filter out conflict position with history offer.
+
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	0.0	0.0	0.0	0.0	27.8
+defend_agent	100.0	0.0	35.1	76.5	69.2	85.7
+grow_tree	100.0	64.9	0.0	90.9	85.2	94.1
+priority_search	100.0	23.5	9.1	0.0	44.4	66.7
+simple_defend	100.0	30.8	14.8	55.6	0.0	100.0
+tranfer_agent_v1	72.2	14.3	5.9	33.3	0.0	0.0
+
+
+
+Total Matches: 1108 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_exhaust/main.py | wEI0gxTDpqz8   | 30.8643635      | μ=33.415, σ=0.850  | 404
+/home/flynnwang/dev/playground/versions/grow_tree_non_exhaust/main.py | zHhPq9x46Mdf   | 29.9085103      | μ=32.470, σ=0.854  | 371
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | ATvhm38vAHHk   | 29.5317556      | μ=32.004, σ=0.824  | 356
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | A6LUXNEDBvP6   | 25.8475506      | μ=28.338, σ=0.830  | 274
+/home/flynnwang/dev/playground/versions/priority_search/main.py | eDsJgxEvaCUp   | 22.6990718      | μ=25.282, σ=0.861  | 270
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | 8oYkpuOQ3Nq9   | 20.6072765      | μ=23.270, σ=0.887  | 279
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 8qyqnqhjQNfR   | 15.2620284      | μ=18.487, σ=1.075  | 262
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree_exhaust	grow_tree_non_exhaust	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	6.7	1.9	0.0	20.5	3.4	14.3
+defend_agent	93.3	0.0	45.1	40.0	85.7	73.2	93.2
+grow_tree_exhaust	98.1	58.2	0.0	57.0	92.6	67.8	95.2
+grow_tree_non_exhaust	100.0	61.3	44.3	0.0	86.5	78.3	89.5
+priority_search	79.5	14.3	7.4	13.5	0.0	30.2	65.8
+simple_defend	96.6	26.8	32.2	23.9	72.1	0.0	78.0
+tranfer_agent_v1	85.7	6.8	4.8	10.5	34.2	22.0	0.0
+
+
+>>> grow_tree v6:
+* add push: push opponent away from current resource cluster
+(regression with new features)
+
+Total Matches: 792 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree/main.py | Aim5R32SoKST   | 29.4789643      | μ=32.134, σ=0.885  | 300
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | yzZexzmQ6WWw   | 26.4705003      | μ=29.001, σ=0.844  | 314
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | RgHjClgJ6EDW   | 24.7608290      | μ=27.210, σ=0.816  | 269
+/home/flynnwang/dev/playground/versions/priority_search/main.py | GyBmUuvbrcL6   | 22.8144027      | μ=25.332, σ=0.839  | 254
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | Htl9bhXHHstz   | 17.9588943      | μ=20.687, σ=0.909  | 238
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | 2sapaaenDG9W   | 14.5199759      | μ=17.630, σ=1.037  | 209
+
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	grow_tree	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	3.6	0.0	9.1	10.3	23.8
+defend_agent	96.4	0.0	42.6	74.0	66.7	93.2
+grow_tree	100.0	57.4	0.0	80.6	69.0	93.8
+priority_search	90.9	26.0	19.4	0.0	34.5	73.3
+simple_defend	89.7	33.3	32.8	67.2	0.0	88.4
+tranfer_agent_v1	76.2	6.8	6.2	26.7	11.6	0.0
+
+
+(with defend_agent)
+    	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree
+12	8	10	18	44.4
+16	8	12	20	40.0
+24	7	2	9	77.8
+32	16	5	21	76.2
+
+
+>>> grow_tree v7: improved a little
+- fix build_city_wt weight decay, demote build_city_wt at night
+- wait to build when resource researched
+
+Total Matches: 258 | Matches Queued: 8
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/versions/grow_tree_1017_18/main.py | dURp3Ynuo7Av   | 23.7836300      | μ=26.156, σ=0.791  | 258
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | 4LZaBGqdmFjf   | 21.4710971      | μ=23.844, σ=0.791  | 258
+
+opponent_name	defend_agent	grow_tree_1017_18
+defend_agent	0.0	36.1
+grow_tree_1017_18	65.0	0.0
+
+    	win_loss	win	loss	total	win_pct
+short_name	map_size
+grow_tree_1017_18
+12	40	45	85	47.1
+16	41	25	66	62.1
+24	29	18	47	61.7
+32	61	4	65	93.8
+
+
+
+replays/1634307380290_Fu4SmJPf2FLx.json, 775155700, a1, defend_agent
+- [] Use the same boost weight for equal sign with opponent_weight
+  * use larger weight for opponent weight resoruce weight
+- [] Use decay for opponent_weight on nrt cell
+- [√] t8, u4, goto nrt(10, 7), not (11, 6)
+  * too much weight for weak_oppo_boost
+- [√] t20 goto (11, 6), not (10, 4)
+  * city tile survive weight too large
+- [√] t14, u8, goto (0, 0) ont (11, 8)
+  * bug of is_target_move_may_fail
+  * [-] t14, u8, move to (10, 4), not (11, 8): correct, due to how enemy move.
+  * [√] u2, t29, goto (11, 5) not (9, 5): deficient wood tile with empty fuel
+- [√] t34, u10, goto (9, 8) not (11, 8)
+  * fix city_last_turns (should +1)
+- [√] u16, moving back and forth for (9, 9)t29 and (11, 8)@t28
+  * because of city_last_turns - arrival_turns_wo_city <= 6
+  * [√] use larger city decay weight
+- [√] t26 u10/u15, (9, 10), (10, 10), (10, 9)
+  * becuase u10 triggered build city weight while u15 didn't
+  * [√] amout * 3 for build city boosting
+  * [√] demote nrt next to player citytile.
+- [√] t161, u_10, not saving city (9, 10), (1, 11)
+  * cluster owner stick on current cluster.
+  * [√] fix cluster owner weight with >= 1 player city only when cluster size >= 2
+
+
+1634420981289_m7XWd03g1J0r, 436556433, a1, defend_agent
+- [] city weight lockdown
+- [√] t10, u4, goto (1, 5) not (3, 6)
+  * [√] build city should have top priority.
+  * [√] t7, goto (3, 6), sholud stay (0, 6)
+  * drop build city bonus demote rule for nb citytile.
+  * [] Do not build city on opponent unit NRT
+- [√] t21, u9, goto opponent unit (3, 3)
+  * no opponent on turn 21
+- [√] t7, u2, goto (1, 5) not (0, 6)
+  * [√] add more push weight for NRT
+- [√] t10, goto (1, 5), not (3, 6)
+  * lower r for build_city_bonus (1.8->1.5) and inc opponent_weight r (1.1->1.2)
+  * has room for further optimization
+- u_4, going one city (3, 6) and going another (1, 5)
+- []! t59/u10 wait for researched to coal and urnaium to build city tile.
+  * [√] wait to build when resource researched
+
+1634413151759_c9Uv6L06JDSy, 332552175, a0, defend_agent
+- [√] t8, u3, goto (10, 5), not stay (11, 4)
+  * BUG: build city weight not decay correctly
+- [√] t33, u8, goto (11, 5), not (9, 5)
+  * build city bonus is larger than city crash weight
+  * [√] Fixed by lower build city bonus at night
+- [-] t47, u9, target (10, 3) not (11, 5)
+  * why (11, 5) is not a opponent defend position
+  * because (11, 5) is not nearest NRT for oppo u5
+- [√] t78 u_9 why not moving to city boundary.
+  * because default resource weight does not have dist decay
+- [-] t79, t80, why weight so large, >8000? (4, 4)
+  * cluster weight
+
 
 
 
@@ -117,6 +1042,52 @@ tranfer_agent_v1	83.9	7.7	2.0	35.5	14.8	0.0
 
 (no more regression with simple_agent.)
 
+
+
+
+
+1633958661937_J6Dk3WdSMCMk, a0, defend_agent, 846813857
+- [√] t54, cluster onwer drag back to fuel city! (a second case)
+
+
+1633960566517_sVOBT9jpCU5V, 16, a0, defend_agent, 225838960
+- [√] t22, u_1, goto can not build cluster cell (10, 15)
+  * when assign cluster, use can_build open boundary
+- [] t19, u_6, goto (8, 6) not (5, 5)
+  * becuase (8, 6) has a larger fuel_wt
+  * [?] Use a larger weight for neighbour city boost.
+
+>> evaluating two changes above...
+Total Matches: 625 | Matches Queued: 7
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | A1qZAXfW6S4y   | 29.4803484      | μ=32.246, σ=0.922  | 244
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | 0exxN4fN2l5f   | 27.4118158      | μ=30.051, σ=0.880  | 236
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | avml3BuWaNsO   | 23.0910962      | μ=25.656, σ=0.855  | 203
+/home/flynnwang/dev/playground/versions/priority_search/main.py | ffjImld6fc7v   | 21.4370228      | μ=24.000, σ=0.854  | 202
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | hZxnSsMRfstL   | 18.9339997      | μ=21.713, σ=0.926  | 189
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | JZzzFcozo3aw   | 13.0145822      | μ=16.198, σ=1.061  | 176
+
+opponent_name	Tong_Hui_Kang_v4	defend_agent	lux_perspective	priority_search	simple_defend	tranfer_agent_v1
+Tong_Hui_Kang_v4	0.0	4.5	2.9	9.7	3.2	22.9
+defend_agent	95.5	0.0	32.7	80.0	88.1	93.2
+lux_perspective	97.1	67.3	0.0	79.2	89.1	95.6
+priority_search	90.3	20.0	20.8	0.0	25.6	62.1
+simple_defend	96.8	11.9	10.9	74.4	0.0	82.9
+tranfer_agent_v1	77.1	6.8	4.4	37.9	17.1	0.0
+
+(got regression), drop cluster owner change and re-test.
+
+
+Total Matches: 478 | Matches Queued: 10
+Name                           | ID             | Score=(μ - 3σ)  | Mu: μ, Sigma: σ    | Matches
+/home/flynnwang/dev/playground/lux_perspective/main.py | aROE96mhWe0R   | 29.6282023      | μ=32.600, σ=0.991  | 183
+/home/flynnwang/dev/playground/versions/defend_agent/main.py | voYCPok0YCXT   | 26.0519403      | μ=28.704, σ=0.884  | 190
+/home/flynnwang/dev/playground/versions/simple_defend/main.py | 1Sn3ulxbap6Z   | 22.6873016      | μ=25.317, σ=0.877  | 162
+/home/flynnwang/dev/playground/versions/priority_search/main.py | TJgWca1FNOeb   | 19.9760517      | μ=22.750, σ=0.925  | 143
+/home/flynnwang/dev/playground/versions/tranfer_agent_v1/main.py | eiTPWGSwyuhn   | 18.3778386      | μ=21.275, σ=0.966  | 130
+/home/flynnwang/dev/playground/versions/Tong_Hui_Kang_v4/main.py | T2WIXXo5lfzU   | 13.0401128      | μ=16.365, σ=1.108  | 148
+
+(not very clear whether we should adopt it, abandon.)
 
 
 ======================================= 2021-10-10 ==============================================

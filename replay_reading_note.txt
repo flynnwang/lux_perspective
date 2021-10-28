@@ -1,5 +1,499 @@
 
 
+
+
+=========================== 2021-10-28 ==========================
+1635362891366_nFxT8LdanWBp
+- win with large magin: mostly because the city did not crash at first night
+- could do better to build worker on older city.
+
+1635367315663_tvbARNvxtjiw [W]
+- lost the large city in the middle
+- is it needed to turn on exhaust mode?
+
+
+1635369960252_9bzDVdPblMvT [W]
+- cool defend!
+- Why coal cluster is closed?
+
+
+1635364862022_iU0IbcQJEeTi
+- no need to move back to wood city, secure coal is more important!
+
+
+
+=========================== 2021-10-26 ==========================
+>> run_2021_1026_20
+
+1635249649079_a1doLBoY6hij
+- small city size
+
+
+1635249819837_venKz0mBKvdH
+- no wood city survive
+
+1635249028198_43Rv1PP0Wlz1
+- small wood city size
+
+
+1635250983707_tvZaYRlSACwC
+- wood city crash, result in small wood city size
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28590164
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28574496
+- only mantain city that near opponent city?jo
+- maintain city when wood > 500?
+
+
+
+
+
+=========================== 2021-10-26 ==========================
+replays/1635235735748_xKz7GCWIHAmM.json	
+- minor lose
+- not handling coal collection well, lose uranium: might related to inc of city crash weight
+
+
+1635237314665_aBQqySb0gDEl
+- lose wood city and late for coal
+
+
+1635244183960_LyB6AwixV8xP
+- why coal resources are not targeted?
+- not handling coal collection well
+
+
+1635244650925_4vrwgeWYuDH5
+- not protect uranium
+
+
+1635241655950_imnoCshS1GUU
+- wood city crash
+
+
+1635237370257_bFNypZolRITr
+- not protect coal well
+
+
+1635234810816_zcE3M6YXSjfW
+- wood competition failure
+
+1635235964361_5JWwmbkDP7pi
+- lose uranium
+
+
+1635239969402_UwxOTwm1h9cO
+- lose coal
+- wood city crash
+
+
+
+=========================== 2021-10-25 ==========================
+
+1635121469170_nCPSIygvxYhw
+- die at connection point
+
+1635115246243_0ZpbwVvnabTs
+- locked at resource point due to build city at CP
+- late for coal
+
+
+
+
+=========================== 2021-10-23 ==========================
+
+1634970024052_9bklRCTMSYoD, 868931385, a0
+- [√] lock case
+
+
+1634973361618_Rs8yxZDZagNi
+- spend too much time to target lost cluster (waste time)
+  * do not exploit RT or NRT on lost cluster (per worker).
+- has uranium locked inside worker.
+  * [] need to tranfer resource out of locked area.
+
+
+1634970616201_PGVHSev3fd80
+- sparse wood map
+- why u_3 stay at (23, 2)
+
+1634972085617_QYj7eANCRixQ
+- Special case, where the initial cluster is largest.
+
+
+1634971172143_TwZiSNotrKBQ
+- late for the center large cluster.
+- should add more weight for unexploied competing cluster (has opponent or across middle)
+
+replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
+- This could be a good case for defend logic.
+- lost initial and the second wood cluster, defend failure
+
+
+-----
+
+1634948022062_ea1Z8gJrmBt8
+- Not deliver uranium into large city, why? ()
+  * because of bug due to city_wont_last
+
+
+=========================== 2021-10-22 ==========================
+replays/1634802638854_eBKAYs8HDOFu.json
+replays/1634790793664_efNVnakAXHJC.json
+replays/1634794955694_bFeyKJyP0k6X.json
+- [] Lost largest wood cluster
+
+1634796407676_aTEQSKndwxx8
+1634793963309_i5lfecPuSbzO
+- minor lost
+
+replays/1634803411353_G1xP3etp9OUs.json
+- should eject worker on city to save wood resource?
+- why we will build city tile on non-connection point locaton?
+  * it's not, it's on old NRT positions
+
+=========================== 2021-10-21 ==========================
+replays/1634797734804_RztHz1FdfqIV.json
+- coal competition failure
+
+
+1634803131270_b07Q8vLGwRMv
+- late to explore
+- t23-25, u7, not moving, why? defend bug?
+
+1634800288627_No7iDcCQA26P
+- t14 u_4, why moving to (8, 6)
+
+
+1634799770319_GRj3sfcRB0R4
+- a lot of coal city
+- lost uranium resource
+
+
+1634792045443_rN1hWUFOJjWI
+- wood city crash?
+- lost uranium
+
+
+1634795382538_AkZhO28dTIHX
+- wood city crash
+
+1634795828119_33LIlA9ftHna
+- wood city crash
+
+1634802376283_MkumeRGLbrR1
+- wood city crash
+
+
+1634792632126_o8Wo735tc0e0, 190812630, a0, defend_agent
+- [] wrong direction for first move, lost large cluster
+
+1634797808040_EHVlTX4YwLc1
+- t136, why moving unit far away?
+- only 1 lost
+
+1634801445618_XV94aqBb1mcY
+- lost wood city
+
+1634792557480_doDTGTVf7P6e
+- lost coal
+
+1634791967629_E4NAAYSqxXW3
+- wood city crash
+
+1634793369907_y3aJiw434PAg, 664701512, a1, defend_agent
+- [] lost wood city
+- large city crash, because of no wood fuel to city
+
+1634793464931_w6mB9gXlmP7C
+- near good, 2 lost
+
+1634791407343_STK0pnjcvDtP
+- wood city crash
+
+
+1634804248439_CmpQ4kUXSb8p
+- wood city crash
+
+1634794922824_xcBtB5deuCFz, a1, 912473702, defend_agent
+- t6, u_4, goto (8, 5), not (6, 2)
+  * because removed the cluster weight when worker on cluster
+
+
+
+
+=========================== 2021-10-19  ==========================
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28502567
+* How Toad build city fast: 14 v.s. 8 in first day
+* [] Try save city over night?
+* [] This could be used as benchmark for city building: lastest c=12
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28448670
+* t38, u_4: need to follow up opponent at corner
+* When city in not lasting, and there is no resource, worker is easy to die at night.
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28426036
+* ME: going in the wrong dircetion of resource cluster.
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28410178
+- Lose wood cluster
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28510704
+- [] Me: moving onto wrong direction on first step.
+
+
+
+replays/1634629311580_Dv4CqellEAKI.json
+- t62 u_25 hit citytile when going to coal
+
+
+=========================== 2021-10-18  ==========================
+1634564220806_6TDJmic64tP1
+- [] LSC, not save city, why?
+
+1634552817507_s38pEJ0bLwAz
+- wood resource competition failed
+
+1634553195208_7xY3bafHbh2h
+- LSC, center cluster failed
+
+1634557282851_zz83eWq3lFOf
+- [] build city at wrong place, not hand in hand
+
+1634563368909_fFPauqDwdqzK
+- [] not move towads opponent when compete center wood cluster
+  * send worker away when assign cluster
+
+1634557645496_8vgBgJIvDJSt
+- late for coal
+
+1634560954415_agp9XuxnFgYo
+- not fast enough at wood city tiles
+
+1634557071084_YusqT0jZcChl
+- failed at build more city tile than opponent
+- not defend coal cluster well
+
+1634560429849_6KeUHTmIUQ6U
+- wood city crash
+
+
+1634562917229_uEdNhThSzUKR
+- failed with 2 less CT
+
+1634562456633_Hw2fe2gniE9R
+- failed to protect coal
+
+1634553315968_JmUzwvGb1bn2
+- less city tile, LSC
+
+1634559738818_eP8hqT7Rg8w5
+- [] t22, u1, not moving toward opponent (dist is not a good signal)
+
+
+1634560065570_GZfcb5vMZl01
+- not saving large wood city.
+  * cluster owner use coal to build house
+
+
+1634552763033_PNDKCk973Ntm
+- failed with 2 less CT
+- have a chance to grad coal from opponent coal cluster, but not, why?
+
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28261216
+* At second citytile, build new worker, but send the old worker to new resoruce
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28253704
+* how to protect coal well even the research point is slower
+* as long as you do that, opponent city will crash due to resource constraint.
+
+
+
+=========================== 2021-10-17 (18) ==========================
+
+
+1634467925901_7EKoPrrg67XE, sz=32
+* slower at the beginning, but overall could build more city.
+
+1634470976712_eBfsrYI1VKer, sz=32
+* less city crash
+
+1634472905520_LtmNnE0PBL5z, sz=32
+* more survived cities
+
+
+1634467098183_6WjafZKU3igV, sz=12
+- slow at coal research
+- city crash casued rebuild
+(maybe could deliver resource at night?)
+
+
+1634472916023_Hp2djmnkSF1X
+- [] first step not make any sense
+- repeated eject woker, but consume the resurce, not make sense
+- fail at coal
+
+
+1634467629224_WjgYxOg0waKt, sz=12
+- [] first step not right
+- [] fail at coal
+
+1634471624635_N8FGQxiAX5eW
+- fail at coal
+
+
+1634470453605_Md8J29TeAC6e
+- fail at coal
+
+
+1634469650334_I1ASiiv6KBi5
+- fail at uranium
+
+
+1634471699977_0JOZgtz847da
+- [] is it possible to move the unit to another cluster when the second unit born?
+- large city crash
+- fail to reach uranium
+
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28348618
+* has city crash, but how can he still leading the research point?
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28340974
+- me research coal faster, but failed to defend coal
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28304583
+sz=16
+* no city fuel action for sure... see t35
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28283163
+* crash me with more wood resource.
+
+
+=========================== 2021-10-17 (01) ==========================
+1634424598067_jFdY2ELFdOoo
+* smaller city group, wood resource cluster is also small
+
+
+1634409583330_JMsnGN2CFaad
+* [] why the first step is not moving toward opponent?
+* t58 u10 not stopping opponent (because another near by opponent unit?)
+* t111, u_42, not stop opponent unit
+* !! not much coal delivery into wood city, why?
+* no enough uranium deliver into wood city (locked with opponent)
+* [] t131, why u_15 went to (1, 11), a opponent unit position
+
+
+1634407080325_aDrUcYqM4LmO
+* first step is not good
+* [] t61 u28, not stop opponent unit
+* if mixed cluster, could stay on city for mining
+
+
+1634420877234_Yho64qy7eJcN
+* city crash
+* should bias next cluster position
+
+
+1634421108882_tu3zZcOqdacP
+* [] push feature bad case: moving to opponent citytile and stop there
+* [] t17 u_3 lockdown: need to detect lockdown
+
+
+1634426316624_V8SJ4GaHT7kK
+* contains lockdown by oppo citytile
+
+
+1634426175451_GMD1verg559U
+* invaded by opponent
+
+1634420981289_m7XWd03g1J0r, a1, defend_agent
+* [] city weight lockdown
+
+1634413151759_c9Uv6L06JDSy, 332552175, a0, defend_agent
+* push away but not build city is a waste of time
+
+
+
+=========================== 2021-10-13 ==========================
+1634184787991_KKl3mhDRQzJB.json
+- t13, u_4, target coal cell (3, 1)
+  * [-] Why target that cluster? This is just going to the 2 wood celljjj.
+  * Why choose (2, 3) over (1, 5)
+
+
+
+
+=========================== 2021-10-13 ==========================
+[√] 1634067102924_kkJTeMDzUn8B, a0, 384979115
+- [] Use all cluter inferance to decide the position to move.
+- (after adding near resource defend, problem sovled.)
+
+[√] 1634081304145_XZgo6XmlcK6m, 465269056, a1
+- [-] t19, u2, not moving to target (10, 3)
+  * verified: it's a search path with backward direction.
+
+[] 1634072432279_ArrDFHCY4UU8, 455825312, a1
+- 2rd unit going back to initial cluster.
+- not defend wood resource well
+- (latest): crashed at last
+
+1634071514066_cyTozJOIgLVK, 547930982, a1
+- [] t8/u4, Why get around to goto (4, 6)?
+  * this is more like a city build worker posiiton error.
+  * (not easy to fix)
+
+
+1634083436333_JigIPOESARBX
+1634072020871_yRP0zjgbXftz
+- Failed to defend the initial cluster
+
+1634068132307_6503LOotKS3t
+- fail to reach coal.
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-27520788
+- Assign two units both to large cluster?
+
+
+
+=========================== 2021-10-12 ==========================
+https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-28071072
+* how to born the new worker? better scatter them?
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28066107
+* This is how wood regrow done.
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-27651429
+* Exaust all tree resource in the last, and cause large city crash...
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-27781498
+- seems to only build city tile to defend the wood, otherwise, it will not build?
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-27908917
+- my failed example: lost wood
+
+
+
+=========================== 2021-10-11 PM ==========================
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-28024481
+- Toad Brigade: send two worker to another resource.
+- [] Possible to use global cluster assignment directly?
+
+TB: build more city tile to gain more research point, instead of keep city alive.
+
+
+
 =========================== 2021-10-11 PM ==========================
 
 1633925295586_Wc4zsNQQPA8L, 535162648
@@ -28,9 +522,9 @@ https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-2801910
 1633952774529_ttwPENkRjheK, a1, defend_agent
 - Weak at wood competition + late for coal
 
-1633949241513_iAwEPHjlILdv, a0, defend_agent
+1633949241513_iAwEPHjlILdv, a0, defend_agent (can not reproduce)
 - Use last city tile is not gurrante to be good. Maybe try compute dist to near resource tile.
-- [] t53, all worker going back for one step, why? one step late lead to coal competition failure.
+- [-] t53, all worker going back for one step, why? one step late lead to coal competition failure.
 
 1633944754472_ISKS7BMAOJ9k, a1, defend_agent
 - late for uranium
@@ -58,7 +552,7 @@ https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-2801910
 1633943687015_UJ97oTDygEjt a1, defend_agent
 - LCF = large city failure.
 
-1633960566517_sVOBT9jpCU5V, 16, a0, defend_agent
+1633960566517_sVOBT9jpCU5V, 16, a0, defend_agent, 225838960
 - too much city died at first night.
 - locked with opponent unit when compete center resource.
 - WCF = wood competition failure.
@@ -87,7 +581,7 @@ https://www.kaggle.com/c/lux-ai-2021/submissions?dialog=episodes-episode-2801910
 - t34, u_2 dragged backed to near resource tile, why?
 - LARGE_CITY_FAILURE
 
-1633941204047_iVo2EOR9eWnN, 32, a0, defend_agent
+1633941204047_iVo2EOR9eWnN, 32, a0, defend_agent, 920459455
 - city crash a lot at beginning stage.
 - [] t29, u11, not saving city, why?
 
