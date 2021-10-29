@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = []
-MAP_POS_LIST = []
+DRAW_UNIT_LIST = ['u_6']
+MAP_POS_LIST = [(3, 7), (4, 7)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -1107,6 +1107,17 @@ class Cluster:
 
   @property
   @functools.lru_cache(maxsize=1, typed=False)
+  def nb9_boundary_positions(self):
+    positions = set()
+    for cluster_cell in self.cells:
+      for nb_cell in get_nb9_positions(cluster_cell.pos, self.game_map):
+        if (not nb_cell.has_resource() or
+            nb_cell.resource.type != self.resource_type):
+          positions.add(nb_cell.pos)
+    return positions
+
+  @property
+  @functools.lru_cache(maxsize=1, typed=False)
   def resource_positions(self):
     return {c.pos for c in self.cells}
 
@@ -1125,12 +1136,15 @@ class Cluster:
     return False
 
   @functools.lru_cache(maxsize=4, typed=False)
-  def get_open_boundary_positions(self, can_build=False, keep_oppo_unit=False):
+  def get_open_boundary_positions(self, can_build=False, keep_oppo_unit=False, use_nb9=False):
     """open positions:
     1) not a citytile AND not opponent unit
     2) (can build) not resource tile."""
     open_positions = set()
-    for pos in self.boundary_positions:
+
+    positions = (self.nb9_boundary_positions if use_nb9
+                 else self.boundary_positions)
+    for pos in positions:
       boundary_cell = self.game_map.get_cell_by_pos(pos)
       if boundary_cell.citytile is not None:
         continue
@@ -1480,10 +1494,11 @@ class ClusterInfo:
 
   @functools.lru_cache(maxsize=1023, typed=False)
   def get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-      self, cid, unit, debug=False):
+      self, cid, unit, debug=False, use_nb9=False):
     min_dist = MAX_PATH_WEIGHT
     cluster = self.c(cid)
-    open_positions = cluster.get_open_boundary_positions(keep_oppo_unit=True)
+    open_positions = cluster.get_open_boundary_positions(keep_oppo_unit=True,
+                                                         use_nb9=use_nb9)
     for pos in open_positions:
       shortest_path, _ = strategy.quickest_path_pairs[unit.id]
       dist = shortest_path.shortest_dist(pos)
@@ -1745,6 +1760,11 @@ class Strategy:
       unit.is_cluster_owner = False
       unit.is_transfer_worker = False
       unit.target_city_id = None
+
+
+      cids = self.ci.get_neighbour_cells_cluster_ids(unit.pos,)
+      unit.on_cluster = (len(cids) > 0)
+
 
       # Flag the unit if after the worker has not task after initial planning.
       unit.is_idle_worker = False
@@ -2256,6 +2276,7 @@ class Strategy:
 
       cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
           near_resource_tile.pos)
+      is_connection_point = (len(cell_cluster_ids) == 0)
       # if cell_cluster_ids:
       # open_ratio = max(worker.cid_to_open_ratio.get(cid, -1)
       # for cid in cell_cluster_ids)
@@ -2291,9 +2312,13 @@ class Strategy:
             move_days=arrival_turns,
             surviving_turns=surviving_turns,
             debug=debug)
-        if one_step_amt == 0 or wait_turns >= MAX_DAYS:
-          return MAX_DAYS
-        collect_turns = int(math.ceil(req_amt / one_step_amt))
+        if is_connection_point:
+          collect_turns = 100
+          wait_turns = 0
+        else:
+          if one_step_amt == 0 or wait_turns >= MAX_DAYS:
+            return MAX_DAYS
+          collect_turns = int(math.ceil(req_amt / one_step_amt))
 
         city_crash_wait_turns = 0
         # if is_opponent_citytile:
@@ -2323,8 +2348,7 @@ class Strategy:
 
       if fast_build_turns >= MAX_DAYS:
         if debug:
-          prt(f' skip NRT({near_resource_tile.pos}) fast_build_turns={fast_build_turns}'
-             )
+          prt(f' skip NRT({near_resource_tile.pos}) fast_build_turns={fast_build_turns} is_CP={is_connection_point}')
         return -99999
 
       wt = 0
@@ -2350,7 +2374,6 @@ class Strategy:
       opponent_weight = 0
       oppo_weight_type = ''
 
-      is_connection_point = (len(cell_cluster_ids) == 0)
       if is_connection_point:
         cell_cluster_ids = self.ci.get_neighbour_cells_cluster_ids(
             near_resource_tile.pos, use_nb9=True)
@@ -2393,8 +2416,8 @@ class Strategy:
           if attack_boundary_cids:
             is_nearest_nrt_in_cluster = any(
                 (self.ci.
-                 get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
-                     cid, nearest_oppo_unit, debug) == oppo_arrival_turns)
+                get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(
+                    cid, nearest_oppo_unit, debug, use_nb9=True) == oppo_arrival_turns)
                 for cid in attack_boundary_cids)
             # if debug:
             # prt(f'++++ is_nearest_nrt_in_cluster={is_nearest_nrt_in_cluster}')
@@ -2410,9 +2433,10 @@ class Strategy:
               # This is the most dangerous cell, that enemy approach from outside
 
               # do not protect connection_point from inside opponent unit
-              do_not_protect_inside_oppo_unit = (is_connection_point and
-                                                 is_worker_on_attack_cluster)
-              if do_not_protect_inside_oppo_unit:
+              do_not_protect_cp_if_not_close = (is_connection_point
+                                                 and is_worker_on_attack_cluster
+                                                 and oppo_arrival_turns > 2)
+              if do_not_protect_cp_if_not_close:
                 pass
               else:
                 opponent_weight += 5000 / dd(arrival_turns, r=1.2)
@@ -2493,6 +2517,10 @@ class Strategy:
           near_resource_tile.pos in self.blacklist_city_building_positions):
         build_city_bonus = False
         build_city_bonus_off_reason = f'(open_cell={n_open}, blicklist={near_resource_tile.pos in self.blacklist_city_building_positions}), non_wood_res_loc={near_resource_tile.pos in self.non_wood_resource_locations}'
+
+      if not is_transfer_build_position and is_connection_point:
+        build_city_bonus = False
+        build_city_bonus_off_reason = f'CP_no_build'
 
       build_city_wt = 0
       if build_city_bonus:
@@ -2631,6 +2659,11 @@ class Strategy:
         if self.lock_lock.is_locked_with_player_unit(worker.pos, target.pos):
           continue
 
+        # Do not lock with opponent unit if woker is not on cluster
+        if not worker.on_cluster and self.lock_lock.is_locked(worker.pos,
+                                                              target.pos):
+          continue
+
         if cell_has_player_citytile(target, self.game):
           v = get_city_tile_weight(worker, target, quicker_dest_turns,
                                    is_first_citytile)
@@ -2754,6 +2787,11 @@ class Strategy:
 
       # Do not move onto lock position with player unit.
       if self.lock_lock.is_locked_with_player_unit(worker.pos, next_position):
+        return -MAX_MOVE_WEIGHT
+
+      # Do not lock with opponent unit if woker is not on cluster
+      if not worker.on_cluster and self.lock_lock.is_locked(worker.pos,
+                                                            next_position):
         return -MAX_MOVE_WEIGHT
 
       # Use target score if forced into other positions
