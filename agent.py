@@ -2454,9 +2454,10 @@ class Strategy:
               # This is the most dangerous cell, that enemy approach from outside
 
               # do not protect connection_point from inside opponent unit
-              do_not_protect_cp_if_not_close = (is_connection_point and
-                                                is_worker_on_attack_cluster and
-                                                oppo_arrival_turns > 2)
+              do_not_protect_cp_if_not_close = (
+                  is_connection_point and is_worker_on_attack_cluster and
+                  oppo_arrival_turns > 2 and
+                  near_resource_tile.n_citytile_neighbour > 0)
               if do_not_protect_cp_if_not_close:
                 pass
               else:
