@@ -26,8 +26,8 @@ DRAW_UNIT_TARGET_VALUE = 0
 DRAW_UNIT_MOVE_VALUE = 0
 DRAW_QUICK_PATH_VALUE = 0
 
-DRAW_UNIT_LIST = ['u_6']
-MAP_POS_LIST = [(3, 7), (4, 7)]
+DRAW_UNIT_LIST = ['u_13']
+MAP_POS_LIST = [(1, 1), (15, 2)]
 MAP_POS_LIST = [Position(x, y) for x, y in MAP_POS_LIST]
 
 # TODO: add more
@@ -53,10 +53,20 @@ UNIT_SAVED_BY_RES_WEIGHT = 0.0001
 
 DEFAULT_RESOURCE_WT = 1.2
 
-# def prt(line, file=sys.stderr):
-# print(line, file=file)
 
-prt = print
+import os
+LOG_PATH = '/home/flynnwang/dev/playground/log/c.log'
+if os.path.exists(LOG_PATH):
+  os.remove(LOG_PATH)
+
+
+def prt(line, file=sys.stderr):
+  print(line, file=file)
+  with open(LOG_PATH, 'a') as f:
+    f.write(line + '\n')
+
+# prt = print
+
 
 
 def timeit(func):
@@ -1137,8 +1147,12 @@ class Cluster:
   def resource_positions(self):
     return {c.pos for c in self.cells}
 
-  def on_cluster(self, pos):
-    return pos in self.boundary_positions or pos in self.resource_positions
+  def on_cluster(self, pos, use_nb9=False):
+    if pos in self.resource_positions:
+      return True
+    if use_nb9 and pos in self.nb9_boundary_positions:
+      return True
+    return pos in self.boundary_positions
 
   def is_arrived(self, pos):
     return pos in self.boundary_positions or pos in self.resource_positions
@@ -1780,7 +1794,8 @@ class Strategy:
       unit.is_transfer_worker = False
       unit.target_city_id = None
 
-      cids = self.ci.get_neighbour_cells_cluster_ids(unit.pos,)
+      cids = self.ci.get_neighbour_cells_cluster_ids(unit.pos, include_pos=True,
+                                                     use_nb9=True)
       unit.on_cluster = (len(cids) > 0)
 
       # Flag the unit if after the worker has not task after initial planning.
@@ -1791,10 +1806,10 @@ class Strategy:
 
       left_turns_this_round = get_left_turns_this_round(self.game.turn)
 
-      # TODO: it should not be used?
       # surviving_turns is only based on current cargo, map info is not included.
       surviving_turns = unit_surviving_turns(self.game.turn, unit)
       unit.is_cargo_not_enough_for_nights = surviving_turns < left_turns_this_round
+      unit.surviving_turns = surviving_turns
 
       unit.is_carrying_coal_or_uranium = (unit.cargo.coal > 0 or
                                           unit.cargo.uranium > 0)
@@ -1966,8 +1981,7 @@ class Strategy:
                           quick_path):
     player = self.game.player
     debug = False
-    if (worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST and
-        plan_idx == 1):
+    if (worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST):
       debug = True
     # Give a small weight for any resource 0.1 TODO: any other option?
     wt = 0
@@ -1997,7 +2011,7 @@ class Strategy:
         (not resource_tile.has_buildable_neighbour or worker.cargo.wood >= 20)):
       # 1) For wood cell with no buildable neightbor, demote its weight
       # 2) For worker with wood >= 40, move build need 5 turns, while wait need only 4.
-      fuel_wt = 0.001
+      fuel_wt = 0.0001
       fuel_wt_type = ('wood_not_buildable' if
                       (not resource_tile.has_buildable_neighbour) else
                       'worker_wood>=20')
@@ -2054,7 +2068,7 @@ class Strategy:
     default_res_wt /= dd(arrival_turns, r=1.5)
     v = ((wt) / dd(arrival_turns) + boost_cluster + fuel_wt + opponent_weight +
          default_res_wt + wood_full_boost)
-    if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
+    if worker.id in DRAW_UNIT_LIST and resource_tile.pos in MAP_POS_LIST:
       # prt(f"t={self.game.turn} w[{worker.id}] v={v}, res={resource_tile.pos}")
       prt(f"[RES] t={self.game.turn} w[{worker.id}] v={v}, res={resource_tile.pos} r={resource_tile.resource} "
           f"arr_turns={arrival_turns} wt={wt} {fuel_wt_type}, boost_cluster={boost_cluster}, fuel_wt={fuel_wt}, opponent_weight={opponent_weight}, min_oppo_arrival_turns={oppo_arrival_turns}"
@@ -2401,7 +2415,7 @@ class Strategy:
 
       oppo_arrival_turns, nearest_oppo_unit = self.get_nearest_opponent_unit_to_cell(
           near_resource_tile, debug=debug)
-      if oppo_arrival_turns < MAX_PATH_WEIGHT:
+      if not is_connection_point and oppo_arrival_turns < MAX_PATH_WEIGHT:
         opponent_weight += 1e-4 / dd(oppo_arrival_turns)
 
       threat_turns = MIN_DEFEND_ENEMY_ARRIVAL_TRUNS
@@ -2414,6 +2428,8 @@ class Strategy:
         # This is important becasuse if opponent arrival first, then we won't
         # be able to do anything
         if arrival_turns <= oppo_arrival_turns:
+          # opponent_weight += 1e-4 / dd(oppo_arrival_turns)
+
           # Use min, in case there is more than one resource types.
           one_step_fuel = min(
               self.ci.c(cid).one_step_fuel for cid in cell_cluster_ids)
@@ -2421,8 +2437,9 @@ class Strategy:
 
           # Add a constant weight, so we'll try to move to tihs cell, but
           # still build tile bonus will drag it away.
-          opponent_weight += one_step_fuel / dd(arrival_turns, 1.1)
-          oppo_weight_type = 'weak_boost'
+          if not is_connection_point:
+            opponent_weight += one_step_fuel / dd(arrival_turns, 1.1)
+            oppo_weight_type = 'weak_boost'
 
         # early_arrival_turns = oppo_arrival_turns - arrival_turns
         # Move at all cost to the attacking point.
@@ -2447,18 +2464,32 @@ class Strategy:
             # is_oppo_unit_on_attack_cluster = any(self.ci.c(cid).on_cluster(nearest_oppo_unit.pos)
             # for cid in attack_boundary_cids)
             is_worker_on_attack_cluster = any(
-                self.ci.c(cid).on_cluster(worker.pos)
+                self.ci.c(cid).on_cluster(worker.pos, use_nb9=True)
                 for cid in attack_boundary_cids)
 
             if is_nearest_nrt_in_cluster:
               # This is the most dangerous cell, that enemy approach from outside
 
               # do not protect connection_point from inside opponent unit
-              do_not_protect_cp_if_not_close = (
-                  is_connection_point and is_worker_on_attack_cluster and
-                  oppo_arrival_turns > 2 and
-                  near_resource_tile.n_citytile_neighbour > 0)
-              if do_not_protect_cp_if_not_close:
+              do_not_protect = False
+              if is_connection_point:
+                # Do not protect is not at cluster
+                if not is_worker_on_attack_cluster:
+                  do_not_protect = True
+
+                # Do not protect oppo_unit far away
+                if oppo_arrival_turns > 2:
+                  do_not_protect = True
+
+                # Do not protect if the other side has citytile. # TODO: 2 or 1?
+                if near_resource_tile.n_citytile_neighbour >= 1:
+                  do_not_protect = True
+
+                # Do not paotect if unit might die
+                if self.circle_turn >= 29 and worker.surviving_turns <= 5:
+                  do_not_protect = True
+
+              if do_not_protect:
                 pass
               else:
                 opponent_weight += 5000 / dd(arrival_turns, r=1.2)
@@ -2471,15 +2502,22 @@ class Strategy:
               opponent_weight += 100 / dd(arrival_turns, r=1.2)
               oppo_weight_type = 'faster_cell'
 
-          if worker.id in DRAW_UNIT_LIST and near_resource_tile.pos in MAP_POS_LIST and plan_idx == 1:
-            prt(f"attack_boundary_cids={attack_boundary_cids}")
-            prt(f"min_turns_to_nearest_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}"
-               )
+          if debug:
+            # prt(f"attack_boundary_cids={attack_boundary_cids}")
+            # prt(f"min_turns_to_nearest_cluster={self.ci.get_min_turns_to_cluster_near_resource_cell_for_opponent_unit(list(cell_cluster_ids)[0], nearest_oppo_unit)}"
+               # )
             prt(f"[oppo] nearest_oppo_unit={nearest_oppo_unit.id}, "
                 f"{near_resource_tile.pos} min_oppo_unit_turns={oppo_arrival_turns},"
                 f" player_unit_arrival_turns={arrival_turns}, "
                 f"is_nearset_cluster_to_unit={bool(oppo_nearest_cids & cell_cluster_ids)} "
                 f"is_nearest_nrt_in_cluster={is_nearest_nrt_in_cluster}")
+
+      # Remove connection point if it's not in danger
+      if is_connection_point and oppo_weight_type != 'atk_cluster':
+        if debug:
+          prt(' [NRT-CP] skip non atk cluster CP.')
+        return -99999
+
 
       oppo_decay_r = 1.8
       unit_cids = self.ci.get_neighbour_cells_cluster_ids(worker.pos,
@@ -2593,17 +2631,20 @@ class Strategy:
         build_city_wt += 10
         default_nrt_wt = DEFAULT_RESOURCE_WT / dd(arrival_turns, r=1.5)
 
+
       v = ((wt) / dd(arrival_turns) + boost_cluster + opponent_weight +
            transfer_build_wt + demote_opponent_unit + default_nrt_wt +
            build_city_wt)
+
       if debug:
         prt(f'[NRT] t={self.game.turn} w[{worker.id}] nrt[{near_resource_tile.pos}], is_oppo_city={int(is_opponent_citytile)} '
             f'v={v}. wt={wt}, clustr={boost_cluster}, '
             f' opponent={opponent_weight}({oppo_weight_type}), '
             f'transfer_build_wt={transfer_build_wt} arr_turns={arrival_turns}, '
             f'build_city={build_city_wt} build_turns={fast_build_turns}, off={build_city_bonus_off_reason}'
-            f' is_transfer_build_position={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
+            f' is_transfer_build={is_transfer_build_position}, demoet_oppo_unit={demote_opponent_unit}'
             f' default_nrt_wt={default_nrt_wt}, n_open={n_open}, in_non_wood=({near_resource_tile.pos in self.non_wood_resource_locations})'
+            f' is_CP={is_connection_point}'
            )
       return v
 
@@ -2682,9 +2723,9 @@ class Strategy:
           continue
 
         # Do not lock with opponent unit if woker is not on cluster
-        if not worker.on_cluster and self.lock_lock.is_locked(
-            worker.pos, target.pos):
-          continue
+        # if not worker.on_cluster and self.lock_lock.is_locked(
+            # worker.pos, target.pos):
+          # continue
 
         if cell_has_player_citytile(target, self.game):
           v = get_city_tile_weight(worker, target, quicker_dest_turns,
@@ -2716,6 +2757,9 @@ class Strategy:
         # Do not assign target of player unit, itself has dist=1 target that may fail
         if plan_idx >= 1 and is_target_move_may_fail(worker, target):
           v = -9999
+
+        if v < 0:
+          continue
 
         # Add global bias towards opponent area.
         bias = self.bias.get_bias(target.pos)
@@ -2813,9 +2857,9 @@ class Strategy:
         return -MAX_MOVE_WEIGHT
 
       # Do not lock with opponent unit if woker is not on cluster
-      if not worker.on_cluster and self.lock_lock.is_locked(
-          worker.pos, next_position):
-        return -MAX_MOVE_WEIGHT
+      # if not worker.on_cluster and self.lock_lock.is_locked(
+          # worker.pos, next_position):
+        # return -MAX_MOVE_WEIGHT
 
       # Use target score if forced into other positions
       bg_score = worker.target_scores[next_position] * 1e-8
