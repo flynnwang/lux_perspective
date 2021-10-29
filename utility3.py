@@ -1,6 +1,5 @@
 import functools
 import math
-from copy import deepcopy
 
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
@@ -204,8 +203,12 @@ def resource_fuel(resource):
 
 
 def cargo_night_endurance(cargo, upkeep):
-  cargo = deepcopy(cargo)
-  if cargo.wood == 0 and cargo.coal == 0 and cargo.uranium == 0:
+  return _cargo_night_endurance(cargo.wood, cargo.coal, cargo.uranium, upkeep)
+
+
+@functools.lru_cache(maxsize=1023)
+def _cargo_night_endurance(wood, coal, uranium, upkeep):
+  if wood == 0 and coal == 0 and uranium == 0:
     return 0
 
   def burn_fuel(amount, fuel_rate):
@@ -214,20 +217,20 @@ def cargo_night_endurance(cargo, upkeep):
     resource_left = amount - one_night_amount * nights
     return nights, resource_left
 
-  wood_nights, wood_left = burn_fuel(cargo.wood, WOOD_FUEL_RATE)
+  wood_nights, wood_left = burn_fuel(wood, WOOD_FUEL_RATE)
 
   assert COAL_FUEL_RATE >= upkeep and URANIUM_FUEL_RATE >= upkeep
-  if wood_left > 0 and (cargo.coal > 0 or cargo.uranium > 0):
+  if wood_left > 0 and (coal > 0 or uranium > 0):
     wood_nights += 1
 
-    if cargo.coal > 0:
-      cargo.coal -= 1
+    if coal > 0:
+      coal -= 1
     else:
-      assert cargo.uranium > 0
-      cargo.uranium -= 1
+      assert uranium > 0
+      uranium -= 1
 
-  coal_nights, _ = burn_fuel(cargo.coal, COAL_FUEL_RATE)
-  uranium_nights, _ = burn_fuel(cargo.uranium, URANIUM_FUEL_RATE)
+  coal_nights, _ = burn_fuel(coal, COAL_FUEL_RATE)
+  uranium_nights, _ = burn_fuel(uranium, URANIUM_FUEL_RATE)
   return wood_nights + coal_nights + uranium_nights
 
 
@@ -268,13 +271,11 @@ def consume_cargo(turn, cargo, is_citytile, sim_turns, upkeep):
   return cargo
 
 
-@functools.lru_cache(maxsize=MAX_DAYS)
 def is_day(turn):
   turn %= CIRCLE_LENGH
   return turn < DAY_LENGTH
 
 
-@functools.lru_cache(maxsize=MAX_DAYS)
 def is_night(turn):
   return not is_day(turn)
 
@@ -399,23 +400,27 @@ def city_last_nights(city, add_fuel=0):
   return fuel // light_upkeep + 1
 
 
-def nights_to_last_turns(turn, last_nights):
-  if turn >= MAX_DAYS:
-    return 0
-
-  if is_day(turn):
-    days = get_day_count_this_round(turn)
-    # print(f'add days={days}')
-    return nights_to_last_turns(turn + days, last_nights) + days
-
-  # The night case
-  nights = get_night_count_this_round(turn)
+def _nights_to_last_turns(days, nights, last_nights):
+  """First compute last turns for this round, then directly compute remaining ones."""
   if last_nights < nights:
-    return last_nights
+    return days + last_nights
 
+  days += nights
   last_nights -= nights
-  # print(f'add nights={days}')
-  return nights_to_last_turns(turn + nights, last_nights) + nights
+
+  n_circle = last_nights // NIGHT_LENGTH
+  days += n_circle * CIRCLE_LENGH
+
+  last_nights %= NIGHT_LENGTH
+  days += DAY_LENGTH + last_nights
+  return days
+
+
+def nights_to_last_turns(turn, last_nights):
+  days = get_day_count_this_round(turn)
+  nights = get_night_count_this_round(turn)
+  last_turns = _nights_to_last_turns(days, nights, last_nights)
+  return min(last_turns, MAX_DAYS-turn)
 
 
 def city_last_days(turn, city):
