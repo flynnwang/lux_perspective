@@ -3,7 +3,6 @@ import heapq
 import math, sys
 import time
 from collections import defaultdict, deque
-from copy import deepcopy
 from itertools import chain
 
 import numpy as np
@@ -303,9 +302,9 @@ def collect_target_cells(turn, game):
       is_target_cell = False
       if cell_has_player_citytile(cell, game):
         cell.citytile.cell = cell
-        citytiles = [deepcopy(cell)
-                    ] + [deepcopy(cell)] * (MAX_UNIT_PER_CITY - 1)
-        citytiles[0].is_first_citytile = True  # only boost for first tile.
+
+        # only boost for first tile.
+        citytiles = [(True, cell)] + [(False, cell)] * (MAX_UNIT_PER_CITY - 1)
         target_cells.extend(citytiles)
       elif cell.has_resource():
         is_target_cell = True
@@ -319,7 +318,7 @@ def collect_target_cells(turn, game):
       if is_target_cell:
         cell.has_buildable_neighbour = cell_has_buildable_neighbour(
             cell, game_map)
-        target_cells.append(cell)
+        target_cells.append((False, cell))
   return target_cells
 
 
@@ -1688,9 +1687,6 @@ class Strategy:
                 # f' oppo_citytile={cell_has_target_player_citytile(cell, self.game.opponent)}')
         cell.n_citytile_neighbour = self.count_citytile_neighbours(cell)
 
-        # This is a flag for calling for idle worker to collect fuel for city.
-        cell.is_first_citytile = False
-
         if self.game.turn == 0:
           if cell.is_coal_target or cell.is_uranium_target:
             self.non_wood_resource_locations.add(cell.pos)
@@ -2093,7 +2089,7 @@ class Strategy:
 
     CITYTILE_LOST_WEIGHT = 1000
 
-    def get_city_tile_weight(worker, city_cell, arrival_turns):
+    def get_city_tile_weight(worker, city_cell, arrival_turns, is_first_citytile):
       """
       1. collect fuel (to keep powering citytile)
       2. protect dying worker [at night]: to dying woker
@@ -2278,7 +2274,7 @@ class Strategy:
       # * Only boost for one unit.
       # * Prioritize unit in the same city.
       receive_transfer_wt = 0
-      if (city_cell.is_first_citytile and
+      if (is_first_citytile and
           citytile.pos in self.fuel_city_by_transfer_positions):
         receive_transfer_wt = 1000 + self.fuel_city_by_transfer_positions[
             citytile.pos]
@@ -2287,7 +2283,7 @@ class Strategy:
            (city_crash_boost / dd(arrival_turns, r=1.1)) +
            (city_survive_boost / dd(arrival_turns, r=1.1)) +
            (receive_transfer_wt / dd(arrival_turns)))
-      if (city_cell.is_first_citytile and worker.id in DRAW_UNIT_LIST and
+      if (is_first_citytile and worker.id in DRAW_UNIT_LIST and
           city_cell.pos in MAP_POS_LIST and plan_idx == 1):
         prt(f"[CITY_TILE]: plan[{plan_idx}] {worker.id} tar={worker.target.pos} => city={city_cell.pos}  v={v}, wt={wt}, city_crash={city_crash_boost}@[{city_crash_boost_loc}],"
             f"city_survive={city_survive_boost}@[{city_survive_boost_loc}]"
@@ -2652,7 +2648,7 @@ class Strategy:
     weights = np.ones((len(workers), len(target_cells))) * -9999
 
     for i, worker in enumerate(workers):
-      for j, target in enumerate(target_cells):
+      for j, (is_first_citytile, target) in enumerate(target_cells):
         # Can't arrive at target cell.
         quicker_path, quicker_dest_turns = self.select_quicker_path(
             worker, target.pos)
@@ -2672,7 +2668,7 @@ class Strategy:
           continue
 
         if cell_has_player_citytile(target, self.game):
-          v = get_city_tile_weight(worker, target, quicker_dest_turns)
+          v = get_city_tile_weight(worker, target, quicker_dest_turns, is_first_citytile)
           # if worker.id in DRAW_UNIT_LIST and target.pos in MAP_POS_LIST:
           # prt(f"to t[{target.pos}], v={v}, arr={quicker_dest_turns}", file=sys.stderr)
         elif target.has_resource():
@@ -2731,7 +2727,7 @@ class Strategy:
 
       worker.target_score = weights[worker_idx, target_idx]
 
-      target = target_cells[target_idx]
+      _, target = target_cells[target_idx]
       worker.target = target
       worker.target_pos = target.pos
       # if worker.id in DRAW_UNIT_LIST:
