@@ -1679,12 +1679,23 @@ class Strategy:
   def update_game_map_info(self):
     # TODO: ref citytile to city
     self.has_collectable_resource_on_map = False
+
+    for unit in self.game.player.units:
+      cell = self.game_map.get_cell_by_pos(unit.pos)
+      cell.unit = unit
+      # cell.units.append(unit)
+
+    for unit in self.game.opponent.units:
+      cell = self.game_map.get_cell_by_pos(unit.pos)
+      cell.unit = unit
+      # cell.units.append(unit)
+
     for y in range(self.game.map_height):
       for x in range(self.game.map_width):
         cell = self.game_map.get_cell(x, y)
-        cell.unit = None
+        if not hasattr(cell, 'unit'):
+          cell.unit = None
         cell.has_buildable_neighbour = False
-        cell.units = []
 
         cell.is_coal_target = False
         cell.is_uranium_target = False
@@ -1709,22 +1720,25 @@ class Strategy:
             is_resource_researched(cell.resource, self.player)):
           self.has_collectable_resource_on_map = True
 
+        if cell_has_player_citytile(cell, self.game):
+          city = self.game.player.cities[cell.citytile.cityid]
+          cell.city = city
+
         # if cell.pos in MAP_POS_LIST:
         # prt(f"cell.pos={cell.pos}, has_res={cell.has_resource()} res={cell.resource}, coal={cell.is_coal_target}, urnaium={cell.is_uranium_target}")
+
+    for y in range(self.game.map_height):
+      for x in range(self.game.map_width):
+        cell = self.game_map.get_cell(x, y)
+        # TODO(perf_opt: do it in one loop
+        n_nb_oppo_unit, n_nb_oppo_citytile = count_cell_neighbour_opponent_unit_and_city_tile(
+            cell, self.game)
+        cell.n_nb_oppo_unit = n_nb_oppo_unit
+        cell.n_nb_oppo_citytile = n_nb_oppo_citytile
 
     # if self.game.turn == 0:
     # prt(f'number of non_wood_resource_locations: {len(self.non_wood_resource_locations)}, {self.non_wood_resource_locations}')
     # pass
-
-    for unit in self.game.player.units:
-      cell = self.game_map.get_cell_by_pos(unit.pos)
-      cell.unit = unit
-      cell.units.append(unit)
-
-    for unit in self.game.opponent.units:
-      cell = self.game_map.get_cell_by_pos(unit.pos)
-      cell.unit = unit
-      cell.units.append(unit)
 
   # @timeit
   def update_unit_info(self):
@@ -1993,8 +2007,8 @@ class Strategy:
           opponent_weight = 500 / dd(arrival_turns, r=oppo_decay_r)
           oppo_weight_type = 'oppo_unit/'
 
-        n_oppo_unit, n_oppo_citytile = count_cell_neighbour_opponent_unit_and_city_tile(
-            resource_tile, self.game)
+        n_oppo_unit = resource_tile.n_nb_oppo_unit
+        n_oppo_citytile = resource_tile.n_nb_oppo_citytile
         opponent_weight += min(
             (n_oppo_citytile * 0 + n_oppo_unit * 200), 500) / dd(
                 arrival_turns, r=oppo_decay_r)
@@ -2043,8 +2057,8 @@ class Strategy:
       2. protect dying worker [at night]: to dying woker
       3. receive fuel from a fuel full worker on cell: get help from worker.
       """
+      city = city_cell.city
       citytile = city_cell.citytile
-      city = g.player.cities[citytile.cityid]
 
       wt = 0
 
@@ -2182,12 +2196,18 @@ class Strategy:
         city_survive_boost = 0
 
       is_wood_city = city_cell.pos in self.is_wood_city_tile
-      if (not self.turn_on_exhaust(worker, city_cell.pos) and is_wood_city and
-          is_wood_resource_worker(worker)):
-        city_crash_boost = 0
-        city_survive_boost = 0
-        city_crash_boost_loc = 'wood_woker'
-        city_survive_boost_loc = 'wood_worker'
+      if is_wood_city and is_wood_resource_worker(worker):
+        if not self.turn_on_exhaust(worker, city_cell.pos):
+          city_crash_boost = 0
+          city_survive_boost = 0
+          city_crash_boost_loc = 'exhaust'
+          city_survive_boost_loc = 'exhaust'
+
+        if not city.is_in_danger:
+          city_crash_boost = 0
+          city_survive_boost = 0
+          city_crash_boost_loc = 'city_in_danger'
+          city_survive_boost_loc = 'city_in_danger'
 
       # collect_amt, _ = get_one_step_collection_values(city_cell, player, self.game)
       # if is_wood_city and collect_amt > 0:
@@ -3042,15 +3062,38 @@ class Strategy:
     remaining_nights = get_remaining_nights(self.game.turn)
     nights_to_next_day = get_night_count_this_round(self.game.turn)
 
+    def is_city_in_danger(city):
+      """
+      0. city won't last
+      1. citytile nb has oppo citytile or oppo unit
+      2. turn >= 28
+      """
+      if self.game.circle_turn < 28:
+        return False
+
+      if not city.is_dying_this_round:
+        return False
+
+      for citytile in city.citytiles:
+        cell = self.game_map.get_cell_by_pos(citytile.pos)
+        if cell.n_nb_oppo_unit or cell.n_nb_oppo_citytile:
+          return True
+      return True
+
     for city in chain(self.game.player.cities.values(),
                       self.game.opponent.cities.values()):
       city.last_turns = city_last_days(self.game.turn, city)
+
       city.city_game_end_fuel_req = (
           remaining_nights * city.light_upkeep - city.fuel)
+
       city.city_next_day_fuel_req = (
           nights_to_next_day * city.light_upkeep - city.fuel)
       city.is_dying_this_round = (city.city_next_day_fuel_req > 0)
+
       city.later_round_nights_to_live = remaining_nights - nights_to_next_day
+
+      city.is_in_danger = is_city_in_danger(city)
 
   @property
   def ci(self):
