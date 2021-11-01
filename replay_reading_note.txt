@@ -2,6 +2,172 @@
 
 
 
+1635663316963_9UqyKO7cV9PT, before, 304361078
+1635736466265_aZpXsnKY0hTH, after
+- before is only lucky win.
+- could be used for coal transfer
+
+
+
+1635664122026_6M4wXiOdtyxW
+1635737298605_Yt7NYHZA083B
+- luck win
+
+
+1635662550501_3WCtNWly1gIW
+1635735804973_Uy4ZlmkLcKSG
+ - wood city crash becasue of coal
+ - worker can't pass city due to no coal tranfer
+ - worker has uranium, but did not buidl city
+
+
+ 1635736166521_fao2hkfBRzvl
+- coal tranfer maybe help
+
+
+=========================== 2021-11-01 ==========================
+replays/1635662594985_hZM4VNUlomGp.json, LOSS
+- wood city crash
+
+replays/1635663832409_DTrt9QcTgT3d.json, LOSS
+- late for coal
+
+
+1635663390185_LMYPH1KiceOC, WIN
+- large wood size and fast to coal
+
+
+1635661821804_xC93C1wY60dy, WIN
+- t28, current version already have tranfer build for non exhaust cluster?
+  * will transfer, but build or not defends on the worker
+  * but becuase of encouraging connection point, so 
+
+
+1635664362081_AQdNPseciVwj, WIN
+- competition on center wood cluster wins
+
+
+replays/1635662798379_f9sTgmEcjXek.json, WIN
+- t60 u5, not build city
+
+
+
+=========================== 2021-10-31 ==========================
+1635664449365_TZgbWhyqDb6H, 871376350
+- large city crash
+- t62, u_1, target (0, 14)
+- [√ ]t36, u_10, not save city!
+  * [√] Use large city save weight! (at least during night?)
+- [] t101 u_15, move to c_21
+  * because of city surive weight
+
+
+
+1635664961491_MNYtu3qTbXtq
+- large wood city crash
+
+
+1635662999775_5BiCEk9lzW9p
+- wood city crash
+- [] could be used to test coal transfer
+
+
+1635661821440_48xMgNeft0l2
+- not save city at night for city in danger
+- wood city crash
+
+
+1635662600463_gfzbPeTDPh3H, 12
+- lost coal
+
+
+1635664407809_R4kPAAMUQDIM
+- lost large wood city
+
+1635663929457_XD4XHzpUZiXI, 12
+- lost uranium
+
+1635661969432_EVYKt4FGT7k5, 12
+- lost uranium
+
+1635661821845_gs3m6Yre5yJ0, 12
+- lost uranium
+
+
+1635663242576_FXj3v4IGYLJt, 12
+- lost large wood city
+
+
+[] 1635663895056_NR38z7dFXR4J, 12 0
+- should win, but due to survive weight, large city will have small survive weight and die
+
+
+=========================== 2021-10-31 ==========================
+
+1635647473211_UA6dGyFEYsb1, win
+- competition on initial resource
+- build worker fast, and occupy the coal
+
+
+1635645428651_DntCpzYsYHno loss
+- not competition resource
+- not defend middle cluster well, 
+
+
+1635645885334_jIHppN0AXZpy
+- initial resource competition
+- fast reach coal
+
+1635647120957_iVs7bWf1WIpt
+- faster coal
+- protect uranium
+
+
+1635644173935_xtrrcc6yOu2B
+- woker die at late coal
+- lose coal
+
+1635646600239_FJIiT3425DgH, WIN
+- coal portection
+
+
+1635644982775_1UtLemCiJzp8, LOSS
+- no initial competition
+- wood city crash
+- late for urainum
+
+
+1635645714410_ru9S46CrXA6U, LOSS
+- no initial competition
+- [] city crash because of coal late, could be example for coal transfer
+
+
+1635644340417_MsaZ0C124g58, WIN
+- no initial competition
+- dominate coal and uranium
+
+
+1635645165147_CzK8jpgbepgm, LOSS
+- lost wood resource
+
+
+1635644174509_DsBbrub9PHtu, LOSS
+- no inital competition
+- no obvious problem, city number is smaller
+- t67 u20, why fuel city
+
+
+1635645949617_yuAhtvvv9DAz LOSS
+- initial competition
+- city crash, smaller city size, and late for coal
+- uranium not deliver
+
+
+1635645567555_HZ7afWFrBx4Q, LOSS
+- too many city
+
+
+
 =========================== 2021-10-28 ==========================
 1635362891366_nFxT8LdanWBp
 - win with large magin: mostly because the city did not crash at first night

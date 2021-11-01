@@ -470,27 +470,83 @@ test map: replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
 - [X] cluster pinning: 76.2
 - [X] lock with opponent unit when worker not on cluster:
 
-- [] connection point defend: rebuild_defend_CP
+- [] connection point defend: rebuild_defend_CP: hard to get it work
   * compute_build_turns work with CP
   * turn off CP build if not transfer build
   * add nb9 boundary
   * add oppo_arrival_turns > 2 for do_not_protect_cp_if_not_close
+  * do not add oppnent bias for NRT
+  * use -99999 if CP v = 0
+  * [] use nb city tile count 2 for CP defend
 
 
-- [] fix is_worker_on_last_city_tiles
+>> in testing
+- [] secure city in danger.
+  * [√] If citytile nb has oppo citytile or oppo unit, inc WT after circle turn >= 20
+  * [√] boost city_crash_boost for wood city tile: x 2
+  * [X] Save at least 2 city per each cluster
+    * sorted by global bias
+    * keep alive 25%, or keep max 2
+  * [√] use oppo unit dist to citytile to secure city in danger
+    * [-] dist 2: no change, maybe keep it?
+    * [] try dist 3
+  * [√] Use large boost for city in danger
+    * [X] boost 2000 for city in danger at night
+    * [-] boost 500 + oppo unit dist 2
 
-- remove max limit on cluster and resource wait time
+
+> DO NOT HAUST
+  - [√] always use transfer build, but only build on non-CP NRT (speed up build)
+    * add 700 weight to city in danger for circle turn >= 24
+  - [X] do not turn on exhaust mode for competition cluster: try not crash city
+    * should turn on exhaust mode, just to retain more worker on this cluster
+- [X] always exhaust for size=12 map?
+  * tried on both sz=12 and sz=16, not as good.
+
+- [] transfer coal
+
+
+
+- [] remove `surviving_rate` for city_survive_weight
+  * branch: rebuild_city_survive_weight
+  * surviving_rate: may cause large city to have small weight
+  * test later after coal transfer
+
+- [] Try not use coal for city_crash_boost only?
+  * not large regression, test later.
+
+- [] Try update city boost score: remove turn limit?
+  * remove city_crash_boost
+
+- [] limit city building if resource is not enough.
+- [] Check cluster open ratio to compute the city tile bonus wt for outer unit
+
+
+
+- [] add larger weight for faster cell: 677255637
+
+
+- [] do not waste resource while sitting on city tile
 - inc defend range?
+
+- circle to attack: drop resource tile that's too close to oppo unit
+- sustain mode
+
+
+
+# Quick tests
+- [] fix is_worker_on_last_city_tiles (maybe not)
+
+- [X] remove max limit on cluster and resource wait time
+  * run_2021_1030_14_inc_max_wait_turns
+
 - no need to turn on exhaust info for affending cluster?
 
+
+- remove fuel_wt for resource tile?
+- [] No more resource, no NRT, then build city tile at current place!
+
 - open wood cluster
-
-- transfer coal
-- **secure city in danger.
-
-- circle to attack
-- better defend behaviour
-- sustain mode
 
 
 
@@ -499,6 +555,22 @@ test map: replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
 > 235929563, t54, u_22
 - without deepcopy: (3, 9) to (2, 9)
 - with copy: (3, 9) to (3, 8)
+
+
+
+204919389
+- [√] t58, u16, (8, 5)
+- [√] t52 u1 to (10, 10), not (14, 12): do not protect from outside
+
+- [√] t64, u1, (14, 12), (15, 11): drop lock with opponent unit
+- [√] t49 u25, why goto (1, 5), not (14, 1): faster cell for CP
+
+- [-] t61, u13, (15, 2), why goto (1, 1)
+  * (15, 2), coal not ready
+- [] t210 u25, not build city tile
+  * [] No more resource, no NRT, then build city tile at current place!
+
+
 
 
 Toad: take control of wood to win?
@@ -543,3 +615,7 @@ IDEAS:
 * unit cargo won't goto 100 at night
 * in city tile, road level is 6 (which means, move to citytile at night is good)
 * A full worker will not collect resource
+* it's possible to make fuel upkeep smaller by adding a new city tile.
+
+
+Lear

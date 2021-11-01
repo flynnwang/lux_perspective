@@ -1,6 +1,327 @@
 
 
 
+>> [C] run_2021_1101_12_rebuild_coal_usage
+* do not use coal for city that last.
+* small regression
+
+opponent_name	defend_agent	rebuild_coal_usage
+short_name
+defend_agent	0.0	18.2
+rebuild_coal_usage	82.7	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_coal_usage
+12	37	10	47	78.7
+16	45	14	59	76.3
+24	56	13	69	81.2
+32	53	3	56	94.6
+
+
+
+>> [C] run_2021_1101_10_peak_survave_rate
+- max(surviving_rate, 0.9)
+- good for size=24 map, but has regression on sz=16 map
+
+opponent_name	defend_agent	rebuild_city_survive_weight
+short_name
+defend_agent	0.0	17.0
+rebuild_city_survive_weight	83.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_city_survive_weight
+12	37	10	47	78.7
+16	40	19	59	67.8
+24	58	7	65	89.2
+32	51	2	53	96.2
+
+
+>> [C] run_2021_1101_10_city_survive_weight
+- remove surviving_rate for city_survive_boost
+
+opponent_name	defend_agent	rebuild_city_survive_weight
+short_name
+defend_agent	0.0	19.0
+rebuild_city_survive_weight	81.4	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_city_survive_weight
+12	34	13	47	72.3
+16	46	13	59	78.0
+24	55	14	69	79.7
+32	53	3	56	94.6
+
+
+>> [C] run_2021_1101_09_exhaust_sz12
+
+
+(exhaust on for sz=12 map)
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_exhaust_small_map	12	37	10	47	78.7
+
+(exhaust off for sz=12 map)
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_exhaust_small_map	12	36	11	47	76.6
+
+
+(sz=16, exhaust always on)
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_exhaust_small_map	16	41	18	59	69.5
+
+
+>> [C] run_2010_1031_23_tranfer_build_non_cp
+- always transfer build, but only on non-CP NRT
+- use large city crash boost when t>=25
+(not run to end, but result is not good)
+
+
+opponent_name	defend_agent	rebuild_transfer_build_on_non_CP
+short_name
+defend_agent	0.0	26.5
+rebuild_transfer_build_on_non_CP	74.3	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_transfer_build_on_non_CP
+12	20	10	30	66.7
+16	21	11	32	65.6
+24	23	5	28	82.1
+32	20	3	23	87.0
+
+
+
+>> [C] run_2010_1031_20_save_city_large_weight_v2
+- dist 2 oppo unit for city in danger + large weight at night (wt=500)
+
+opponent_name	defend_agent	rebuild_save_city_large_weight
+short_name
+defend_agent	                0.0	16.0
+rebuild_save_city_large_weight	84.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city_large_weight
+12	39	8	47	83.0
+16	44	15	59	74.6
+24	56	13	69	81.2
+32	55	1	56	98.2
+
+
+>> [C] run_2010_1031_20_save_city_large_weight
+- large weight at night (+2000)
+
+opponent_name	defend_agent	rebuild_save_city_large_weight
+short_name
+defend_agent	0.0	16.9
+rebuild_save_city_large_weight	83.1	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city_large_weight
+12	38	9	47	80.9
+16	44	15	59	74.6
+24	56	13	69	81.2
+32	54	2	56	96.4
+
+
+>> [C] run_2010_1031_18_save_city_dist2
+* no change detected (test after large boost weight)
+
+opponent_name	defend_agent	rebuild_save_dist2_city
+short_name
+defend_agent	        0.0	    15.6
+rebuild_save_dist2_city	84.8	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_dist2_city
+12	38	9	47	80.9
+16	47	12	59	79.7
+24	57	12	69	82.6
+32	54	2	56	96.4
+
+
+>> [C] run_2010_1031_15_save_min_city_v3
+* keep min 2 city tile, not good too...
+
+opponent_name	defend_agent	rebuild_save_minimum_city
+short_name
+defend_agent	0.0	19.9
+rebuild_save_minimum_city	80.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_minimum_city
+12	36	11	47	76.6
+16	44	15	59	74.6
+24	53	16	69	76.8
+32	53	3	56	94.6
+
+
+
+>> [C] run_2010_1031_15_save_min_city
+- keep min 25% city for each cluster
+
+opponent_name	defend_agent	rebuild_save_minimum_city
+short_name
+defend_agent	0.0	19.9
+rebuild_save_minimum_city	80.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_minimum_city
+12	36	11	47	76.6
+16	43	16	59	72.9
+24	55	14	69	79.7
+32	52	4	56	92.9
+
+
+>> [BEST_SO_FAR][C] run_2021_1031_14_save_city_boost_city_in_danger
+- branch: rebuild_save_city
+- add extra boost for city in danger: city_crash_boost
+
+opponent_name	defend_agent	rebuild_save_city
+short_name
+defend_agent	    0.0	    15.6
+rebuild_save_city	84.8	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city
+12	38	9	47	80.9
+16	47	12	59	79.7
+24	57	12	69	82.6
+32	54	2	56	96.4
+
+
+>> [C] rebuild_faster_cell_1030
+- add weight for faster cell
+- regression on all map size except sz=24
+
+opponent_name	defend_agent	rebuild_faster_cell_1030
+short_name
+defend_agent	0.0	23.4
+rebuild_faster_cell_1030	76.6	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_faster_cell_1030
+12	30	17	47	63.8
+16	37	22	59	62.7
+24	60	9	69	87.0
+32	50	6	56	89.3
+
+
+>> [C] run_2021_1031_13_save_city_and_t20: [BETTER]
+
+opponent_name	defend_agent	rebuild_save_city
+short_name
+defend_agent	    0.0	    16.9
+rebuild_save_city	83.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city
+12	37	10	47	78.7
+16	44	15	59	74.6
+24	57	12	69	82.6
+32	55	1	56	98.2
+
+
+>> [C] run_2021_1031_11_save_city_and [GOOOOOOOOOOOOOOOD]
+- use and for city build
+- [] save some city tile for all clutesr?
+
+opponent_name	defend_agent	rebuild_save_city
+short_name
+defend_agent	    0.0	    18.2
+rebuild_save_city	82.3	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city
+12	34	13	47	72.3
+16	43	16	59	72.9
+24	59	10	69	85.5
+32	54	2	56	96.4
+
+
+>> [C] 2021_1031_08_rebuild_save_city
+- cloud rerun rebuild branch
+- conclusion: run env will impact the result
+
+opponent_name	defend_agent	rebuild_1030
+short_name
+defend_agent	0.0	22.1
+rebuild_1030	77.9	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_1030
+12	31	16	47	66.0
+16	39	20	59	66.1
+24	56	13	69	81.2
+32	54	2	56	96.4
+
+
+>> [C] 2021_1031_08_rebuild_save_city
+- cloud run, with turn >= 25 to save city
+
+opponent_name	defend_agent	rebuild_save_city
+short_name
+defend_agent	0.0	22.9
+rebuild_save_city	77.1	0.0
+
+
+
+>> run_2021_1030_09_defend_CP
+
+opponent_name	defend_agent	rebuild
+short_name
+defend_agent	0.0	32.0
+rebuild	68.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild
+12	33	14	47	70.2
+16	34	25	59	57.6
+24	43	26	69	62.3
+32	47	9	56	83.9
+
+
+
+>> run_2021_1030_18_save_city
+- version 1 of save city: not number moved (win/fail changed)
+
+opponent_name	defend_agent	rebuild_save_city
+short_name
+defend_agent	0.0	16.5
+rebuild_save_city	84.0	0.0
+
+
+>>  run_2021_1029_08_pref_utility_opt
+- perf improvement on utility and deepcopy and
+
+opponent_name	defend_agent	rebuild
+short_name
+defend_agent	0.0	    16.0
+rebuild	        84.0	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild
+12	36	11	47	76.6
+16	46	13	59	78.0
+24	59	10	69	85.5
+32	53	3	56	94.6
+
 
 
 >> run_2021_1028_23_perf: need to identify regression
