@@ -1,6 +1,28 @@
 
 
 
+
+>> [C] run_2021_1102_10_baseline_2021_1102
+- new benchmark on dataset 1102 200
+
+opponent_name	defend_agent	rebuild_save_city
+short_name
+defend_agent	0.0	17.0
+rebuild_save_city	83.0	0.0
+
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city	12	34	16	50	68.0
+16	40	10	50	80.0
+24	45	5	50	90.0
+32	47	3	50	94.0
+
+
+
+
+
+
 >> [C] run_2021_1101_12_rebuild_coal_usage
 * do not use coal for city that last.
 * small regression

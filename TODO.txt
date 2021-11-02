@@ -503,9 +503,14 @@ test map: replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
 - [X] always exhaust for size=12 map?
   * tried on both sz=12 and sz=16, not as good.
 
+
 - [] transfer coal
+  * [√] Transfer coal/uranium from resource tile to NRT unit
+  * [] Do not build coal city if there is city won't last
 
+- [] Try scatter unit when building city
 
+- [] add resource weight to city even it's empty worker
 
 - [] remove `surviving_rate` for city_survive_weight
   * branch: rebuild_city_survive_weight
