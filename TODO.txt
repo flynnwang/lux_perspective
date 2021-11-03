@@ -504,13 +504,42 @@ test map: replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
   * tried on both sz=12 and sz=16, not as good.
 
 
+>> Pending branches
+- fix city last turns (included in coal transfer branch)
+- coal transfer
+- scatter build
+
+
 - [] transfer coal
   * [√] Transfer coal/uranium from resource tile to NRT unit
   * [] Do not build coal city if there is city won't last
 
+- [√] Should cluster owner save city?
+  * [√] need to account for arrival resource from more workers to join
+  * [√] use dest arrival fuel
+  * [] city crash took unit away (save unsavable city)
+  * [√] raise min crash fuel wt
+
 - [] Try scatter unit when building city
+  * [] demote dist1 NRT with my own citytile
+  * [] Quickest path search skip unit in cooldown (blockage)
+  * [] demote cell where nearest dist to oppo < nearest dist to worker
+
+- [] sustain mode
+  * [√] check all open positions that has player citytile
+  * [] do not use wood for city survive
+  * [] do not stand at city tile next to wood if it will last
+  * [] worker should standby NRT, not always on resource tile
+
+
+- [] cell level offender detection.
+  * map seed: 4791741
+
+
 
 - [] add resource weight to city even it's empty worker
+
+- perf opt: do not collect after cargo full (sim_on_cell)
 
 - [] remove `surviving_rate` for city_survive_weight
   * branch: rebuild_city_survive_weight
@@ -535,7 +564,6 @@ test map: replays/1634967320130_qdfkByUUeHPY.json, sz=24, 693952626, a1
 - inc defend range?
 
 - circle to attack: drop resource tile that's too close to oppo unit
-- sustain mode
 
 
 

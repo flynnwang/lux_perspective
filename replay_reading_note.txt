@@ -1,4 +1,75 @@
 
+============================== scatter
+
+replays/1635890956513_eu6W2Oly02pj.json	WIN
+1635873074205_VgFDAei4DbgW LOSS
+- wood city crash, because of blocage of coal to outside city
+[] support coal tranfer or uranium transfer
+
+
+1635892097423_j25vVSH5lWWc, WIN
+1635874212340_eIGyh5ypP9rm, LOSS
+- city crash => less RP => later for uranium
+
+
+
+
+map: 16307268
+- t104, u4, build (1, 2)
+
+
+
+
+============================== 
+
+
+replays/1635829773571_ree9fFQAWIbb.json, WIN
+replays/1635865597970_6iBwv3ergZ85.json, LOSS
+- large wood city crash
+
+
+1635829670408_PnpCDW9rXmNi, WIN
+1635865500819_Pt9smBzA7LTU, LOSS
+- after introduce scatter, get opponent unit attack.
+
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-29606914
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-29597513
+- Toad madness...
+
+
+https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-29587904
+- map seed: 147058125
+- map for build city tile test
+
+
+======================== coal transfer cases
+
+1635821174549_IXHMjIThSGs3, LOSS
+1635824444335_UsOXx1BtXbrF, WIN
+- good case, save city that prevous can save
+
+
+1635819829307_92mC1oPxtLjj, LOSS
+1635823148338_g9OJMjYPvEwV, WIN
+- previous, res not enough, and crashed one large city.
+
+1635818890737_5ygVXJN6uXNj
+1635822267553_iftZdkAHBpPs
+1307062, t107, u7, goto (11, 3), (11, 1)
+* because cluster owner is leaving cluter and drag back
+
+
+
+
+
+
+
+--------------------------
+
+
+
 
 https://www.kaggle.com/c/lux-ai-2021/leaderboard?dialog=episodes-episode-29584498
 - first step move too much

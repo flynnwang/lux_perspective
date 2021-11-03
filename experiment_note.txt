@@ -1,5 +1,304 @@
 
 
+>> [C] run_2021_1103_22_rebuild_merge_v2
+- merge more with city receive fuel and extended city last turns.
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	0.0	25.0
+rebuild_scatter_build	75.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	39	11	50	78.0
+16	33	17	50	66.0
+24	36	14	50	72.0
+32	42	8	50	84.0
+
+
+>> [C] run_2021_1103_21_rebuild_merge
+- only merge coal transfer on resource tile to NRT unit
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	0.0	24.5
+rebuild_scatter_build	75.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	38	12	50	76.0
+16	35	15	50	70.0
+24	37	13	50	74.0
+32	41	9	50	82.0
+
+
+
+>> [C] run_2021_1103_17_coal_tranfer_more_amt
+- inc coal transfer amt: 30/16 [TODO]: further increase
+- minor regression
+
+opponent_name	distribute_resource	rebuild_coal_transfer
+short_name
+distribute_resource	0.0	29.5
+rebuild_coal_transfer	71.0	0.0
+
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_coal_transfer
+12	36	14	50	72.0
+16	33	17	50	66.0
+24	36	14	50	72.0
+32	37	13	50	74.0
+
+
+
+
+>> [C] run_2021_1103_16_rebuild_scatter_build_searsh_wait_turns
+- not skip, but introduce wait turns during search (still has bug)
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	0.0	26.5
+rebuild_scatter_build	74.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	40	10	50	80.0
+16	36	14	50	72.0
+24	32	18	50	64.0
+32	41	9	50	82.0
+
+
+
+>> [C] run_2021_1103_15_rebuild_scatter_build_dist1_demote100: even
+- not as good, as demote 10
+- demote 100 might waste sometime for building a new city tile
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	    0.0	    28.0
+rebuild_scatter_build	72.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	35	15	50	70.0
+16	37	13	50	74.0
+24	37	13	50	74.0
+32	36	14	50	72.0
+
+
+
+>> [C] run_2021_1103_13_rebuild_scatter_build_search_opt: regression
+- based on scatter dist 1 demote
+- skip cell if it has opponent unit in cooldown (should compute the arrival turns after wait)
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	0.0	36.5
+rebuild_scatter_build	63.5	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	33	17	50	66.0
+16	34	16	50	68.0
+24	27	23	50	54.0
+32	33	17	50	66.0
+
+
+
+>> [C] run_2021_1103_13_rebuild_scatter_build_dist1: *GOOD*
+- demote dist 1 NRT with -10
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	0.0	23.5
+rebuild_scatter_build	76.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	39	11	50	78.0
+16	34	16	50	68.0
+24	35	15	50	70.0
+32	45	5	50	90.0
+
+
+
+
+
+
+
+>> [C] run_2021_1102_23_rebuild_scatter_build_v2
+- scatter build
+- ignore scatter build if opponent_weight < 1
+- (not running to finish)
+
+opponent_name	distribute_resource	rebuild_scatter_build
+short_name
+distribute_resource	0.0	33.5
+rebuild_scatter_build	67.1	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_scatter_build
+12	31	18	49	63.3
+16	29	16	45	64.4
+24	27	11	38	71.1
+32	27	11	38	71.1
+
+
+
+>> [C] run_2021_1102_22_coal_transfer_nrt_lower
+- try lower the tranfer amount [even worse]
+
+opponent_name	distribute_resource	rebuild_coal_transfer
+short_name
+distribute_resource	0.0	34.5
+rebuild_coal_transfer	65.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_coal_transfer
+12	35	15	50	70.0
+16	32	18	50	64.0
+24	30	20	50	60.0
+32	34	16	50	68.0
+
+
+
+>> [C] run_2021_1102_20_coal_transfer_nrt
+- add transfer on NRT position
+
+opponent_name	distribute_resource	rebuild_coal_transfer
+short_name
+distribute_resource	0.0	32.5
+rebuild_coal_transfer	69.0	0.0
+
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_coal_transfer
+12	35	15	50	70.0
+16	31	19	50	62.0
+24	35	15	50	70.0
+32	37	13	50	74.0
+
+
+
+>> [C] run_2021_1102_18_inc_min_fuel_for_city_crash_boost
+- inc min weight, 80/150/160 for city crash boost
+
+opponent_name	cluster_owner_save_city	distribute_resource
+short_name
+cluster_owner_save_city	0.0	70.5
+distribute_resource	30.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+cluster_owner_save_city
+12	37	13	50	74.0
+16	33	17	50	66.0
+24	33	17	50	66.0
+32	38	12	50	76.0
+
+
+>> [C] run_2021_1102_18_arrival_fuel_for_city_crash
+* use arrival fuel for city fuel request
+* use extended city last turns with unit fuel from assinged workers.
+
+opponent_name	cluster_owner_save_city	distribute_resource
+short_name
+cluster_owner_save_city	0.0	72.5
+distribute_resource	28.5	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+cluster_owner_save_city
+12	39	11	50	78.0
+16	34	16	50	68.0
+24	34	16	50	68.0
+32	38	12	50	76.0
+
+
+
+>> [C] run_2021_1102_16_cluster_owner_save_city
+* use cluter owner for city crash weight
+* use arrival fuel for city fuel request
+* use extended city last turns with unit fuel from assinged workers.
+
+opponent_name	cluster_owner_save_city	distribute_resource
+short_name
+cluster_owner_save_city	0.0	69.0
+distribute_resource	31.5	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+cluster_owner_save_city
+12	35	15	50	70.0
+16	33	17	50	66.0
+24	32	18	50	64.0
+32	38	12	50	76.0
+
+
+>> [C] run_2021_1102_14_coal_transfer_benchmark
+* confirmed the regression with coal transfer added.
+
+opponent_name	distribute_resource	rebuild_coal_transfer
+short_name
+distribute_resource	0.0	37.0
+rebuild_coal_transfer	65.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_coal_transfer
+12	31	19	50	62.0
+16	30	20	50	60.0
+24	35	15	50	70.0
+32	34	16	50	68.0
+
+
+
+>> [C] run_2021_1102_13_dist_resource_benchmark
+- benchmark with distribute_resource agent
+
+opponent_name	distribute_resource	rebuild_save_city
+short_name
+distribute_resource	0.0	29.0
+rebuild_save_city	72.0	0.0
+
+win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_save_city
+12	37	13	50	74.0
+16	35	15	50	70.0
+24	34	16	50	68.0
+32	38	12	50	76.0
+
+
+
+
+>> [C] run_2021_1102_11_rebuild_coal_transfer_data1102
+- add coal transfer
+- minor regression (-1)
+
+opponent_name	defend_agent	rebuild_coal_transfer
+short_name
+defend_agent	0.0	17.5
+rebuild_coal_transfer	82.5	0.0
+
+	win_loss	win	loss	total	win_pct
+short_name	map_size
+rebuild_coal_transfer
+12	37	13	50	74.0
+16	38	12	50	76.0
+24	42	8	50	84.0
+32	48	2	50	96.0
 
 
 >> [C] run_2021_1102_10_baseline_2021_1102
@@ -13,7 +312,8 @@ rebuild_save_city	83.0	0.0
 
 win_loss	win	loss	total	win_pct
 short_name	map_size
-rebuild_save_city	12	34	16	50	68.0
+rebuild_save_city
+12	34	16	50	68.0
 16	40	10	50	80.0
 24	45	5	50	90.0
 32	47	3	50	94.0
